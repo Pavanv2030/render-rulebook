@@ -709,44 +709,102 @@ const Admin = () => {
 
         {/* ==================== PRICING TAB ==================== */}
         {activeTab === "pricing" && (
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /> Dynamic Pricing Editor</h3>
-              {Object.keys(editingPricing).length > 0 && (
-                <button onClick={savePricing} disabled={savingPricing}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-sm font-medium">
-                  <Save className="w-4 h-4" /> {savingPricing ? "Saving..." : `Save ${Object.keys(editingPricing).length} changes`}
+          <div className="space-y-6">
+            {/* Add Country */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Manage Countries ({pricing.length})</h3>
+                <button onClick={() => setShowAddCountry(!showAddCountry)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-sm font-medium">
+                  <Plus className="w-4 h-4" /> Add Country
                 </button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">Edit prices below. Changes apply immediately to the Telegram bot after saving.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {pricing.map(p => {
-                const isEditing = !!editingPricing[p.country_code];
-                const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
-                return (
-                  <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium">{p.flag} {p.country_name}</span>
-                      <span className="text-xs text-muted-foreground">{p.country_code}</span>
+              </div>
+              {showAddCountry && (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Code (e.g. PK)</label>
+                      <input type="text" maxLength={3} value={newCountry.code} onChange={(e) => setNewCountry(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="PK" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
-                        <input type="number" value={current.regular}
-                          onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular: Number(e.target.value) } }))}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
-                        <input type="number" value={current.aged}
-                          onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                      </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Name</label>
+                      <input type="text" value={newCountry.name} onChange={(e) => setNewCountry(p => ({ ...p, name: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="Pakistan" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Flag Emoji</label>
+                      <input type="text" value={newCountry.flag} onChange={(e) => setNewCountry(p => ({ ...p, flag: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="🇵🇰" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Regular ₹</label>
+                      <input type="number" value={newCountry.regular} onChange={(e) => setNewCountry(p => ({ ...p, regular: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Aged ₹</label>
+                      <input type="number" value={newCountry.aged} onChange={(e) => setNewCountry(p => ({ ...p, aged: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
                     </div>
                   </div>
-                );
-              })}
+                  <div className="flex gap-2">
+                    <button onClick={addCountry} disabled={addingCountry || !newCountry.code || !newCountry.name}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                      <Plus className="w-4 h-4" /> {addingCountry ? "Adding..." : "Add Country"}
+                    </button>
+                    <button onClick={() => setShowAddCountry(false)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pricing Editor */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /> Dynamic Pricing Editor</h3>
+                {Object.keys(editingPricing).length > 0 && (
+                  <button onClick={savePricing} disabled={savingPricing}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-sm font-medium">
+                    <Save className="w-4 h-4" /> {savingPricing ? "Saving..." : `Save ${Object.keys(editingPricing).length} changes`}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Edit prices below. Changes apply immediately to the Telegram bot after saving.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {pricing.map(p => {
+                  const isEditing = !!editingPricing[p.country_code];
+                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
+                  return (
+                    <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-medium">{p.flag} {p.country_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{p.country_code}</span>
+                          <button onClick={() => removeCountry(p.country_code)} disabled={removingCountry === p.country_code}
+                            className="p-1 rounded-md hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove country">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
+                          <input type="number" value={current.regular}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
+                          <input type="number" value={current.aged}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
