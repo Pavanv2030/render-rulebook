@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
 };
 
-const COUNTRIES = ["IN", "US", "UK", "ET", "AR"];
+const COUNTRIES = ["IN", "US", "UK", "ET", "AR", "BR", "DE", "FR", "NG", "KE", "ZA", "AE", "SA", "TR", "CA", "AU", "JP", "RU", "TM", "MG"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
