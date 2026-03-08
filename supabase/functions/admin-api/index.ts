@@ -364,7 +364,6 @@ Deno.serve(async (req) => {
         }
         return new Response(JSON.stringify({ success: true, sent, failed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-    }
 
       // ========== CRYPTO WALLETS ==========
       if (body.action === "get_crypto_wallets") {
