@@ -356,6 +356,14 @@ const Admin = () => {
           >
             <Database className="w-4 h-4" /> Inventory
           </button>
+          <button
+            onClick={() => setActiveTab("stats")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "stats" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" /> Stats
+          </button>
         </div>
 
         {/* INVENTORY TAB */}
