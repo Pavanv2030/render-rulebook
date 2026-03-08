@@ -113,6 +113,39 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_wallets: {
+        Row: {
+          coin_name: string
+          coin_symbol: string
+          created_at: string
+          id: string
+          is_active: boolean
+          network: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          coin_name: string
+          coin_symbol: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          network?: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          coin_name?: string
+          coin_symbol?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          network?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           country: string | null
