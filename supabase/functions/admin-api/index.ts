@@ -417,6 +417,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // GET UPI wallets
+    if (req.method === "GET" && action === "upi_wallets") {
+      const { data, error } = await supabase.from("upi_wallets").select("*").order("created_at");
+      if (error) throw error;
+      return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
