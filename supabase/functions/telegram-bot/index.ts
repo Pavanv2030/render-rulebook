@@ -6,7 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const PER_ACCOUNT_PRICE = { regular: 50, aged: 100 };
+const COUNTRY_PRICING: Record<string, { regular: number; aged: number }> = {
+  IN: { regular: 50, aged: 100 },
+  US: { regular: 50, aged: 150 },
+  UK: { regular: 80, aged: 150 },
+  ET: { regular: 50, aged: 100 },
+  AR: { regular: 75, aged: 120 },
+  BR: { regular: 200, aged: 400 },
+  DE: { regular: 200, aged: 400 },
+  FR: { regular: 250, aged: 500 },
+  NG: { regular: 50, aged: 100 },
+  KE: { regular: 50, aged: 100 },
+  ZA: { regular: 50, aged: 100 },
+  AE: { regular: 300, aged: 600 },
+  SA: { regular: 300, aged: 600 },
+  TR: { regular: 200, aged: 400 },
+  CA: { regular: 50, aged: 100 },
+  AU: { regular: 200, aged: 400 },
+  JP: { regular: 200, aged: 400 },
+  RU: { regular: 200, aged: 400 },
+  TM: { regular: 100, aged: 200 },
+  MG: { regular: 50, aged: 100 },
+};
 const CURRENCY = "INR";
 const SYMBOL = "₹";
 
@@ -126,10 +147,7 @@ Deno.serve(async (req) => {
         `✅ 3,847+ verified orders delivered\n` +
         `🔒 Delivery after payment verification\n` +
         `💯 100% working accounts guaranteed\n\n` +
-        `📦 *Pricing:*\n` +
-        `• Regular: ${SYMBOL}${PER_ACCOUNT_PRICE.regular}/account\n` +
-        `• Aged (6mo+): ${SYMBOL}${PER_ACCOUNT_PRICE.aged}/account\n\n` +
-        `🌍 *Select your country:*`,
+        `🌍 *Select your country to see pricing:*`,
         { inline_keyboard: countryButtons }
       );
 
@@ -154,13 +172,19 @@ Deno.serve(async (req) => {
         .update({ state: "awaiting_type", selected_country: countryCode, updated_at: new Date().toISOString() })
         .eq("chat_id", chatId);
 
+      const pricing = COUNTRY_PRICING[countryCode] || { regular: 50, aged: 100 };
+
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `${country.flag} *${country.name}* selected!\n\n*Choose account type:*`,
+        `${country.flag} *${country.name}* selected!\n\n` +
+        `📦 *Pricing for ${country.name}:*\n` +
+        `• Regular: ${SYMBOL}${pricing.regular}/account\n` +
+        `• Aged (6mo+): ${SYMBOL}${pricing.aged}/account\n\n` +
+        `*Choose account type:*`,
         {
           inline_keyboard: [
             [
-              { text: `📦 Regular (${SYMBOL}${PER_ACCOUNT_PRICE.regular}/acc)`, callback_data: "type_regular" },
-              { text: `👑 Aged (${SYMBOL}${PER_ACCOUNT_PRICE.aged}/acc)`, callback_data: "type_aged" },
+              { text: `📦 Regular (${SYMBOL}${pricing.regular}/acc)`, callback_data: "type_regular" },
+              { text: `👑 Aged (${SYMBOL}${pricing.aged}/acc)`, callback_data: "type_aged" },
             ],
           ],
         }
@@ -171,7 +195,9 @@ Deno.serve(async (req) => {
     // Type selection
     if (input === "type_regular" || input === "type_aged") {
       const type = input === "type_aged" ? "aged" : "regular";
-      const price = PER_ACCOUNT_PRICE[type];
+      const selectedCountry = state?.selected_country || "IN";
+      const pricing = COUNTRY_PRICING[selectedCountry] || { regular: 50, aged: 100 };
+      const price = pricing[type];
       const label = type === "aged" ? "👑 Aged" : "📦 Regular";
 
       await supabase.from("conversation_states")
@@ -198,7 +224,8 @@ Deno.serve(async (req) => {
       const type = state.selected_type || "regular";
       const country = state.selected_country || "IN";
       const countryInfo = COUNTRIES.find(c => c.code === country);
-      const pricePerAcc = type === "aged" ? PER_ACCOUNT_PRICE.aged : PER_ACCOUNT_PRICE.regular;
+      const pricing = COUNTRY_PRICING[country] || { regular: 50, aged: 100 };
+      const pricePerAcc = pricing[type as "regular" | "aged"];
       const totalPrice = qty * pricePerAcc;
       const label = type === "aged" ? "👑 Aged" : "Regular";
       const orderId = "ORD" + Date.now().toString().slice(-6);
