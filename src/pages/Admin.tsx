@@ -567,7 +567,7 @@ const Admin = () => {
               <div className="glass rounded-2xl p-5">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> Stock Overview</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {COUNTRIES.map(c => {
+                  {dynamicCountries.map(c => {
                     const stats = inventory[c.code];
                     if (!stats) return null;
                     const total = (stats.regular?.available || 0) + (stats.aged?.available || 0);
