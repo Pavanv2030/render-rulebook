@@ -123,6 +123,53 @@ Deno.serve(async (req) => {
 
       await zipReader.close();
 
+      // 🔔 Send stock alerts to subscribers
+      if (added > 0) {
+        const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (BOT_TOKEN) {
+          const { data: alerts } = await supabase.from("stock_alerts")
+            .select("*")
+            .eq("country", country)
+            .eq("account_type", accountType)
+            .eq("notified", false);
+
+          if (alerts && alerts.length > 0) {
+            const countryNames: Record<string, string> = { IN: "🇮🇳 India", US: "🇺🇸 USA", UK: "🇬🇧 UK", AE: "🇦🇪 UAE", ET: "🇪🇹 Ethiopia", AR: "🇦🇷 Argentina", BR: "🇧🇷 Brazil", DE: "🇩🇪 Germany", FR: "🇫🇷 France", NG: "🇳🇬 Nigeria", KE: "🇰🇪 Kenya", ZA: "🇿🇦 South Africa", SA: "🇸🇦 Saudi Arabia", TR: "🇹🇷 Turkey", CA: "🇨🇦 Canada", AU: "🇦🇺 Australia", JP: "🇯🇵 Japan", RU: "🇷🇺 Russia", TM: "🇹🇲 Turkmenistan", MG: "🇲🇬 Madagascar" };
+            const label = accountType === "aged" ? "👑 Aged" : "📦 Regular";
+            const cName = countryNames[country] || country;
+
+            for (const alert of alerts) {
+              // Skip web users
+              if (alert.chat_id.startsWith("web_")) continue;
+              try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: alert.chat_id,
+                    text: `🔔 *STOCK ALERT!*\n\n${cName} — ${label} accounts are *back in stock!* 🎉\n\n*${added}* new accounts available.\n\nOrder now before they sell out! ⚡`,
+                    parse_mode: "Markdown",
+                    reply_markup: JSON.stringify({
+                      inline_keyboard: [
+                        [{ text: "🛒 Buy Now", callback_data: `country_${country}` }],
+                      ],
+                    }),
+                  }),
+                });
+              } catch (e) {
+                console.error(`Failed to notify ${alert.chat_id}:`, e);
+              }
+            }
+
+            // Mark alerts as notified
+            const alertIds = alerts.filter(a => !a.chat_id.startsWith("web_")).map(a => a.id);
+            if (alertIds.length > 0) {
+              await supabase.from("stock_alerts").update({ notified: true }).in("id", alertIds);
+            }
+          }
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
         added,

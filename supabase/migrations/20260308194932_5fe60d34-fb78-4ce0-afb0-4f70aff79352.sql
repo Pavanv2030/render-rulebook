@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_alerts ENABLE ROW LEVEL SECURITY;

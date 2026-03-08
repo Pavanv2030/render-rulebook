@@ -283,6 +283,33 @@ export type Database = {
           },
         ]
       }
+      stock_alerts: {
+        Row: {
+          account_type: string
+          chat_id: string
+          country: string
+          created_at: string
+          id: string
+          notified: boolean
+        }
+        Insert: {
+          account_type?: string
+          chat_id: string
+          country: string
+          created_at?: string
+          id?: string
+          notified?: boolean
+        }
+        Update: {
+          account_type?: string
+          chat_id?: string
+          country?: string
+          created_at?: string
+          id?: string
+          notified?: boolean
+        }
+        Relationships: []
+      }
       upi_wallets: {
         Row: {
           created_at: string
