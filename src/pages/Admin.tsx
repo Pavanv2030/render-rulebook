@@ -163,6 +163,14 @@ const Admin = () => {
     } catch {}
   }, [adminKey, apiFetch, baseUrl, invFilterCountry, invFilterType, invFilterStatus]);
 
+  const fetchCryptoWallets = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api?action=crypto_wallets`);
+      if (!result.error) setCryptoWallets(result.wallets || []);
+    } catch {}
+  }, [adminKey, apiFetch, baseUrl]);
+
   useEffect(() => {
     if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
   }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
