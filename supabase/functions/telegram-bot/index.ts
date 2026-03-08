@@ -864,10 +864,16 @@ async function handleUpiPayment(orderId: string, chatId: string, BOT_TOKEN: stri
   const { data: order } = await supabase.from("orders").select("amount").eq("order_id", orderId).single();
   if (!order) return;
 
+  // Fetch active UPI wallet from DB
+  const { data: upiWallets } = await supabase.from("upi_wallets").select("*").eq("is_active", true).order("created_at").limit(1);
+  const upiId = upiWallets && upiWallets.length > 0 ? upiWallets[0].upi_id : "venkat342@fam";
+  const upiName = upiWallets && upiWallets.length > 0 ? upiWallets[0].display_name : "";
+
   const qrUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/upi-scanner.jpg`;
   await sendPhoto(BOT_TOKEN, chatId, qrUrl,
     `💳 *PAY VIA UPI*\n\n` +
-    `📱 UPI ID: \`venkat342@fam\`\n` +
+    `📱 UPI ID: \`${upiId}\`\n` +
+    (upiName ? `👤 Name: ${upiName}\n` : "") +
     `💰 Amount: *${SYMBOL}${order.amount.toLocaleString()}*\n\n` +
     `Scan the QR above or pay via\nGPay • Paytm • PhonePe\n\n` +
     `📸 *Send payment screenshot* for\nfaster verification!\n\n` +
