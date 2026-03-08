@@ -856,6 +856,117 @@ const Admin = () => {
           </div>
         )}
 
+        {/* ==================== CRYPTO TAB ==================== */}
+        {activeTab === "crypto" && (
+          <div className="space-y-6">
+            {/* Add Wallet */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-primary" /> Crypto Wallets ({cryptoWallets.length})</h3>
+                <button onClick={() => setShowAddWallet(!showAddWallet)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-sm font-medium">
+                  <Plus className="w-4 h-4" /> Add Wallet
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Manage crypto payment addresses. Active wallets appear as payment options in the customer bot.</p>
+
+              {showAddWallet && (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-3 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Symbol (e.g. BTC)</label>
+                      <input type="text" maxLength={10} value={newWallet.coin_symbol} onChange={(e) => setNewWallet(p => ({ ...p, coin_symbol: e.target.value.toUpperCase() }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="USDT" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Coin Name</label>
+                      <input type="text" value={newWallet.coin_name} onChange={(e) => setNewWallet(p => ({ ...p, coin_name: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="Tether" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Network</label>
+                      <input type="text" value={newWallet.network} onChange={(e) => setNewWallet(p => ({ ...p, network: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="TRC20" />
+                    </div>
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="text-xs text-muted-foreground block mb-1">Wallet Address</label>
+                      <input type="text" value={newWallet.wallet_address} onChange={(e) => setNewWallet(p => ({ ...p, wallet_address: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="TYourWalletAddress..." />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={addCryptoWallet} disabled={addingWallet || !newWallet.coin_symbol || !newWallet.coin_name || !newWallet.wallet_address}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                      <Plus className="w-4 h-4" /> {addingWallet ? "Adding..." : "Add Wallet"}
+                    </button>
+                    <button onClick={() => setShowAddWallet(false)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet List */}
+              <div className="space-y-3">
+                {cryptoWallets.map(w => (
+                  <div key={w.id} className={`bg-secondary/50 rounded-xl p-4 ${w.is_active ? "" : "opacity-60"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-primary">{w.coin_symbol}</span>
+                        <span className="text-sm text-muted-foreground">{w.coin_name}</span>
+                        {w.network && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">{w.network}</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateCryptoWallet(w.id, { is_active: !w.is_active })}
+                          className={`p-1.5 rounded-md transition-colors ${w.is_active ? "text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/20" : "text-muted-foreground hover:bg-secondary"}`}
+                          title={w.is_active ? "Disable" : "Enable"}>
+                          {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                        </button>
+                        <button onClick={() => { setEditingWalletId(w.id); setEditingWalletAddress(w.wallet_address); }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/20 transition-colors" title="Edit address">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteCryptoWallet(w.id, w.coin_symbol)}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/20 transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {editingWalletId === w.id ? (
+                      <div className="flex gap-2 mt-2">
+                        <input type="text" value={editingWalletAddress} onChange={(e) => setEditingWalletAddress(e.target.value)}
+                          className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono" />
+                        <button onClick={() => updateCryptoWallet(w.id, { wallet_address: editingWalletAddress })}
+                          className="px-3 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] text-xs font-medium">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingWalletId(null)} className="px-3 py-2 rounded-lg bg-secondary text-muted-foreground text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="text-xs font-mono text-foreground/80 bg-background/50 px-2 py-1 rounded break-all">{w.wallet_address}</code>
+                        <button onClick={() => navigator.clipboard.writeText(w.wallet_address)} className="p-1 text-muted-foreground hover:text-primary" title="Copy">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <span>{w.is_active ? "🟢 Active" : "🔴 Inactive"}</span>
+                      <span>•</span>
+                      <span>Added {new Date(w.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+                {cryptoWallets.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Wallet className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No crypto wallets configured</p>
+                    <p className="text-xs mt-1">Add your first wallet to enable crypto payments</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ==================== BROADCAST TAB ==================== */}
         {activeTab === "broadcast" && (
           <div className="glass rounded-2xl p-6 max-w-2xl">
