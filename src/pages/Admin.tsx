@@ -48,7 +48,9 @@ interface InventoryStats { [country: string]: { [type: string]: { available: num
 
 interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; network: string; wallet_address: string; is_active: boolean; created_at: string; updated_at: string; }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "broadcast";
+interface UpiWallet { id: string; upi_id: string; display_name: string; qr_image_path: string; is_active: boolean; created_at: string; updated_at: string; }
+
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "broadcast";
 
 const Admin = () => {
   const [password, setPassword] = useState("");
