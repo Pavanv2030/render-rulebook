@@ -53,6 +53,7 @@ const ChatWidget = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [upiModal, setUpiModal] = useState<{ amount: number; orderId: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionId = useRef(getSessionId());
 
