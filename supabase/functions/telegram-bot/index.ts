@@ -185,6 +185,21 @@ Deno.serve(async (req) => {
     // 🏠 /start — Welcome
     // ════════════════════════════════════════════
     if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu" || input === "home") {
+      // Check if first-time user — send promo video
+      const { data: existingOrders } = await supabase.from("orders").select("id").eq("customer_id", chatId).limit(1);
+      if (!existingOrders || existingOrders.length === 0) {
+        const videoUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/promo-video.mp4`;
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId, video: videoUrl,
+            caption: `🎬 *Welcome to RIOX ACCOUNTS PRO!*\n\nWatch this quick intro to see how easy it is to buy premium Telegram accounts.\n\n_New here? Type /guide for a step-by-step tutorial!_`,
+            parse_mode: "Markdown",
+            supports_streaming: true,
+          }),
+        });
+      }
+
       // Popular countries first row, then rest in groups of 3
       const popular = ["IN", "US", "UK", "AE"];
       const popularRow = popular.map(code => {
@@ -200,6 +215,7 @@ Deno.serve(async (req) => {
       }
 
       const allRows = [
+        [{ text: "📖 How to Buy (Guide)", callback_data: "guide_1" }],
         popularRow,
         ...restRows,
         [{ text: "📊 My Orders", callback_data: "check_status" }, { text: "🎁 Referrals", callback_data: "/refer" }],
@@ -225,10 +241,146 @@ Deno.serve(async (req) => {
         `└─────────────────────┘\n\n` +
         `${stepIndicator(1)}\n\n` +
         `⬇️ *Pick your country to begin:*\n` +
-        `_(⭐ Popular countries shown first)_`,
+        `_(⭐ Popular countries shown first)_\n` +
+        `_(📖 New? Tap "How to Buy" for a guide!)_`,
         { inline_keyboard: allRows });
 
       await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 📖 /guide — Interactive Step-by-Step Tutorial
+    // ════════════════════════════════════════════
+    if (input === "/guide" || input === "guide_1") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📖  HOW TO BUY — GUIDE       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*STEP 1 of 5* — 🌍 Choose Country\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `After pressing /start, you'll see\na list of 20 countries.\n\n` +
+        `🔹 *Popular countries* appear first:\n` +
+        `   🇮🇳 India • 🇺🇸 USA • 🇬🇧 UK • 🇦🇪 UAE\n\n` +
+        `🔹 Simply *tap on your country*\n   to see pricing & availability.\n\n` +
+        `💡 _Each country has different\nprices and stock levels._\n\n` +
+        `▓░░░░ 1/5`,
+        { inline_keyboard: [
+          [{ text: "Next → Step 2 📦", callback_data: "guide_2" }],
+          [{ text: "⏭️ Skip Guide — Start Buying", callback_data: "start" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "guide_2") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📖  HOW TO BUY — GUIDE       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*STEP 2 of 5* — 📦 Pick Account Type\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `You'll see two options:\n\n` +
+        `📦 *Regular Accounts*\n` +
+        `   • Fresh, newly created\n` +
+        `   • Lower price\n` +
+        `   • Great for general farming\n\n` +
+        `👑 *Aged Accounts (6mo+)*\n` +
+        `   • 6+ months old\n` +
+        `   • Higher trust scores\n` +
+        `   • Best for premium airdrops\n\n` +
+        `🔹 Tap the button to select.\n` +
+        `🔹 Stock levels shown in real-time!\n\n` +
+        `▓▓░░░ 2/5`,
+        { inline_keyboard: [
+          [{ text: "← Step 1", callback_data: "guide_1" }, { text: "Step 3 →", callback_data: "guide_3" }],
+          [{ text: "⏭️ Skip — Start Buying", callback_data: "start" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "guide_3") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📖  HOW TO BUY — GUIDE       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*STEP 3 of 5* — 🔢 Set Quantity\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `Choose how many accounts:\n\n` +
+        `🔹 *Quick buttons:*\n` +
+        `   1️⃣ 2️⃣ 3️⃣ 5️⃣ 🔟 📦25 📦50 💯\n\n` +
+        `🔹 Or *type any number* (1–100)\n\n` +
+        `📊 A *price calculator* shows\ntotal cost for each quantity!\n\n` +
+        `_Example: 10 × ₹50 = ₹500 total_\n\n` +
+        `▓▓▓░░ 3/5`,
+        { inline_keyboard: [
+          [{ text: "← Step 2", callback_data: "guide_2" }, { text: "Step 4 →", callback_data: "guide_4" }],
+          [{ text: "⏭️ Skip — Start Buying", callback_data: "start" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "guide_4") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📖  HOW TO BUY — GUIDE       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*STEP 4 of 5* — 💳 Make Payment\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `After confirming your order:\n\n` +
+        `1️⃣ You'll see the *order summary*\n   with total amount\n\n` +
+        `2️⃣ A *UPI QR code* is shown —\n   scan it with any UPI app:\n` +
+        `   • Google Pay\n   • PhonePe\n   • Paytm\n\n` +
+        `3️⃣ Pay the exact amount shown\n\n` +
+        `4️⃣ *Send a screenshot* 📸 of your\n   payment for faster verification!\n\n` +
+        `5️⃣ Tap *"✅ I Have Paid"*\n\n` +
+        `▓▓▓▓░ 4/5`,
+        { inline_keyboard: [
+          [{ text: "← Step 3", callback_data: "guide_3" }, { text: "Step 5 →", callback_data: "guide_5" }],
+          [{ text: "⏭️ Skip — Start Buying", callback_data: "start" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "guide_5") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📖  HOW TO BUY — GUIDE       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*STEP 5 of 5* — 📥 Get Your Accounts!\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `After payment verification:\n\n` +
+        `✅ Admin approves your order\n` +
+        `📥 Accounts are *delivered right here*\n   in this chat as a file!\n\n` +
+        `⏱️ *Typical wait: 5–15 minutes*\n\n` +
+        `📊 Track anytime: tap *"My Orders"*\n   or type /status\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🎉 *That's it! Super easy!*\n\n` +
+        `Ready to buy your first accounts?\nTap the button below! 🚀\n\n` +
+        `▓▓▓▓▓ 5/5 ✅`,
+        { inline_keyboard: [
+          [{ text: "🛒 Start Buying Now!", callback_data: "start" }],
+          [{ text: "← Back to Step 4", callback_data: "guide_4" }],
+          [{ text: "🎬 Watch Promo Video", callback_data: "watch_promo" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Watch promo video on demand
+    if (input === "watch_promo" || input === "/video") {
+      const videoUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/promo-video.mp4`;
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId, video: videoUrl,
+          caption: `🎬 *RIOX ACCOUNTS PRO*\n\nPremium Telegram accounts — instant delivery, guaranteed quality!\n\nReady to start? 👇`,
+          parse_mode: "Markdown",
+          supports_streaming: true,
+          reply_markup: JSON.stringify({ inline_keyboard: [
+            [{ text: "🛒 Buy Now", callback_data: "start" }],
+            [{ text: "📖 Step-by-Step Guide", callback_data: "guide_1" }],
+          ]}),
+        }),
+      });
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
