@@ -85,6 +85,11 @@ const ChatWidget = () => {
         buttons: data.buttons,
       };
       setMessages((prev) => [...prev, botMsg]);
+
+      // Show UPI modal if payment via UPI detected
+      if (data.reply?.includes("Payment via UPI") && data.upiAmount && data.orderId) {
+        setUpiModal({ amount: data.upiAmount, orderId: data.orderId });
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => [
