@@ -46,7 +46,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "👋 Welcome to AirdropAccounts Pro!\n\nI can help you order premium Telegram accounts for airdrop farming. Tap below to get started!",
+      text: "👋 Welcome to RIOX Accounts Pro!\n\nI can help you order premium Telegram accounts for airdrop farming. Tap below to get started!",
       sender: "bot",
       buttons: [{ text: "🛒 Browse Accounts", data: "start" }],
     },
