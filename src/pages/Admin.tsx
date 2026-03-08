@@ -173,6 +173,14 @@ const Admin = () => {
     } catch {}
   }, [adminKey, apiFetch, baseUrl]);
 
+  const fetchUpiWallets = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api?action=upi_wallets`);
+      if (!result.error) setUpiWallets(result.wallets || []);
+    } catch {}
+  }, [adminKey, apiFetch, baseUrl]);
+
   useEffect(() => {
     if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
   }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
