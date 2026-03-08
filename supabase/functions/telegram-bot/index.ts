@@ -59,16 +59,16 @@ async function answerCb(botToken: string, cbId: string, text?: string) {
   });
 }
 
-async function getPricing(supabase: any): Promise<Record<string, { regular: number; aged: number }>> {
+async function getPricing(supabase: any): Promise<Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }>> {
   try {
-    const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price");
+    const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price, regular_price_usdt, aged_price_usdt");
     if (data && data.length > 0) {
-      const pricing: Record<string, { regular: number; aged: number }> = {};
-      for (const row of data) pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price) };
+      const pricing: Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }> = {};
+      for (const row of data) pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price), regular_usdt: Number(row.regular_price_usdt || 0), aged_usdt: Number(row.aged_price_usdt || 0) };
       return pricing;
     }
   } catch (e) { console.error("Pricing fetch failed:", e); }
-  return { IN: { regular: 50, aged: 100 }, US: { regular: 50, aged: 150 } };
+  return { IN: { regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 }, US: { regular: 50, aged: 150, regular_usdt: 0, aged_usdt: 0 } };
 }
 
 async function getStock(supabase: any, country: string): Promise<{ regular: number; aged: number }> {
@@ -883,8 +883,14 @@ async function handleUpiPayment(orderId: string, chatId: string, BOT_TOKEN: stri
 // ₿ Crypto Payment Handler
 // ════════════════════════════════════════════
 async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: string, supabase: any) {
-  const { data: order } = await supabase.from("orders").select("amount").eq("order_id", orderId).single();
+  const { data: order } = await supabase.from("orders").select("amount, country, account_type, quantity").eq("order_id", orderId).single();
   if (!order) return;
+
+  // Get USDT pricing for this order
+  const { data: countryPricing } = await supabase.from("country_pricing").select("regular_price_usdt, aged_price_usdt").eq("country_code", order.country).single();
+  const type = order.account_type?.toLowerCase() === "aged" ? "aged" : "regular";
+  const usdtPrice = countryPricing ? (type === "aged" ? Number(countryPricing.aged_price_usdt) : Number(countryPricing.regular_price_usdt)) : 0;
+  const totalUsdt = usdtPrice * order.quantity;
 
   // Get active crypto wallets from DB
   const { data: wallets } = await supabase.from("crypto_wallets").select("*").eq("is_active", true).order("coin_symbol");
@@ -903,8 +909,13 @@ async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: s
     `║   ₿  CRYPTO PAYMENT                ║\n` +
     `╚═══════════════════════╝\n\n` +
     `🆔 Order: \`${orderId}\`\n` +
-    `💰 Amount: *${SYMBOL}${order.amount.toLocaleString()}*\n\n` +
-    `Send the equivalent amount in any\nof the following cryptocurrencies:\n\n`;
+    `💰 Amount (INR): *${SYMBOL}${order.amount.toLocaleString()}*\n`;
+
+  if (totalUsdt > 0) {
+    msg += `💲 Amount (USDT): *$${totalUsdt.toFixed(2)}*\n`;
+  }
+
+  msg += `\nSend the equivalent amount in any\nof the following cryptocurrencies:\n\n`;
 
   const coinEmojis: Record<string, string> = { BTC: "₿", ETH: "⟠", USDT: "💲", USDC: "💵", BNB: "🔶", SOL: "◎", XRP: "✕", DOGE: "🐕", LTC: "Ł", TRX: "🔺" };
 
@@ -916,7 +927,11 @@ async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: s
 
   msg += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `📸 After sending, *send a screenshot*\nor the *transaction hash* here.\n\n`;
-  msg += `⚠️ *Send exact equivalent amount*\nin your chosen crypto.\n\n`;
+  if (totalUsdt > 0) {
+    msg += `💲 *Send exactly $${totalUsdt.toFixed(2)} USDT*\nor equivalent in other crypto.\n\n`;
+  } else {
+    msg += `⚠️ *Send exact equivalent amount*\nin your chosen crypto.\n\n`;
+  }
   msg += `⏱️ Admin will verify & approve\nwithin *15–30 minutes*.`;
 
   await sendMsg(BOT_TOKEN, chatId, msg, {

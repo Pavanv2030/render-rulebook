@@ -86,29 +86,35 @@ export type Database = {
       country_pricing: {
         Row: {
           aged_price: number
+          aged_price_usdt: number
           country_code: string
           country_name: string
           flag: string
           id: string
           regular_price: number
+          regular_price_usdt: number
           updated_at: string
         }
         Insert: {
           aged_price?: number
+          aged_price_usdt?: number
           country_code: string
           country_name: string
           flag?: string
           id?: string
           regular_price?: number
+          regular_price_usdt?: number
           updated_at?: string
         }
         Update: {
           aged_price?: number
+          aged_price_usdt?: number
           country_code?: string
           country_name?: string
           flag?: string
           id?: string
           regular_price?: number
+          regular_price_usdt?: number
           updated_at?: string
         }
         Relationships: []

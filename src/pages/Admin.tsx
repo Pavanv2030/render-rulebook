@@ -41,7 +41,7 @@ const PIE_COLORS = ["hsl(175, 80%, 50%)", "hsl(270, 60%, 60%)", "hsl(145, 70%, 4
 
 interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; }
 interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; }
-interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; }
+interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; regular_price_usdt: number; aged_price_usdt: number; }
 interface InventoryItem { id: string; file_name: string; file_path: string; account_type: string; country: string; status: string; order_id: string | null; created_at: string; }
 interface DashboardData { totalRevenue: number; todayRevenue: number; weekRevenue: number; monthRevenue: number; totalOrders: number; todayOrders: number; weekOrders: number; monthOrders: number; deliveredCount: number; pendingCount: number; totalCustomers: number; topCountries: { country: string; revenue: number }[]; stockLevels: Record<string, { regular: number; aged: number }>; }
 interface InventoryStats { [country: string]: { [type: string]: { available: number; total: number } } }
@@ -73,7 +73,7 @@ const Admin = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerStats, setCustomerStats] = useState<Record<string, { total_orders: number; total_spent: number; delivered: number }>>({});
   const [pricing, setPricing] = useState<PricingRow[]>([]);
-  const [editingPricing, setEditingPricing] = useState<Record<string, { regular: number; aged: number }>>({});
+  const [editingPricing, setEditingPricing] = useState<Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }>>({});
   const [savingPricing, setSavingPricing] = useState(false);
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
   const [invFilterCountry, setInvFilterCountry] = useState("all");
@@ -86,7 +86,7 @@ const Admin = () => {
   const [viewingCustomerOrders, setViewingCustomerOrders] = useState<string | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [showAddCountry, setShowAddCountry] = useState(false);
-  const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 });
+  const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 });
   const [addingCountry, setAddingCountry] = useState(false);
   const [removingCountry, setRemovingCountry] = useState<string | null>(null);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
@@ -232,7 +232,7 @@ const Admin = () => {
   const savePricing = async () => {
     setSavingPricing(true); setError(""); setSuccessMsg("");
     try {
-      const updates = Object.entries(editingPricing).map(([code, p]) => ({ country_code: code, regular_price: p.regular, aged_price: p.aged }));
+      const updates = Object.entries(editingPricing).map(([code, p]) => ({ country_code: code, regular_price: p.regular, aged_price: p.aged, regular_price_usdt: p.regular_usdt, aged_price_usdt: p.aged_usdt }));
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_pricing", pricing: updates }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ Pricing updated successfully!"); setEditingPricing({}); fetchPricing();
@@ -285,9 +285,9 @@ const Admin = () => {
     if (!newCountry.code || !newCountry.name) return;
     setAddingCountry(true); setError(""); setSuccessMsg("");
     try {
-      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged }) });
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged, regular_price_usdt: newCountry.regular_usdt, aged_price_usdt: newCountry.aged_usdt }) });
       if (result.error) throw new Error(result.error);
-      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 }); setShowAddCountry(false); fetchPricing();
+      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 }); setShowAddCountry(false); fetchPricing();
     } catch (err: any) { setError(err.message); } finally { setAddingCountry(false); }
   };
 
@@ -768,7 +768,7 @@ const Admin = () => {
               </div>
               {showAddCountry && (
                 <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">Code (e.g. PK)</label>
                       <input type="text" maxLength={3} value={newCountry.code} onChange={(e) => setNewCountry(p => ({ ...p, code: e.target.value.toUpperCase() }))}
@@ -792,6 +792,16 @@ const Admin = () => {
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">Aged ₹</label>
                       <input type="number" value={newCountry.aged} onChange={(e) => setNewCountry(p => ({ ...p, aged: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Regular USDT</label>
+                      <input type="number" step="0.01" value={newCountry.regular_usdt} onChange={(e) => setNewCountry(p => ({ ...p, regular_usdt: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Aged USDT</label>
+                      <input type="number" step="0.01" value={newCountry.aged_usdt} onChange={(e) => setNewCountry(p => ({ ...p, aged_usdt: Number(e.target.value) }))}
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
                     </div>
                   </div>
@@ -821,7 +831,7 @@ const Admin = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {pricing.map(p => {
                   const isEditing = !!editingPricing[p.country_code];
-                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
+                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price, regular_usdt: p.regular_price_usdt, aged_usdt: p.aged_price_usdt };
                   return (
                     <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
                       <div className="flex items-center justify-between mb-3">
@@ -834,7 +844,7 @@ const Admin = () => {
                           </button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
                           <input type="number" value={current.regular}
@@ -845,6 +855,18 @@ const Admin = () => {
                           <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
                           <input type="number" value={current.aged}
                             onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">📦 Regular (USDT)</label>
+                          <input type="number" step="0.01" value={current.regular_usdt}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular_usdt: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">👑 Aged (USDT)</label>
+                          <input type="number" step="0.01" value={current.aged_usdt}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged_usdt: Number(e.target.value) } }))}
                             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
                         </div>
                       </div>
