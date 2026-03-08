@@ -128,6 +128,7 @@ Deno.serve(async (req) => {
     if (input === "🎁 refer & earn") input = "/refer";
     if (input === "🧑‍💻 support") input = "support";
     if (input === "📖 guide") input = "/guide";
+    if (input === "📲 login guide") input = "/loginguide";
 
     const PRICING = await getPricing(supabase);
 
