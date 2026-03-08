@@ -87,7 +87,11 @@ const Admin = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [viewingCustomerOrders, setViewingCustomerOrders] = useState<string | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
-  const [showAddCountry, setShowAddCountry] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [sendingMsgTo, setSendingMsgTo] = useState<string | null>(null);
+  const [customerMsg, setCustomerMsg] = useState("");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [bulkActioning, setBulkActioning] = useState(false);
   const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 });
   const [addingCountry, setAddingCountry] = useState(false);
   const [removingCountry, setRemovingCountry] = useState<string | null>(null);
