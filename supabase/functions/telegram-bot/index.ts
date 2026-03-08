@@ -172,21 +172,34 @@ Deno.serve(async (req) => {
         rows.push(row);
       }
 
-      await sendMsg(BOT_TOKEN, chatId,
+      const SUPABASE_URL_ENV = Deno.env.get("SUPABASE_URL")!;
+      const bannerUrl = `${SUPABASE_URL_ENV}/storage/v1/object/public/bot-assets/welcome-banner.jpg`;
+
+      const caption =
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         `    🚀 *AIRDROP ACCOUNTS PRO*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `Hey *${firstName}*! 👋\n\n` +
         `Premium Telegram accounts ready\nfor airdrop farming — delivered\ninstantly to your inbox.\n\n` +
-        `╔══════════════════╗\n` +
-        `║  ✅  3,847+ Orders Delivered    ║\n` +
-        `║  ⭐  4.9/5 Customer Rating       ║\n` +
-        `║  ⚡  Instant Auto-Delivery        ║\n` +
-        `║  🔒  100% Working Guarantee   ║\n` +
-        `╚══════════════════╝\n\n` +
+        `✅  3,847+ Orders Delivered\n` +
+        `⭐  4.9/5 Customer Rating\n` +
+        `⚡  Instant Auto-Delivery\n` +
+        `🔒  100% Working Guarantee\n\n` +
         `🌍 *Step 1:* Select your country below:\n\n` +
-        `${progressBar(1, 4)}`,
-        { inline_keyboard: rows });
+        `${progressBar(1, 4)}`;
+
+      // Send banner photo with caption
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          photo: bannerUrl,
+          caption,
+          parse_mode: "Markdown",
+          reply_markup: JSON.stringify({ inline_keyboard: rows }),
+        }),
+      });
 
       await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
