@@ -211,6 +211,21 @@ Deno.serve(async (req) => {
       if (body.action === "approve_payment") {
         const { orderId } = body;
         await supabase.from("orders").update({ status: "approved" }).eq("order_id", orderId);
+
+        // Notify customer about approval
+        if (BOT_TOKEN) {
+          const { data: ord } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount, country").eq("order_id", orderId).single();
+          if (ord && ord.customer_id && !ord.customer_id.startsWith("web_")) {
+            await sendTelegramMessage(BOT_TOKEN, ord.customer_id,
+              `✅ *Payment Approved!*\n\n` +
+              `🆔 Order: \`${ord.order_id}\`\n` +
+              `📦 ${ord.quantity}x ${ord.account_type}\n` +
+              `💰 ₹${ord.amount}\n\n` +
+              `⏳ Preparing your accounts for delivery...\nYou'll receive them shortly! 🚀`
+            );
+          }
+        }
+
         const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
         const deliverRes = await fetch(autoDeliverUrl, {
           method: "POST",
@@ -244,6 +259,22 @@ Deno.serve(async (req) => {
         if (status === "delivered") updateData.delivered_at = new Date().toISOString();
         const { error } = await supabase.from("orders").update(updateData).eq("order_id", orderId);
         if (error) throw error;
+
+        // Notify customer about status change
+        if (BOT_TOKEN) {
+          const { data: ord } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount").eq("order_id", orderId).single();
+          if (ord && ord.customer_id && !ord.customer_id.startsWith("web_")) {
+            const statusMessages: Record<string, string> = {
+              approved: `✅ *Payment Approved!*\n\n🆔 Order: \`${ord.order_id}\`\n📦 ${ord.quantity}x ${ord.account_type}\n💰 ₹${ord.amount}\n\n⏳ Preparing your accounts... You'll receive them shortly! 🚀`,
+              delivered: `📦 *Order Delivered!*\n\n🆔 Order: \`${ord.order_id}\`\n📦 ${ord.quantity}x ${ord.account_type}\n💰 ₹${ord.amount}\n\n✅ Your accounts have been delivered! Check your messages above.\nType /start to order more! 🎉`,
+              rejected: `❌ *Order Rejected*\n\n🆔 Order: \`${ord.order_id}\`\n📦 ${ord.quantity}x ${ord.account_type}\n💰 ₹${ord.amount}\n\nPlease contact support or try again.\nType /start to place a new order.`,
+              cancelled: `🚫 *Order Cancelled*\n\n🆔 Order: \`${ord.order_id}\`\n📦 ${ord.quantity}x ${ord.account_type}\n💰 ₹${ord.amount}\n\nType /start to place a new order.`,
+            };
+            const msg = statusMessages[status];
+            if (msg) await sendTelegramMessage(BOT_TOKEN, ord.customer_id, msg);
+          }
+        }
+
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
