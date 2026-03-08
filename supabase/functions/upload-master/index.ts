@@ -1,10 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { BlobReader, ZipReader, TextWriter, BlobWriter } from "https://esm.sh/@zip.js/zip.js@2.7.34";
+import { BlobReader, ZipReader, BlobWriter } from "https://esm.sh/@zip.js/zip.js@2.7.34";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
 };
+
+const COUNTRIES = ["IN", "US", "UK", "ET", "AR"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,31 +30,33 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // GET: inventory stats
+    // GET: inventory stats by country
     if (req.method === "GET" && action === "inventory") {
-      const { data: regular } = await supabase
-        .from("account_inventory")
-        .select("id", { count: "exact" })
-        .eq("account_type", "regular")
-        .eq("status", "available");
-      const { data: aged } = await supabase
-        .from("account_inventory")
-        .select("id", { count: "exact" })
-        .eq("account_type", "aged")
-        .eq("status", "available");
-      const { data: totalRegular } = await supabase
-        .from("account_inventory")
-        .select("id", { count: "exact" })
-        .eq("account_type", "regular");
-      const { data: totalAged } = await supabase
-        .from("account_inventory")
-        .select("id", { count: "exact" })
-        .eq("account_type", "aged");
+      const stats: Record<string, Record<string, { available: number; total: number }>> = {};
 
-      return new Response(JSON.stringify({
-        regular: { available: regular?.length || 0, total: totalRegular?.length || 0 },
-        aged: { available: aged?.length || 0, total: totalAged?.length || 0 },
-      }), {
+      for (const country of COUNTRIES) {
+        stats[country] = {};
+        for (const type of ["regular", "aged"]) {
+          const { data: available } = await supabase
+            .from("account_inventory")
+            .select("id")
+            .eq("account_type", type)
+            .eq("country", country)
+            .eq("status", "available");
+          const { data: total } = await supabase
+            .from("account_inventory")
+            .select("id")
+            .eq("account_type", type)
+            .eq("country", country);
+
+          stats[country][type] = {
+            available: available?.length || 0,
+            total: total?.length || 0,
+          };
+        }
+      }
+
+      return new Response(JSON.stringify({ stats, countries: COUNTRIES }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -61,6 +65,7 @@ Deno.serve(async (req) => {
     if (req.method === "POST") {
       const formData = await req.formData();
       const accountType = (formData.get("accountType") as string) || "regular";
+      const country = (formData.get("country") as string) || "IN";
       const file = formData.get("file") as File;
 
       if (!file) {
@@ -70,7 +75,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Read ZIP
       const zipReader = new ZipReader(new BlobReader(file));
       const entries = await zipReader.getEntries();
 
@@ -78,13 +82,11 @@ Deno.serve(async (req) => {
       let skipped = 0;
 
       for (const entry of entries) {
-        // Skip directories and non-.session files
         if (entry.directory || !entry.filename.endsWith(".session")) continue;
 
         const fileName = entry.filename.split("/").pop() || entry.filename;
-        const filePath = `inventory/${accountType}/${fileName}`;
+        const filePath = `inventory/${country}/${accountType}/${fileName}`;
 
-        // Check if already exists in inventory
         const { data: existing } = await supabase
           .from("account_inventory")
           .select("id")
@@ -96,11 +98,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Extract file content
         const blobWriter = new BlobWriter();
         const blob = await entry.getData!(blobWriter);
 
-        // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from("account-files")
           .upload(filePath, blob, { upsert: true });
@@ -110,9 +110,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Track in inventory
         await supabase.from("account_inventory").insert({
           account_type: accountType,
+          country,
           file_path: filePath,
           file_name: fileName,
           status: "available",
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         success: true,
         added,
         skipped,
-        message: `Added ${added} accounts, skipped ${skipped} duplicates`,
+        message: `Added ${added} ${accountType} accounts for ${country}, skipped ${skipped} duplicates`,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

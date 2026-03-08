@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           account_type: string
           allocated_at: string | null
+          country: string
           created_at: string
           file_name: string
           file_path: string
@@ -28,6 +29,7 @@ export type Database = {
         Insert: {
           account_type?: string
           allocated_at?: string | null
+          country?: string
           created_at?: string
           file_name: string
           file_path: string
@@ -38,6 +40,7 @@ export type Database = {
         Update: {
           account_type?: string
           allocated_at?: string | null
+          country?: string
           created_at?: string
           file_name?: string
           file_path?: string

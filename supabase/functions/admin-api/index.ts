@@ -8,13 +8,13 @@ const corsHeaders = {
 async function sendTelegramDocument(botToken: string, chatId: string, fileUrl: string, caption: string, fileName: string) {
   const fileRes = await fetch(fileUrl);
   const fileBlob = await fileRes.blob();
-  
+
   const formData = new FormData();
   formData.append("chat_id", chatId);
   formData.append("document", fileBlob, fileName);
   formData.append("caption", caption);
   formData.append("parse_mode", "Markdown");
-  
+
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
     method: "POST",
     body: formData,
@@ -69,11 +69,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST: Update order status / upload file
+    // POST actions
     if (req.method === "POST") {
       const contentType = req.headers.get("content-type") || "";
 
-      // Handle file upload (multipart)
+      // Handle file upload (multipart) — manual delivery
       if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
         const orderId = formData.get("orderId") as string;
@@ -92,25 +92,23 @@ Deno.serve(async (req) => {
 
         if (uploadError) throw uploadError;
 
-        // Update order
         await supabase.from("orders").update({
           delivery_file_path: filePath,
           status: "delivered",
           delivered_at: new Date().toISOString(),
         }).eq("order_id", orderId);
 
-        // Send ZIP to customer via Telegram
+        // Send to customer via Telegram
         if (BOT_TOKEN) {
           const { data: order } = await supabase.from("orders")
-            .select("customer_id, order_id, quantity, account_type")
+            .select("customer_id, order_id, quantity, account_type, country")
             .eq("order_id", orderId)
             .single();
 
           if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
-            // Get a signed URL for the file
             const { data: signedData } = await supabase.storage
               .from("account-files")
-              .createSignedUrl(filePath, 600); // 10 min
+              .createSignedUrl(filePath, 600);
 
             if (signedData?.signedUrl) {
               try {
@@ -118,7 +116,7 @@ Deno.serve(async (req) => {
                   BOT_TOKEN,
                   order.customer_id,
                   signedData.signedUrl,
-                  `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+                  `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n🌍 Country: ${order.country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
                   file.name
                 );
               } catch (e) {
@@ -135,6 +133,30 @@ Deno.serve(async (req) => {
 
       // JSON actions
       const body = await req.json();
+
+      // Approve payment & trigger auto-deliver
+      if (body.action === "approve_payment") {
+        const { orderId } = body;
+
+        // Update status to approved
+        await supabase.from("orders").update({ status: "approved" }).eq("order_id", orderId);
+
+        // Trigger auto-deliver
+        const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
+        const deliverRes = await fetch(autoDeliverUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ orderId }),
+        });
+        const deliverResult = await deliverRes.json();
+
+        return new Response(JSON.stringify(deliverResult), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       if (body.action === "update_status") {
         const { orderId, status } = body;

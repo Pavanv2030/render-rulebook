@@ -3,7 +3,7 @@ import { BlobWriter, ZipWriter, BlobReader } from "https://esm.sh/@zip.js/zip.js
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
 };
 
 async function sendTelegramDocument(botToken: string, chatId: string, fileBlob: Blob, caption: string, fileName: string) {
@@ -40,6 +40,20 @@ Deno.serve(async (req) => {
   const LOW_STOCK_THRESHOLD = 10;
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // Support both service-role calls and admin-key calls
+  const adminKey = req.headers.get("x-admin-key");
+  const authHeader = req.headers.get("authorization");
+  const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD");
+  const isServiceRole = authHeader?.includes(SUPABASE_SERVICE_ROLE_KEY);
+  const isAdmin = ADMIN_PASSWORD && adminKey === ADMIN_PASSWORD;
+
+  if (!isServiceRole && !isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { orderId } = await req.json();
 
@@ -64,26 +78,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Determine account type for inventory lookup
     const accountType = order.account_type.toLowerCase().includes("aged") ? "aged" : "regular";
+    const country = order.country || "IN";
 
-    // Pick N available accounts
+    // Pick N available accounts filtered by country + type
     const { data: availableAccounts, error: invError } = await supabase
       .from("account_inventory")
       .select("*")
       .eq("account_type", accountType)
+      .eq("country", country)
       .eq("status", "available")
       .limit(order.quantity);
 
     if (invError) throw invError;
 
     if (!availableAccounts || availableAccounts.length < order.quantity) {
-      // Not enough stock
       const available = availableAccounts?.length || 0;
       if (BOT_TOKEN && order.customer_id && !order.customer_id.startsWith("web_")) {
         await sendTelegramMessage(BOT_TOKEN, order.customer_id,
           `⚠️ *Order Update*\n\n🆔 Order: \`${orderId}\`\n\n` +
-          `We're currently restocking ${accountType} accounts. ` +
+          `We're currently restocking ${accountType} accounts for ${country}. ` +
           `Only ${available}/${order.quantity} available.\n` +
           `Your order will be fulfilled as soon as stock is replenished. We'll notify you! 🙏`
         );
@@ -109,7 +123,7 @@ Deno.serve(async (req) => {
       })
       .in("id", accountIds);
 
-    // Create ZIP with the allocated .session files
+    // Create ZIP
     const zipBlobWriter = new BlobWriter("application/zip");
     const zipWriter = new ZipWriter(zipBlobWriter);
 
@@ -135,7 +149,7 @@ Deno.serve(async (req) => {
       .from("account-files")
       .upload(deliveryPath, zipBlob, { upsert: true, contentType: "application/zip" });
 
-    // Update order
+    // Update order to delivered
     await supabase.from("orders").update({
       status: "delivered",
       delivery_file_path: deliveryPath,
@@ -149,7 +163,7 @@ Deno.serve(async (req) => {
           BOT_TOKEN,
           order.customer_id,
           zipBlob,
-          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
           `accounts_${orderId}.zip`
         );
       } catch (e) {
@@ -162,24 +176,23 @@ Deno.serve(async (req) => {
       .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
       .eq("chat_id", order.customer_id);
 
-    // Check low stock and alert admin
+    // Low stock alert
     if (BOT_TOKEN && ADMIN_CHAT_ID) {
-      for (const type of ["regular", "aged"]) {
-        const { data: remaining } = await supabase
-          .from("account_inventory")
-          .select("id", { count: "exact" })
-          .eq("account_type", type)
-          .eq("status", "available");
+      const { data: remaining } = await supabase
+        .from("account_inventory")
+        .select("id")
+        .eq("account_type", accountType)
+        .eq("country", country)
+        .eq("status", "available");
 
-        const count = remaining?.length || 0;
-        if (count < LOW_STOCK_THRESHOLD) {
-          await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
-            `🚨 *LOW STOCK ALERT*\n\n` +
-            `${type === "aged" ? "👑 Aged" : "📦 Regular"} accounts: *${count}* remaining\n` +
-            `Threshold: ${LOW_STOCK_THRESHOLD}\n\n` +
-            `Please upload more .session files to restock! ⚡`
-          );
-        }
+      const count = remaining?.length || 0;
+      if (count < LOW_STOCK_THRESHOLD) {
+        await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
+          `🚨 *LOW STOCK ALERT*\n\n` +
+          `🌍 ${country} — ${accountType === "aged" ? "👑 Aged" : "📦 Regular"}: *${count}* remaining\n` +
+          `Threshold: ${LOW_STOCK_THRESHOLD}\n\n` +
+          `Please upload more .session files to restock! ⚡`
+        );
       }
     }
 
