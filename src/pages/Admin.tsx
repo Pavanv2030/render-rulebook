@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee, CalendarDays } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from "recharts";
 
 const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
