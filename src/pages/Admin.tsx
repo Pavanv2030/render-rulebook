@@ -260,6 +260,28 @@ const Admin = () => {
 
   const getCountryInfo = (code: string) => COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
 
+  const dailyStats = useMemo(() => {
+    const statsMap: Record<string, { orders: number; delivered: number; revenue: number; rejected: number; countries: Record<string, number> }> = {};
+    orders.forEach((o) => {
+      const day = new Date(o.created_at).toLocaleDateString("en-CA"); // YYYY-MM-DD
+      if (!statsMap[day]) statsMap[day] = { orders: 0, delivered: 0, revenue: 0, rejected: 0, countries: {} };
+      statsMap[day].orders++;
+      if (o.status === "delivered") {
+        statsMap[day].delivered++;
+        statsMap[day].revenue += o.amount;
+      }
+      if (o.status === "rejected") statsMap[day].rejected++;
+      statsMap[day].countries[o.country] = (statsMap[day].countries[o.country] || 0) + 1;
+    });
+    return Object.entries(statsMap)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, data]) => ({ date, ...data }));
+  }, [orders]);
+
+  const totalRevenue = useMemo(() => orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.amount, 0), [orders]);
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const todayStats = dailyStats.find(d => d.date === todayStr);
+
   // Login screen
   if (!isAuth) {
     return (
