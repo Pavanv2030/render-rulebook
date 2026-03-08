@@ -175,6 +175,29 @@ const Admin = () => {
     }
   };
 
+  const rejectPayment = async (orderId: string) => {
+    const reason = prompt("Enter rejection reason (optional):");
+    if (reason === null) return;
+    setRejectingOrder(orderId);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/admin-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey, "apikey": apiKey },
+        body: JSON.stringify({ action: "reject_payment", orderId, reason: reason || "" }),
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`❌ Order ${orderId} rejected. Customer notified.`);
+      fetchOrders();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRejectingOrder(null);
+    }
+  };
+
   const handleFileUpload = async (orderId: string, file: File) => {
     setUploadingOrder(orderId);
     try {
