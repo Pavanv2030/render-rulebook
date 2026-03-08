@@ -6,7 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const PER_ACCOUNT_PRICE = { regular: 50, aged: 100 };
+const COUNTRY_PRICING: Record<string, { regular: number; aged: number }> = {
+  IN: { regular: 50, aged: 100 },
+  US: { regular: 50, aged: 150 },
+  UK: { regular: 80, aged: 150 },
+  ET: { regular: 50, aged: 100 },
+  AR: { regular: 75, aged: 120 },
+  BR: { regular: 200, aged: 400 },
+  DE: { regular: 200, aged: 400 },
+  FR: { regular: 250, aged: 500 },
+  NG: { regular: 50, aged: 100 },
+  KE: { regular: 50, aged: 100 },
+  ZA: { regular: 50, aged: 100 },
+  AE: { regular: 300, aged: 600 },
+  SA: { regular: 300, aged: 600 },
+  TR: { regular: 200, aged: 400 },
+  CA: { regular: 50, aged: 100 },
+  AU: { regular: 200, aged: 400 },
+  JP: { regular: 200, aged: 400 },
+  RU: { regular: 200, aged: 400 },
+  TM: { regular: 100, aged: 200 },
+  MG: { regular: 50, aged: 100 },
+};
 const CURRENCY = "INR";
 const SYMBOL = "₹";
 
