@@ -25,7 +25,8 @@ const COUNTRIES = [
 const MAIN_KEYBOARD = {
   keyboard: [
     [{ text: "🛒 Buy Accounts" }, { text: "📊 My Orders" }],
-    [{ text: "📖 Guide" }, { text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
+    [{ text: "📖 Guide" }, { text: "📲 Login Guide" }],
+    [{ text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
