@@ -16,6 +16,7 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   approved: <ShieldCheck className="w-3.5 h-3.5" />,
   delivered: <CheckCircle className="w-3.5 h-3.5" />,
   cancelled: <XCircle className="w-3.5 h-3.5" />,
+  rejected: <Ban className="w-3.5 h-3.5" />,
 };
 
 const COUNTRIES = [
