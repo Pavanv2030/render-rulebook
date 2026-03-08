@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee, CalendarDays } from "lucide-react";
 
 const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
@@ -61,7 +61,7 @@ const Admin = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [inventory, setInventory] = useState<InventoryStats | null>(null);
   const [uploadingMaster, setUploadingMaster] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "inventory">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "inventory" | "stats">("orders");
   const [selectedUploadCountry, setSelectedUploadCountry] = useState("IN");
   const [selectedUploadType, setSelectedUploadType] = useState("regular");
   const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
@@ -260,6 +260,28 @@ const Admin = () => {
 
   const getCountryInfo = (code: string) => COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
 
+  const dailyStats = useMemo(() => {
+    const statsMap: Record<string, { orders: number; delivered: number; revenue: number; rejected: number; countries: Record<string, number> }> = {};
+    orders.forEach((o) => {
+      const day = new Date(o.created_at).toLocaleDateString("en-CA"); // YYYY-MM-DD
+      if (!statsMap[day]) statsMap[day] = { orders: 0, delivered: 0, revenue: 0, rejected: 0, countries: {} };
+      statsMap[day].orders++;
+      if (o.status === "delivered") {
+        statsMap[day].delivered++;
+        statsMap[day].revenue += o.amount;
+      }
+      if (o.status === "rejected") statsMap[day].rejected++;
+      statsMap[day].countries[o.country] = (statsMap[day].countries[o.country] || 0) + 1;
+    });
+    return Object.entries(statsMap)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, data]) => ({ date, ...data }));
+  }, [orders]);
+
+  const totalRevenue = useMemo(() => orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.amount, 0), [orders]);
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const todayStats = dailyStats.find(d => d.date === todayStr);
+
   // Login screen
   if (!isAuth) {
     return (
@@ -333,6 +355,14 @@ const Admin = () => {
             }`}
           >
             <Database className="w-4 h-4" /> Inventory
+          </button>
+          <button
+            onClick={() => setActiveTab("stats")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "stats" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" /> Stats
           </button>
         </div>
 
@@ -584,6 +614,92 @@ const Admin = () => {
               </div>
             </div>
           </>
+        )}
+
+        {/* STATS TAB */}
+        {activeTab === "stats" && (
+          <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="glass rounded-xl p-5 text-center">
+                <IndianRupee className="w-5 h-5 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold text-primary">₹{totalRevenue.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground mt-1">Total Revenue</div>
+              </div>
+              <div className="glass rounded-xl p-5 text-center">
+                <CalendarDays className="w-5 h-5 text-[hsl(var(--success))] mx-auto mb-2" />
+                <div className="text-2xl font-bold text-[hsl(var(--success))]">₹{(todayStats?.revenue || 0).toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground mt-1">Today's Earnings</div>
+              </div>
+              <div className="glass rounded-xl p-5 text-center">
+                <BarChart3 className="w-5 h-5 text-foreground mx-auto mb-2" />
+                <div className="text-2xl font-bold">{todayStats?.orders || 0}</div>
+                <div className="text-xs text-muted-foreground mt-1">Today's Orders</div>
+              </div>
+              <div className="glass rounded-xl p-5 text-center">
+                <CheckCircle className="w-5 h-5 text-[hsl(var(--success))] mx-auto mb-2" />
+                <div className="text-2xl font-bold text-[hsl(var(--success))]">{todayStats?.delivered || 0}</div>
+                <div className="text-xs text-muted-foreground mt-1">Today's Deliveries</div>
+              </div>
+            </div>
+
+            {/* Daily Breakdown Table */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" /> Daily Business Report
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Date</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Orders</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Delivered</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Rejected</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Revenue</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Countries</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dailyStats.map((day) => (
+                      <tr key={day.date} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${day.date === todayStr ? "bg-primary/5" : ""}`}>
+                        <td className="px-4 py-3 font-medium">
+                          {day.date === todayStr ? (
+                            <span className="text-primary">📅 Today</span>
+                          ) : (
+                            new Date(day.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                          )}
+                        </td>
+                        <td className="px-4 py-3">{day.orders}</td>
+                        <td className="px-4 py-3 text-[hsl(var(--success))]">{day.delivered}</td>
+                        <td className="px-4 py-3 text-destructive">{day.rejected}</td>
+                        <td className="px-4 py-3 font-semibold text-primary">₹{day.revenue.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1.5 flex-wrap">
+                            {Object.entries(day.countries).map(([code, count]) => {
+                              const ci = getCountryInfo(code);
+                              return (
+                                <span key={code} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-xs">
+                                  {ci.flag} {count}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {dailyStats.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No data yet</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
