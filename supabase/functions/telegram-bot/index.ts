@@ -25,7 +25,8 @@ const COUNTRIES = [
 const MAIN_KEYBOARD = {
   keyboard: [
     [{ text: "🛒 Buy Accounts" }, { text: "📊 My Orders" }],
-    [{ text: "📖 Guide" }, { text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
+    [{ text: "📖 Guide" }, { text: "📲 Login Guide" }],
+    [{ text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -127,6 +128,7 @@ Deno.serve(async (req) => {
     if (input === "🎁 refer & earn") input = "/refer";
     if (input === "🧑‍💻 support") input = "support";
     if (input === "📖 guide") input = "/guide";
+    if (input === "📲 login guide") input = "/loginguide";
 
     const PRICING = await getPricing(supabase);
 
@@ -361,7 +363,41 @@ Deno.serve(async (req) => {
         { inline_keyboard: [
           [{ text: "🛒 Start Buying Now!", callback_data: "start" }],
           [{ text: "← Back to Step 4", callback_data: "guide_4" }],
+          [{ text: "📲 How to Login Accounts", callback_data: "login_guide" }],
           [{ text: "🎬 Watch Promo Video", callback_data: "watch_promo" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 📲 Login Guide — How to use .zip accounts
+    // ════════════════════════════════════════════
+    if (input === "/loginguide" || input === "login_guide") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║  📲  LOGIN GUIDE                       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `*How to Login Accounts Using*\n*the ZIP File You Received:*\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `*Step 1:* 🤖 Start the login bot\n` +
+        `   👉 Open @NewLonamiBot\n\n` +
+        `*Step 2:* 📖 Click on *"Read OTP"*\n\n` +
+        `*Step 3:* 📁 Send the *ZIP file*\n   you received from us\n\n` +
+        `*Step 4:* 📱 You'll get a phone number\n` +
+        `   → Enter it in your Telegram app\n` +
+        `   → Send OTP from your app\n` +
+        `   → *Only after sending*, click\n     *"OTP 💑"* in the bot\n` +
+        `   → Copy the OTP, paste it\n` +
+        `   → Enter the password: \`123\`\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `⚠️ *IMPORTANT NOTE:*\n` +
+        `Click on OTP *only after* you've\nsent the code from your app!\n\n` +
+        `🔐 *2-Step Password:* \`123\`\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━`,
+        { inline_keyboard: [
+          [{ text: "🤖 Open Login Bot", url: "https://t.me/NewLonamiBot" }],
+          [{ text: "🛒 Buy Accounts", callback_data: "start" }],
+          [{ text: "📖 Buying Guide", callback_data: "guide_1" }],
         ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
