@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle,
   Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee,
-  CalendarDays, Users, DollarSign, Megaphone, Trash2, Eye, Send, Edit3, Save
+  CalendarDays, Users, DollarSign, Megaphone, Trash2, Eye, Send, Edit3, Save, Plus, X
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, PieChart, Pie, Cell } from "recharts";
 
@@ -83,6 +83,10 @@ const Admin = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [viewingCustomerOrders, setViewingCustomerOrders] = useState<string | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
+  const [showAddCountry, setShowAddCountry] = useState(false);
+  const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 });
+  const [addingCountry, setAddingCountry] = useState(false);
+  const [removingCountry, setRemovingCountry] = useState<string | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -152,8 +156,8 @@ const Admin = () => {
   }, [adminKey, apiFetch, baseUrl, invFilterCountry, invFilterType, invFilterStatus]);
 
   useEffect(() => {
-    if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); }
-  }, [fetchOrders, fetchInventory, fetchDashboard]);
+    if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
+  }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
 
   useEffect(() => { if (adminKey && activeTab === "customers") fetchCustomers(); }, [activeTab, fetchCustomers, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "pricing") fetchPricing(); }, [activeTab, fetchPricing, adminKey]);
@@ -248,7 +252,38 @@ const Admin = () => {
     } catch {}
   };
 
-  const getCountryInfo = (code: string) => COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
+  const getCountryInfo = (code: string) => {
+    const fromPricing = pricing.find(p => p.country_code === code);
+    if (fromPricing) return { code: fromPricing.country_code, flag: fromPricing.flag, name: fromPricing.country_name };
+    return COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
+  };
+
+  // Derive dynamic country list from pricing (DB) + fallback COUNTRIES
+  const dynamicCountries = useMemo(() => {
+    if (pricing.length > 0) return pricing.map(p => ({ code: p.country_code, flag: p.flag, name: p.country_name }));
+    return COUNTRIES;
+  }, [pricing]);
+
+  const addCountry = async () => {
+    if (!newCountry.code || !newCountry.name) return;
+    setAddingCountry(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 }); setShowAddCountry(false); fetchPricing();
+    } catch (err: any) { setError(err.message); } finally { setAddingCountry(false); }
+  };
+
+  const removeCountry = async (countryCode: string) => {
+    const country = pricing.find(p => p.country_code === countryCode);
+    if (!confirm(`Remove ${country?.country_name || countryCode}? This cannot be undone.`)) return;
+    setRemovingCountry(countryCode); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove_country", country_code: countryCode }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Country ${countryCode} removed!`); fetchPricing();
+    } catch (err: any) { setError(err.message); } finally { setRemovingCountry(null); }
+  };
 
   const dailyStats = useMemo(() => {
     const statsMap: Record<string, { orders: number; delivered: number; revenue: number; rejected: number; countries: Record<string, number> }> = {};
@@ -508,7 +543,7 @@ const Admin = () => {
                   <label className="text-xs text-muted-foreground block mb-1">Country</label>
                   <select value={selectedUploadCountry} onChange={(e) => setSelectedUploadCountry(e.target.value)}
                     className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-                    {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                    {dynamicCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -532,7 +567,7 @@ const Admin = () => {
               <div className="glass rounded-2xl p-5">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> Stock Overview</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {COUNTRIES.map(c => {
+                  {dynamicCountries.map(c => {
                     const stats = inventory[c.code];
                     if (!stats) return null;
                     const total = (stats.regular?.available || 0) + (stats.aged?.available || 0);
@@ -557,7 +592,7 @@ const Admin = () => {
                 <h3 className="font-semibold flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> Inventory Items</h3>
                 <select value={invFilterCountry} onChange={(e) => setInvFilterCountry(e.target.value)} className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground">
                   <option value="all">All Countries</option>
-                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                  {dynamicCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                 </select>
                 <select value={invFilterType} onChange={(e) => setInvFilterType(e.target.value)} className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground">
                   <option value="all">All Types</option>
@@ -674,44 +709,102 @@ const Admin = () => {
 
         {/* ==================== PRICING TAB ==================== */}
         {activeTab === "pricing" && (
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /> Dynamic Pricing Editor</h3>
-              {Object.keys(editingPricing).length > 0 && (
-                <button onClick={savePricing} disabled={savingPricing}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-sm font-medium">
-                  <Save className="w-4 h-4" /> {savingPricing ? "Saving..." : `Save ${Object.keys(editingPricing).length} changes`}
+          <div className="space-y-6">
+            {/* Add Country */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Manage Countries ({pricing.length})</h3>
+                <button onClick={() => setShowAddCountry(!showAddCountry)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-sm font-medium">
+                  <Plus className="w-4 h-4" /> Add Country
                 </button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">Edit prices below. Changes apply immediately to the Telegram bot after saving.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {pricing.map(p => {
-                const isEditing = !!editingPricing[p.country_code];
-                const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
-                return (
-                  <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium">{p.flag} {p.country_name}</span>
-                      <span className="text-xs text-muted-foreground">{p.country_code}</span>
+              </div>
+              {showAddCountry && (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Code (e.g. PK)</label>
+                      <input type="text" maxLength={3} value={newCountry.code} onChange={(e) => setNewCountry(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="PK" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
-                        <input type="number" value={current.regular}
-                          onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular: Number(e.target.value) } }))}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
-                        <input type="number" value={current.aged}
-                          onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                      </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Name</label>
+                      <input type="text" value={newCountry.name} onChange={(e) => setNewCountry(p => ({ ...p, name: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="Pakistan" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Flag Emoji</label>
+                      <input type="text" value={newCountry.flag} onChange={(e) => setNewCountry(p => ({ ...p, flag: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="🇵🇰" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Regular ₹</label>
+                      <input type="number" value={newCountry.regular} onChange={(e) => setNewCountry(p => ({ ...p, regular: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Aged ₹</label>
+                      <input type="number" value={newCountry.aged} onChange={(e) => setNewCountry(p => ({ ...p, aged: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
                     </div>
                   </div>
-                );
-              })}
+                  <div className="flex gap-2">
+                    <button onClick={addCountry} disabled={addingCountry || !newCountry.code || !newCountry.name}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                      <Plus className="w-4 h-4" /> {addingCountry ? "Adding..." : "Add Country"}
+                    </button>
+                    <button onClick={() => setShowAddCountry(false)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pricing Editor */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /> Dynamic Pricing Editor</h3>
+                {Object.keys(editingPricing).length > 0 && (
+                  <button onClick={savePricing} disabled={savingPricing}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-sm font-medium">
+                    <Save className="w-4 h-4" /> {savingPricing ? "Saving..." : `Save ${Object.keys(editingPricing).length} changes`}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Edit prices below. Changes apply immediately to the Telegram bot after saving.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {pricing.map(p => {
+                  const isEditing = !!editingPricing[p.country_code];
+                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
+                  return (
+                    <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-medium">{p.flag} {p.country_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{p.country_code}</span>
+                          <button onClick={() => removeCountry(p.country_code)} disabled={removingCountry === p.country_code}
+                            className="p-1 rounded-md hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Remove country">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
+                          <input type="number" value={current.regular}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
+                          <input type="number" value={current.aged}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
