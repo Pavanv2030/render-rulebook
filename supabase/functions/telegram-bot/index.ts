@@ -172,13 +172,19 @@ Deno.serve(async (req) => {
         .update({ state: "awaiting_type", selected_country: countryCode, updated_at: new Date().toISOString() })
         .eq("chat_id", chatId);
 
+      const pricing = COUNTRY_PRICING[countryCode] || { regular: 50, aged: 100 };
+
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `${country.flag} *${country.name}* selected!\n\n*Choose account type:*`,
+        `${country.flag} *${country.name}* selected!\n\n` +
+        `📦 *Pricing for ${country.name}:*\n` +
+        `• Regular: ${SYMBOL}${pricing.regular}/account\n` +
+        `• Aged (6mo+): ${SYMBOL}${pricing.aged}/account\n\n` +
+        `*Choose account type:*`,
         {
           inline_keyboard: [
             [
-              { text: `📦 Regular (${SYMBOL}${PER_ACCOUNT_PRICE.regular}/acc)`, callback_data: "type_regular" },
-              { text: `👑 Aged (${SYMBOL}${PER_ACCOUNT_PRICE.aged}/acc)`, callback_data: "type_aged" },
+              { text: `📦 Regular (${SYMBOL}${pricing.regular}/acc)`, callback_data: "type_regular" },
+              { text: `👑 Aged (${SYMBOL}${pricing.aged}/acc)`, callback_data: "type_aged" },
             ],
           ],
         }
