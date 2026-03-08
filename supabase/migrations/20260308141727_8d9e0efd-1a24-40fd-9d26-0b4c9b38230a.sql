@@ -1,0 +1,1 @@
+ALTER TABLE public.country_pricing ADD CONSTRAINT country_pricing_country_code_unique UNIQUE (country_code);
