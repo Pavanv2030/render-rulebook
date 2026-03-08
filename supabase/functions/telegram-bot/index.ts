@@ -59,16 +59,16 @@ async function answerCb(botToken: string, cbId: string, text?: string) {
   });
 }
 
-async function getPricing(supabase: any): Promise<Record<string, { regular: number; aged: number }>> {
+async function getPricing(supabase: any): Promise<Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }>> {
   try {
-    const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price");
+    const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price, regular_price_usdt, aged_price_usdt");
     if (data && data.length > 0) {
-      const pricing: Record<string, { regular: number; aged: number }> = {};
-      for (const row of data) pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price) };
+      const pricing: Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }> = {};
+      for (const row of data) pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price), regular_usdt: Number(row.regular_price_usdt || 0), aged_usdt: Number(row.aged_price_usdt || 0) };
       return pricing;
     }
   } catch (e) { console.error("Pricing fetch failed:", e); }
-  return { IN: { regular: 50, aged: 100 }, US: { regular: 50, aged: 150 } };
+  return { IN: { regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 }, US: { regular: 50, aged: 150, regular_usdt: 0, aged_usdt: 0 } };
 }
 
 async function getStock(supabase: any, country: string): Promise<{ regular: number; aged: number }> {
