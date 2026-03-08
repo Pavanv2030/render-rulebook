@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
         `🎁 *Referral Program*\n\n` +
         `Share your code and earn *5% commission* on every sale!\n\n` +
         `Your referral code: \`${refCode}\`\n` +
-        `Share link: https://t.me/AirdropAccountsPro_bot?start=${refCode}\n\n` +
+        `Share link: https://t.me/airdro12pbot?start=${refCode}\n\n` +
         `When someone uses your code, you earn automatically! 💰`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });

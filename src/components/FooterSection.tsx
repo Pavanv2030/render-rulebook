@@ -14,12 +14,12 @@ const FooterSection = () => {
           © {new Date().getFullYear()} AirdropAccounts Pro. Premium Telegram accounts for airdrop farming.
         </p>
         <a
-          href="https://t.me/AirdropAccountsPro_bot"
+          href="https://t.me/airdro12pbot"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-primary hover:underline"
         >
-          @AirdropAccountsPro_bot
+          @airdro12pbot
         </a>
       </div>
     </footer>
