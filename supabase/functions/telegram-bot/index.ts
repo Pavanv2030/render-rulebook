@@ -21,10 +21,32 @@ const COUNTRIES = [
   { code: "TM", flag: "🇹🇲", name: "Turkmenistan" }, { code: "MG", flag: "🇲🇬", name: "Madagascar" },
 ];
 
-async function sendMsg(botToken: string, chatId: string, text: string, replyMarkup?: any) {
-  const body: any = { chat_id: chatId, text, parse_mode: "Markdown" };
-  if (replyMarkup) body.reply_markup = JSON.stringify(replyMarkup);
+// ── Persistent reply keyboard (always visible) ──
+const MAIN_KEYBOARD = {
+  keyboard: [
+    [{ text: "🛒 Buy Accounts" }, { text: "📊 My Orders" }],
+    [{ text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+async function sendMsg(botToken: string, chatId: string, text: string, inlineMarkup?: any) {
+  const body: any = {
+    chat_id: chatId, text, parse_mode: "Markdown",
+    reply_markup: inlineMarkup ? JSON.stringify(inlineMarkup) : JSON.stringify(MAIN_KEYBOARD),
+  };
   return await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+}
+
+async function sendPhoto(botToken: string, chatId: string, photo: string, caption: string, inlineMarkup?: any) {
+  const body: any = {
+    chat_id: chatId, photo, caption, parse_mode: "Markdown",
+    reply_markup: inlineMarkup ? JSON.stringify(inlineMarkup) : JSON.stringify(MAIN_KEYBOARD),
+  };
+  return await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
@@ -32,7 +54,7 @@ async function sendMsg(botToken: string, chatId: string, text: string, replyMark
 async function answerCb(botToken: string, cbId: string, text?: string) {
   await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callback_query_id: cbId, text }),
+    body: JSON.stringify({ callback_query_id: cbId, text: text || "✓" }),
   });
 }
 
@@ -41,9 +63,7 @@ async function getPricing(supabase: any): Promise<Record<string, { regular: numb
     const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price");
     if (data && data.length > 0) {
       const pricing: Record<string, { regular: number; aged: number }> = {};
-      for (const row of data) {
-        pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price) };
-      }
+      for (const row of data) pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price) };
       return pricing;
     }
   } catch (e) { console.error("Pricing fetch failed:", e); }
@@ -57,10 +77,15 @@ async function getStock(supabase: any, country: string): Promise<{ regular: numb
   return { regular, aged };
 }
 
-function progressBar(step: number, total: number): string {
-  const filled = "▓";
-  const empty = "░";
-  return filled.repeat(step) + empty.repeat(total - step) + ` ${step}/${total}`;
+function stepIndicator(step: number): string {
+  const steps = ["🌍 Country", "📦 Type", "🔢 Qty", "💳 Pay"];
+  return steps.map((s, i) => i + 1 === step ? `▸ *${s}*` : i + 1 < step ? `✅ ${s}` : `○ ${s}`).join("  ");
+}
+
+function stockBadge(count: number): string {
+  if (count === 0) return "🔴 Sold Out";
+  if (count <= 5) return `🟡 ${count} left`;
+  return `🟢 ${count} in stock`;
 }
 
 Deno.serve(async (req) => {
@@ -79,7 +104,7 @@ Deno.serve(async (req) => {
     const message = update.message || update.callback_query?.message;
     const callbackQuery = update.callback_query;
     const chatId = String(message?.chat?.id || callbackQuery?.from?.id);
-    const text = (update.message?.text || "").trim();
+    const rawText = (update.message?.text || "").trim();
     const callbackData = callbackQuery?.data || "";
     const username = message?.from?.username || callbackQuery?.from?.username || "unknown";
     const firstName = message?.from?.first_name || callbackQuery?.from?.first_name || "Friend";
@@ -87,7 +112,7 @@ Deno.serve(async (req) => {
     if (!chatId) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     if (callbackQuery) await answerCb(BOT_TOKEN, callbackQuery.id);
 
-    // Upsert customer & conversation state
+    // Upsert state & customer
     let { data: state } = await supabase.from("conversation_states").select("*").eq("chat_id", chatId).single();
     if (!state) {
       const { data: ns } = await supabase.from("conversation_states").insert({ chat_id: chatId, state: "idle" }).select().single();
@@ -95,64 +120,60 @@ Deno.serve(async (req) => {
     }
     await supabase.from("customers").upsert({ telegram_id: chatId, username, first_name: firstName }, { onConflict: "telegram_id" });
 
-    const input = (callbackData || text).toLowerCase();
+    // Normalize input — handle both callbacks and keyboard button text
+    let input = (callbackData || rawText).toLowerCase();
+    if (input === "🛒 buy accounts") input = "start";
+    if (input === "📊 my orders") input = "check_status";
+    if (input === "🎁 refer & earn") input = "/refer";
+    if (input === "🧑‍💻 support") input = "support";
+
     const PRICING = await getPricing(supabase);
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // 📸 Photo/Screenshot Handler
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     const photo = update.message?.photo;
     if (photo && photo.length > 0 && (state?.state === "awaiting_payment" || state?.state === "payment_review") && state?.pending_order_id) {
-      const fileId = photo[photo.length - 1].file_id; // highest resolution
+      const fileId = photo[photo.length - 1].file_id;
       const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
 
-      // Mark as payment_received
       await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
       await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
       await sendMsg(BOT_TOKEN, chatId,
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `   📸 *SCREENSHOT RECEIVED*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `✅ Your payment screenshot for\n` +
-        `order \`${state.pending_order_id}\` has been\nforwarded to our admin.\n\n` +
-        `⏱️ Verification time: *5–15 min*\n\n` +
-        `💡 _You'll be notified once your\naccounts are ready!_`,
+        `╔═══════════════════════╗\n` +
+        `║   📸  SCREENSHOT RECEIVED     ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `✅ Payment proof for \`${state.pending_order_id}\`\nhas been sent to our team!\n\n` +
+        `⏱️ *ETA:* 5–15 minutes\n\n` +
+        `We'll send your accounts right\nhere once verified! 📥`,
         { inline_keyboard: [
-          [{ text: "📊 Check Status", callback_data: "check_status" }],
-          [{ text: "🛒 Place Another Order", callback_data: "start" }],
+          [{ text: "📊 Track Order", callback_data: "check_status" }],
+          [{ text: "🏠 Main Menu", callback_data: "start" }],
         ]});
 
-      // Forward screenshot + order info to admin bot
       if (ADMIN_CHAT_ID && ADMIN_BOT_TOKEN) {
         const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
         if (order) {
           const ci = COUNTRIES.find(c => c.code === order.country);
-          // Send photo with caption to admin
           await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendPhoto`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              chat_id: ADMIN_CHAT_ID,
-              photo: fileId,
-              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
+              chat_id: ADMIN_CHAT_ID, photo: fileId,
+              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
               parse_mode: "Markdown",
             }),
           });
-          // Send action buttons separately
           await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: ADMIN_CHAT_ID,
-              text: `⚡ *Take action on ${order.order_id}:*`,
+              text: `⚡ *Action for ${order.order_id}:*`,
               parse_mode: "Markdown",
-              reply_markup: JSON.stringify({
-                inline_keyboard: [
-                  [{ text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
-                   { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` }]
-                ]
-              }),
+              reply_markup: JSON.stringify({ inline_keyboard: [
+                [{ text: `✅ Approve`, callback_data: `approve_${order.order_id}` },
+                 { text: `❌ Reject`, callback_data: `reject_${order.order_id}` }]
+              ]}),
             }),
           });
         }
@@ -160,59 +181,65 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
-    // 🏠 /start — Welcome Screen
-    // ═══════════════════════════════════════
-    if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu") {
-      // Country buttons in rows of 2
-      const rows: any[][] = [];
-      for (let i = 0; i < COUNTRIES.length; i += 2) {
-        const row = [{ text: `${COUNTRIES[i].flag} ${COUNTRIES[i].name}`, callback_data: `country_${COUNTRIES[i].code}` }];
-        if (COUNTRIES[i + 1]) row.push({ text: `${COUNTRIES[i + 1].flag} ${COUNTRIES[i + 1].name}`, callback_data: `country_${COUNTRIES[i + 1].code}` });
-        rows.push(row);
+    // ════════════════════════════════════════════
+    // 🏠 /start — Welcome
+    // ════════════════════════════════════════════
+    if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu" || input === "home") {
+      // Popular countries first row, then rest in groups of 3
+      const popular = ["IN", "US", "UK", "AE"];
+      const popularRow = popular.map(code => {
+        const c = COUNTRIES.find(x => x.code === code)!;
+        return { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` };
+      });
+
+      const rest = COUNTRIES.filter(c => !popular.includes(c.code));
+      const restRows: any[][] = [];
+      for (let i = 0; i < rest.length; i += 3) {
+        const row = rest.slice(i, i + 3).map(c => ({ text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` }));
+        restRows.push(row);
       }
 
-      const SUPABASE_URL_ENV = Deno.env.get("SUPABASE_URL")!;
-      const bannerUrl = `${SUPABASE_URL_ENV}/storage/v1/object/public/bot-assets/welcome-banner.jpg`;
+      const allRows = [
+        popularRow,
+        ...restRows,
+        [{ text: "📊 My Orders", callback_data: "check_status" }, { text: "🎁 Referrals", callback_data: "/refer" }],
+        [{ text: "🧑‍💻 Support", callback_data: "support" }],
+      ];
 
-      const caption =
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `    🚀 *RIOX ACCOUNTS PRO*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `Hey *${firstName}*! 👋\n\n` +
-        `Premium Telegram accounts ready\nfor airdrop farming — delivered\ninstantly to your inbox.\n\n` +
-        `✅  3,847+ Orders Delivered\n` +
-        `⭐  4.9/5 Customer Rating\n` +
-        `⚡  Instant Auto-Delivery\n` +
-        `🔒  100% Working Guarantee\n\n` +
-        `🌍 *Step 1:* Select your country below:\n\n` +
-        `${progressBar(1, 4)}`;
+      const bannerUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/welcome-banner.jpg`;
 
-      // Send banner photo with caption
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          photo: bannerUrl,
-          caption,
-          parse_mode: "Markdown",
-          reply_markup: JSON.stringify({ inline_keyboard: [...rows, [{ text: "📊 My Orders", callback_data: "check_status" }, { text: "🧑‍💻 Support", callback_data: "support" }]] }),
-        }),
-      });
+      await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
+        `Hey *${firstName}*! 👋 Welcome to\n\n` +
+        `╔═══════════════════════╗\n` +
+        `║   🚀  RIOX ACCOUNTS PRO       ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `Premium Telegram accounts for\nairdrop farming — delivered instantly.\n\n` +
+        `┌──── ✨ *Why Us?* ────┐\n` +
+        `│                                                     │\n` +
+        `│  ✅  3,847+ Happy Customers  │\n` +
+        `│  ⭐  4.9★ Avg Rating                │\n` +
+        `│  ⚡  Auto-Delivery in <5 min     │\n` +
+        `│  🔒  100% Working Guarantee  │\n` +
+        `│  💰  Lowest Market Prices        │\n` +
+        `│                                                     │\n` +
+        `└─────────────────────┘\n\n` +
+        `${stepIndicator(1)}\n\n` +
+        `⬇️ *Pick your country to begin:*\n` +
+        `_(⭐ Popular countries shown first)_`,
+        { inline_keyboard: allRows });
 
       await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // 🌍 Country Selection
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     if (input.startsWith("country_")) {
       const code = input.replace("country_", "").toUpperCase();
       const country = COUNTRIES.find(c => c.code === code);
       if (!country) {
-        await sendMsg(BOT_TOKEN, chatId, "❌ Invalid selection. Tap /start to try again.");
+        await sendMsg(BOT_TOKEN, chatId, "❌ Invalid country. Tap below to retry.", { inline_keyboard: [[{ text: "🏠 Start Over", callback_data: "start" }]] });
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
@@ -221,32 +248,40 @@ Deno.serve(async (req) => {
 
       await supabase.from("conversation_states").update({ state: "awaiting_type", selected_country: code, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
+      const regDiscount = stock.regular > 20 ? "" : stock.regular > 0 ? "\n│  ⚠️ _Limited stock!_" : "\n│  🚫 _Currently unavailable_";
+      const agedDiscount = stock.aged > 20 ? "" : stock.aged > 0 ? "\n│  ⚠️ _Limited stock!_" : "\n│  🚫 _Currently unavailable_";
+
       await sendMsg(BOT_TOKEN, chatId,
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `${country.flag} *${country.name}* — Pricing\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `┌─────────────────────┐\n` +
-        `│ 📦 *Regular Accounts*        │\n` +
-        `│ Price: *${SYMBOL}${pricing.regular}*/account     │\n` +
-        `│ Stock: ${stock.regular > 0 ? `✅ ${stock.regular} available` : "❌ Out of stock"}  │\n` +
-        `├─────────────────────┤\n` +
-        `│ 👑 *Aged Accounts (6mo+)* │\n` +
-        `│ Price: *${SYMBOL}${pricing.aged}*/account      │\n` +
-        `│ Stock: ${stock.aged > 0 ? `✅ ${stock.aged} available` : "❌ Out of stock"}    │\n` +
-        `└─────────────────────┘\n\n` +
-        `📋 *Step 2:* Choose account type:\n\n` +
-        `${progressBar(2, 4)}`,
+        `${country.flag} *${country.name}*\n\n` +
+        `${stepIndicator(2)}\n\n` +
+        `╔═══ 📦 *REGULAR* ═══╗\n` +
+        `║                                                  ║\n` +
+        `║  💰 *${SYMBOL}${pricing.regular}* per account           ║\n` +
+        `║  📊 ${stockBadge(stock.regular)}               ║\n` +
+        `║  ✓ Fresh accounts                       ║\n` +
+        `║  ✓ Ready to use                           ║${regDiscount}\n` +
+        `║                                                  ║\n` +
+        `╠═══ 👑 *AGED (6mo+)* ═══╣\n` +
+        `║                                                  ║\n` +
+        `║  💰 *${SYMBOL}${pricing.aged}* per account             ║\n` +
+        `║  📊 ${stockBadge(stock.aged)}                 ║\n` +
+        `║  ✓ 6+ months old                         ║\n` +
+        `║  ✓ Higher trust score                   ║\n` +
+        `║  ✓ Best for premium drops          ║${agedDiscount}\n` +
+        `║                                                  ║\n` +
+        `╚══════════════════╝\n\n` +
+        `👇 *Select account type:*`,
         { inline_keyboard: [
           [{ text: `📦 Regular — ${SYMBOL}${pricing.regular}/acc`, callback_data: "type_regular" }],
           [{ text: `👑 Aged — ${SYMBOL}${pricing.aged}/acc`, callback_data: "type_aged" }],
-          [{ text: "🔙 Back to Countries", callback_data: "start" }],
+          [{ text: "🔙 Change Country", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
         ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
-    // 📦 Type Selection
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
+    // 📦 Type Selection → Quantity
+    // ════════════════════════════════════════════
     if (input === "type_regular" || input === "type_aged") {
       const type = input === "type_aged" ? "aged" : "regular";
       const selectedCountry = state?.selected_country || "IN";
@@ -257,71 +292,84 @@ Deno.serve(async (req) => {
 
       await supabase.from("conversation_states").update({ state: "awaiting_quantity", selected_type: type, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
-      // Quick quantity buttons
-      const qtyRows = [
-        [{ text: "1️⃣", callback_data: "qty_1" }, { text: "2️⃣", callback_data: "qty_2" }, { text: "3️⃣", callback_data: "qty_3" }, { text: "5️⃣", callback_data: "qty_5" }],
-        [{ text: "🔟 10", callback_data: "qty_10" }, { text: "📦 25", callback_data: "qty_25" }, { text: "📦 50", callback_data: "qty_50" }, { text: "💯 100", callback_data: "qty_100" }],
-        [{ text: "🔙 Back", callback_data: `country_${selectedCountry}` }],
-      ];
-
       await sendMsg(BOT_TOKEN, chatId,
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `${label} — ${country?.flag || ""} ${country?.name || selectedCountry}\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `💰 *${SYMBOL}${price}* per account\n\n` +
-        `🔢 *Step 3:* How many accounts?\n\n` +
-        `Tap a quick option below or\ntype any number (1–100):\n\n` +
-        `${progressBar(3, 4)}`,
-        { inline_keyboard: qtyRows });
+        `${country?.flag || ""} *${country?.name}* → ${label}\n\n` +
+        `${stepIndicator(3)}\n\n` +
+        `💰 Price: *${SYMBOL}${price}* per account\n\n` +
+        `╔══════════════════╗\n` +
+        `║  🧮 *PRICE CALCULATOR*          ║\n` +
+        `╠══════════════════╣\n` +
+        `║  1 acc  →  ${SYMBOL}${price}                         ║\n` +
+        `║  5 acc  →  ${SYMBOL}${price * 5}                     ║\n` +
+        `║  10 acc →  ${SYMBOL}${price * 10}                   ║\n` +
+        `║  25 acc →  ${SYMBOL}${price * 25}                   ║\n` +
+        `║  50 acc →  ${SYMBOL}${price * 50}                   ║\n` +
+        `║  100 acc → ${SYMBOL}${price * 100}                 ║\n` +
+        `╚══════════════════╝\n\n` +
+        `*How many accounts?*\nTap below or type a number (1-100):`,
+        { inline_keyboard: [
+          [{ text: "1️⃣ 1", callback_data: "qty_1" }, { text: "2️⃣ 2", callback_data: "qty_2" }, { text: "3️⃣ 3", callback_data: "qty_3" }, { text: "5️⃣ 5", callback_data: "qty_5" }],
+          [{ text: "🔟 10", callback_data: "qty_10" }, { text: "📦 25", callback_data: "qty_25" }, { text: "📦 50", callback_data: "qty_50" }, { text: "💯 100", callback_data: "qty_100" }],
+          [{ text: "🔙 Change Type", callback_data: `country_${selectedCountry}` }, { text: "🏠 Menu", callback_data: "home" }],
+        ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // 🔢 Quantity — Quick Buttons
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     if (input.startsWith("qty_")) {
       const qty = parseInt(input.replace("qty_", ""));
       if (!isNaN(qty) && qty >= 1 && qty <= 100) {
-        // Process as quantity input
-        return await processQuantity(qty, state, chatId, username, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID);
+        return await processQuantity(qty, state, chatId, username, firstName, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID);
       }
     }
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // 🔢 Quantity — Manual Input
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     if (state?.state === "awaiting_quantity") {
       const qty = parseInt(input);
       if (isNaN(qty) || qty < 1 || qty > 100) {
-        await sendMsg(BOT_TOKEN, chatId, "⚠️ Please enter a number between *1* and *100*.\n\nOr tap a quick option above ☝️");
+        await sendMsg(BOT_TOKEN, chatId,
+          `⚠️ *Invalid number!*\n\nPlease enter between *1* and *100*.\nOr tap a quick option above ☝️`,
+          { inline_keyboard: [[{ text: "🔙 Go Back", callback_data: `country_${state.selected_country || "IN"}` }]] });
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-      return await processQuantity(qty, state, chatId, username, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID);
+      return await processQuantity(qty, state, chatId, username, firstName, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID);
     }
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // ✅ Payment Confirmation
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done") || input.includes("paid done")) {
       if (state?.pending_order_id) {
         await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
         await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
         await sendMsg(BOT_TOKEN, chatId,
-          `━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `   ✅ *PAYMENT RECEIVED*\n` +
-          `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `╔═══════════════════════╗\n` +
+          `║   ✅  PAYMENT RECEIVED           ║\n` +
+          `╚═══════════════════════╝\n\n` +
           `🆔 Order: \`${state.pending_order_id}\`\n\n` +
-          `🔄 *What happens next:*\n\n` +
-          `  1️⃣  Admin verifies payment ⏳\n` +
-          `  2️⃣  Order gets approved ✅\n` +
-          `  3️⃣  Accounts delivered here 📥\n\n` +
-          `⏱️ Typical time: *5–15 minutes*\n\n` +
-          `💡 _You'll get a notification as soon\nas your accounts are ready!_\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━━━`,
+          `*What happens next:*\n\n` +
+          `  ┌── Step 1 ──┐\n` +
+          `  │ ⏳ Admin verifies payment │\n` +
+          `  └──────────┘\n` +
+          `          ⬇️\n` +
+          `  ┌── Step 2 ──┐\n` +
+          `  │ ✅ Order approved              │\n` +
+          `  └──────────┘\n` +
+          `          ⬇️\n` +
+          `  ┌── Step 3 ──┐\n` +
+          `  │ 📥 Accounts sent here     │\n` +
+          `  └──────────┘\n\n` +
+          `⏱️ *ETA: 5–15 minutes*\n\n` +
+          `💡 _Tip: Send a payment screenshot\nfor even faster verification!_ 📸`,
           { inline_keyboard: [
-            [{ text: "📊 Check Status", callback_data: "check_status" }],
+            [{ text: "📊 Track My Order", callback_data: "check_status" }],
             [{ text: "🛒 Place Another Order", callback_data: "start" }],
+            [{ text: "🧑‍💻 Need Help?", callback_data: "support" }],
           ]});
 
         // Notify admin
@@ -330,83 +378,95 @@ Deno.serve(async (req) => {
           const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
           if (order) {
             const ci = COUNTRIES.find(c => c.code === order.country);
-            const adminBody = {
-              chat_id: ADMIN_CHAT_ID,
-              text: `🚨 *NEW PAYMENT RECEIVED!*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*\n\n⚡ Take action:`,
-              parse_mode: "Markdown",
-              reply_markup: JSON.stringify({
-                inline_keyboard: [
-                  [{ text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
-                   { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` }]
-                ]
-              })
-            };
             await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
-              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(adminBody),
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: ADMIN_CHAT_ID,
+                text: `🚨 *NEW PAYMENT!*\n\n🆔 \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
+                parse_mode: "Markdown",
+                reply_markup: JSON.stringify({ inline_keyboard: [
+                  [{ text: `✅ Approve`, callback_data: `approve_${order.order_id}` },
+                   { text: `❌ Reject`, callback_data: `reject_${order.order_id}` }]
+                ]}),
+              }),
             });
           }
         }
       } else {
-        await sendMsg(BOT_TOKEN, chatId, "❓ No pending order found.\n\nTap below to start a new order! 👇",
+        await sendMsg(BOT_TOKEN, chatId,
+          `❓ *No pending order found.*\n\nStart a new order below! 👇`,
           { inline_keyboard: [[{ text: "🛒 Start New Order", callback_data: "start" }]] });
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     // ❌ Cancel Order
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
     if (input === "cancel") {
       if (state?.pending_order_id) {
         await supabase.from("orders").update({ status: "cancelled" }).eq("order_id", state.pending_order_id);
         await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
         await sendMsg(BOT_TOKEN, chatId,
-          `❌ *Order Cancelled*\n\nYour order \`${state.pending_order_id}\` has been cancelled.\nNo payment required.\n\nWant to try again? 👇`,
-          { inline_keyboard: [[{ text: "🛒 New Order", callback_data: "start" }]] });
+          `╔═══════════════════════╗\n` +
+          `║   ❌  ORDER CANCELLED             ║\n` +
+          `╚═══════════════════════╝\n\n` +
+          `Order \`${state.pending_order_id}\` cancelled.\nNo charges applied.\n\n` +
+          `Ready to try again? 👇`,
+          { inline_keyboard: [
+            [{ text: "🛒 New Order", callback_data: "start" }],
+            [{ text: "🏠 Main Menu", callback_data: "home" }],
+          ]});
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
-    // 📊 /status or check_status
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
+    // 📊 Order Status
+    // ════════════════════════════════════════════
     if (input === "/status" || input === "check_status" || input === "/myorders") {
       const limit = input === "/myorders" ? 20 : 5;
       const { data: orders } = await supabase.from("orders").select("*").eq("customer_id", chatId).order("created_at", { ascending: false }).limit(limit);
 
       if (orders && orders.length > 0) {
-        let msg = `━━━━━━━━━━━━━━━━━━━━━━\n   📊 *YOUR ORDERS*\n━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        let msg = `╔═══════════════════════╗\n║   📊  YOUR ORDERS                    ║\n╚═══════════════════════╝\n\n`;
         let totalSpent = 0, delivered = 0;
 
         for (const o of orders) {
-          const emoji = o.status === "delivered" ? "✅" : o.status === "pending" ? "⏳" : o.status === "payment_received" ? "🔍" : o.status === "approved" ? "📦" : o.status === "rejected" ? "❌" : "🚫";
-          const statusText = o.status === "payment_received" ? "Under Review" : o.status === "delivered" ? "Delivered ✓" : o.status.replace("_", " ");
+          const emoji = o.status === "delivered" ? "🟢" : o.status === "pending" ? "🟡" : o.status === "payment_received" ? "🔵" : o.status === "approved" ? "🟢" : o.status === "rejected" ? "🔴" : "⚪";
+          const statusLabel = o.status === "payment_received" ? "Under Review" : o.status === "delivered" ? "✓ Delivered" : o.status === "approved" ? "Approved" : o.status === "rejected" ? "Rejected" : o.status === "cancelled" ? "Cancelled" : "Pending";
           const ci = COUNTRIES.find(c => c.code === o.country);
-          const date = new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" });
+          const date = new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
-          msg += `${emoji} \`${o.order_id}\`\n`;
-          msg += `   ${ci?.flag || "🌍"} ${o.quantity}x ${o.account_type} — *${SYMBOL}${o.amount}*\n`;
-          msg += `   Status: *${statusText}* • ${date}\n\n`;
+          msg += `${emoji} \`${o.order_id}\` • ${date}\n`;
+          msg += `    ${ci?.flag || "🌍"} ${o.quantity}× ${o.account_type} — *${SYMBOL}${o.amount}*\n`;
+          msg += `    Status: *${statusLabel}*\n\n`;
 
           if (o.status === "delivered") { totalSpent += o.amount; delivered++; }
         }
 
-        msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        msg += `📈 *${orders.length} orders* | ✅ *${delivered} delivered* | 💰 *${SYMBOL}${totalSpent}* spent`;
+        msg += `┌─────────────────────┐\n`;
+        msg += `│ 📈 ${orders.length} orders │ ✅ ${delivered} delivered │\n`;
+        msg += `│ 💰 Total spent: *${SYMBOL}${totalSpent}*    │\n`;
+        msg += `└─────────────────────┘`;
 
-        await sendMsg(BOT_TOKEN, chatId, msg,
-          { inline_keyboard: [[{ text: "🛒 New Order", callback_data: "start" }, { text: "🔄 Refresh", callback_data: "check_status" }]] });
+        await sendMsg(BOT_TOKEN, chatId, msg, { inline_keyboard: [
+          [{ text: "🔄 Refresh", callback_data: "check_status" }, { text: "📜 Full History", callback_data: "/myorders" }],
+          [{ text: "🛒 New Order", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
+        ]});
       } else {
         await sendMsg(BOT_TOKEN, chatId,
-          `📭 *No orders yet!*\n\nYou haven't placed any orders.\nStart your first order now! 🚀`,
-          { inline_keyboard: [[{ text: "🛒 Start Shopping", callback_data: "start" }]] });
+          `📭 *No orders yet!*\n\nYou haven't placed any orders.\nGet started now — it only takes\n30 seconds! ⚡`,
+          { inline_keyboard: [
+            [{ text: "🛒 Buy My First Accounts", callback_data: "start" }],
+          ]});
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
-    // 🎁 /refer
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
+    // 🎁 Referral Program
+    // ════════════════════════════════════════════
     if (input === "/refer") {
       let { data: customer } = await supabase.from("customers").select("referral_code").eq("telegram_id", chatId).single();
       let refCode = customer?.referral_code;
@@ -415,50 +475,60 @@ Deno.serve(async (req) => {
         await supabase.from("customers").update({ referral_code: refCode }).eq("telegram_id", chatId);
       }
 
-      await sendMsg(BOT_TOKEN, chatId,
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `   🎁 *REFERRAL PROGRAM*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `Earn *5% commission* on every\nsale from your referrals! 💰\n\n` +
-        `🔗 *Your Referral Link:*\nhttps://t.me/airdro12pbot?start=${refCode}\n\n` +
-        `📋 *Your Code:* \`${refCode}\`\n\n` +
-        `*How it works:*\n` +
-        `1️⃣ Share your link with friends\n` +
-        `2️⃣ They place an order\n` +
-        `3️⃣ You earn 5% automatically! 🤑\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━`,
-        { inline_keyboard: [[{ text: "🛒 Back to Shop", callback_data: "start" }]] });
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
+      // Count referral stats
+      const { data: refs } = await supabase.from("referrals").select("commission").eq("referrer_telegram_id", chatId);
+      const totalEarned = (refs || []).reduce((s: number, r: any) => s + (r.commission || 0), 0);
+      const totalRefs = refs?.length || 0;
 
-    // ═══════════════════════════════════════
-    // 🧑‍💻 Support
-    // ═══════════════════════════════════════
-    if (input.includes("support") || input.includes("human") || input.includes("help me") || input === "/support") {
       await sendMsg(BOT_TOKEN, chatId,
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `   🧑‍💻 *CUSTOMER SUPPORT*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `Our team typically responds\nwithin *15–30 minutes*.\n\n` +
-        `A support agent will contact\nyou shortly! 🙏\n\n` +
-        `💡 *Quick Help:*`,
+        `╔═══════════════════════╗\n` +
+        `║   🎁  REFERRAL PROGRAM           ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `Earn *5% commission* on every\nsale from your referrals! 💰\n\n` +
+        `┌──── 📊 *Your Stats* ────┐\n` +
+        `│  👥 Referrals: *${totalRefs}*                   │\n` +
+        `│  💰 Earned: *${SYMBOL}${totalEarned}*               │\n` +
+        `└─────────────────────┘\n\n` +
+        `🔗 *Your Link (tap to copy):*\n\`https://t.me/airdro12pbot?start=${refCode}\`\n\n` +
+        `📋 *Code:* \`${refCode}\`\n\n` +
+        `*How it works:*\n` +
+        `1️⃣ Share link → 2️⃣ They buy → 3️⃣ You earn 🤑`,
         { inline_keyboard: [
-          [{ text: "📊 Check Order Status", callback_data: "check_status" }],
-          [{ text: "🛒 Place New Order", callback_data: "start" }],
-          [{ text: "🎁 Referral Program", callback_data: "/refer" }],
+          [{ text: "🛒 Back to Shop", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
         ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // ═══════════════════════════════════════
-    // 🤖 Fallback — Main Menu
-    // ═══════════════════════════════════════
+    // ════════════════════════════════════════════
+    // 🧑‍💻 Support
+    // ════════════════════════════════════════════
+    if (input.includes("support") || input.includes("human") || input.includes("help me") || input === "/support" || input === "/help") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║   🧑‍💻  CUSTOMER SUPPORT          ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `Our support team is here to help!\n\n` +
+        `⏱️ Response time: *15–30 min*\n\n` +
+        `A human agent will reach out\nto you shortly! 🙏\n\n` +
+        `💡 *Quick self-service:*`,
+        { inline_keyboard: [
+          [{ text: "📊 Check Order Status", callback_data: "check_status" }],
+          [{ text: "🛒 Place New Order", callback_data: "start" }],
+          [{ text: "🎁 Referral Program", callback_data: "/refer" }],
+          [{ text: "🏠 Main Menu", callback_data: "home" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 🏠 Fallback — Main Menu
+    // ════════════════════════════════════════════
     await sendMsg(BOT_TOKEN, chatId,
-      `━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `   🚀 *RIOX ACCOUNTS PRO*\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Hey *${firstName}*! What would you\nlike to do today?\n\n` +
-      `Choose an option below 👇`,
+      `╔═══════════════════════╗\n` +
+      `║   🚀  RIOX ACCOUNTS PRO       ║\n` +
+      `╚═══════════════════════╝\n\n` +
+      `Hey *${firstName}*! 👋\n\nWhat would you like to do?\n\n` +
+      `Choose from the options below\nor use the menu buttons 👇`,
       { inline_keyboard: [
         [{ text: "🛒 Buy Accounts", callback_data: "start" }],
         [{ text: "📊 My Orders", callback_data: "check_status" }, { text: "🎁 Refer & Earn", callback_data: "/refer" }],
@@ -472,10 +542,10 @@ Deno.serve(async (req) => {
   }
 });
 
-// ═══════════════════════════════════════
+// ════════════════════════════════════════════
 // Process Quantity & Create Order
-// ═══════════════════════════════════════
-async function processQuantity(qty: number, state: any, chatId: string, username: string, supabase: any, BOT_TOKEN: string, PRICING: any, ADMIN_CHAT_ID?: string) {
+// ════════════════════════════════════════════
+async function processQuantity(qty: number, state: any, chatId: string, username: string, firstName: string, supabase: any, BOT_TOKEN: string, PRICING: any, ADMIN_CHAT_ID?: string) {
   const type = state?.selected_type || "regular";
   const country = state?.selected_country || "IN";
   const ci = COUNTRIES.find(c => c.code === country);
@@ -496,30 +566,38 @@ async function processQuantity(qty: number, state: any, chatId: string, username
   }).eq("chat_id", chatId);
 
   await sendMsg(BOT_TOKEN, chatId,
-    `━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `   📋 *ORDER SUMMARY*\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-    `🆔 Order ID: \`${orderId}\`\n\n` +
-    `┌─────────────────────┐\n` +
-    `│ 🌍 Country:  ${ci?.flag || ""} *${ci?.name || country}*\n` +
-    `│ 📦 Type:       ${label}\n` +
-    `│ 🔢 Quantity:  *${qty}* accounts\n` +
-    `│ 💵 Price:      ${SYMBOL}${pricePerAcc} × ${qty}\n` +
-    `├─────────────────────┤\n` +
-    `│ 💰 *TOTAL: ${SYMBOL}${totalPrice.toLocaleString()} INR*\n` +
+    `╔═══════════════════════╗\n` +
+    `║   📋  ORDER CREATED!                ║\n` +
+    `╚═══════════════════════╝\n\n` +
+    `${stepIndicator(4)}\n\n` +
+    `🆔 *Order:* \`${orderId}\`\n\n` +
+    `┌─── 🧾 *Details* ───┐\n` +
+    `│                                                │\n` +
+    `│  🌍 ${ci?.flag || ""} *${ci?.name || country}*             │\n` +
+    `│  📦 ${label}                              │\n` +
+    `│  🔢 *${qty}* account${qty > 1 ? "s" : ""}                    │\n` +
+    `│  💵 ${SYMBOL}${pricePerAcc} × ${qty}                  │\n` +
+    `│                                                │\n` +
+    `│  ━━━━━━━━━━━━━━━━━━       │\n` +
+    `│  💰 *TOTAL: ${SYMBOL}${totalPrice.toLocaleString()}*       │\n` +
+    `│                                                │\n` +
     `└─────────────────────┘\n\n` +
-    `${progressBar(4, 4)}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `         💳 *PAY VIA UPI*\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-    `📱 UPI ID: \`venkat342@fam\`\n\n` +
-    `Send exactly *${SYMBOL}${totalPrice.toLocaleString()}* via:\n` +
-    `  • Google Pay\n  • PhonePe\n  • Paytm\n  • Any UPI app\n\n` +
-    `📸 *Send payment screenshot* here\nfor faster verification!\n\n` +
+    `╔═══════════════════════╗\n` +
+    `║        💳  PAY VIA UPI                 ║\n` +
+    `╠═══════════════════════╣\n` +
+    `║                                                    ║\n` +
+    `║  📱 UPI: \`venkat342@fam\`         ║\n` +
+    `║                                                    ║\n` +
+    `║  Send *${SYMBOL}${totalPrice.toLocaleString()}* via:            ║\n` +
+    `║  • Google Pay  • PhonePe      ║\n` +
+    `║  • Paytm  • Any UPI app        ║\n` +
+    `║                                                    ║\n` +
+    `╚═══════════════════════╝\n\n` +
+    `📸 *Send screenshot* for faster verify!\n` +
     `Or tap *"✅ I Have Paid"* below 👇`,
     { inline_keyboard: [
       [{ text: "✅ I Have Paid", callback_data: "paid" }],
-      [{ text: "❌ Cancel Order", callback_data: "cancel" }],
+      [{ text: "❌ Cancel Order", callback_data: "cancel" }, { text: "🧑‍💻 Help", callback_data: "support" }],
     ]});
 
   return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
