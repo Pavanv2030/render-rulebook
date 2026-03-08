@@ -6,26 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const PRICING: Record<string, any> = {
-  IN: { regular: { 5: 250, 10: 500, 25: 1200, 50: 2300, 100: 4500 }, aged: { 5: 1245, 10: 2235, 25: 4500 }, sym: "₹", curr: "INR", upi: true },
-  US: { regular: { 5: 5, 10: 9, 25: 20, 50: 35, 100: 60 }, aged: { 5: 15, 10: 27, 25: 60 }, sym: "$", curr: "USDT", upi: false },
-  PK: { regular: { 5: 1390, 10: 2500, 25: 5560, 50: 9730 }, aged: { 5: 4170, 10: 7500, 25: 16680 }, sym: "₨", curr: "PKR", upi: false },
-  BD: { regular: { 5: 550, 10: 990, 25: 2200, 50: 3850, 100: 6600 }, aged: { 5: 1650, 10: 2970, 25: 6600 }, sym: "৳", curr: "BDT", upi: false },
-  PH: { regular: { 5: 285, 10: 513, 25: 1140, 50: 1995, 100: 3420 }, aged: { 5: 855, 10: 1539, 25: 3420 }, sym: "₱", curr: "PHP", upi: false },
-};
-
-const COUNTRY_MAP: Record<string, string> = {
-  india: "IN", usa: "US", us: "US", pakistan: "PK", bangladesh: "BD", philippines: "PH",
-  "🇮🇳 india": "IN", "🇺🇸 usa": "US", "🇵🇰 pakistan": "PK", "🇧🇩 bangladesh": "BD", "🇵🇭 philippines": "PH",
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  IN: "🇮🇳", US: "🇺🇸", PK: "🇵🇰", BD: "🇧🇩", PH: "🇵🇭",
-};
-
-const COUNTRY_NAMES: Record<string, string> = {
-  IN: "India", US: "USA", PK: "Pakistan", BD: "Bangladesh", PH: "Philippines",
-};
+// Per-account pricing: ₹50 regular, ₹100 aged — same for all countries
+const PER_ACCOUNT_PRICE = { regular: 50, aged: 100 };
+const CURRENCY = "INR";
+const SYMBOL = "₹";
 
 async function sendTelegramMessage(botToken: string, chatId: string, text: string, replyMarkup?: any) {
   const body: any = { chat_id: chatId, text, parse_mode: "Markdown" };
@@ -64,7 +48,6 @@ Deno.serve(async (req) => {
   try {
     const update = await req.json();
     
-    // Extract message info
     const message = update.message || update.callback_query?.message;
     const callbackQuery = update.callback_query;
     const chatId = String(message?.chat?.id || callbackQuery?.from?.id);
@@ -77,7 +60,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Answer callback query immediately
     if (callbackQuery) {
       await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
     }
@@ -112,85 +94,62 @@ Deno.serve(async (req) => {
     if (input === "/start" || input === "hi" || input === "hello" || input === "start") {
       await sendTelegramMessage(BOT_TOKEN, chatId,
         `👋 *Welcome to AirdropAccounts Pro, ${firstName}!*\n\n` +
-        `🚀 Premium virtual Telegram accounts for airdrop farming.\n\n` +
+        `🚀 Premium Telegram accounts for airdrop farming.\n\n` +
         `⭐ *Why trust us?*\n` +
         `✅ 3,847+ verified orders delivered\n` +
         `🔒 Instant auto-delivery after payment\n` +
         `💯 100% working accounts guaranteed\n` +
         `🎁 Free sample for new buyers — type /sample\n\n` +
-        `🌍 *Select your country to see prices:*`,
+        `📦 *Pricing:*\n` +
+        `• Regular: ${SYMBOL}${PER_ACCOUNT_PRICE.regular}/account\n` +
+        `• Aged (6mo+): ${SYMBOL}${PER_ACCOUNT_PRICE.aged}/account\n\n` +
+        `*Choose account type:*`,
         {
           inline_keyboard: [
-            [{ text: "🇮🇳 India", callback_data: "country_india" }, { text: "🇺🇸 USA", callback_data: "country_usa" }],
-            [{ text: "🇵🇰 Pakistan", callback_data: "country_pakistan" }, { text: "🇧🇩 Bangladesh", callback_data: "country_bangladesh" }],
-            [{ text: "🇵🇭 Philippines", callback_data: "country_philippines" }],
+            [
+              { text: `📦 Regular (${SYMBOL}${PER_ACCOUNT_PRICE.regular}/acc)`, callback_data: "type_regular" },
+              { text: `👑 Aged (${SYMBOL}${PER_ACCOUNT_PRICE.aged}/acc)`, callback_data: "type_aged" },
+            ],
           ],
         }
       );
-      await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+      await supabase.from("conversation_states")
+        .update({ state: "awaiting_type", updated_at: new Date().toISOString() })
+        .eq("chat_id", chatId);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Country selection
-    if (input.startsWith("country_") || COUNTRY_MAP[input]) {
-      const countryKey = input.startsWith("country_") ? input.replace("country_", "") : input;
-      const code = COUNTRY_MAP[countryKey];
-      
-      if (code && PRICING[code]) {
-        const p = PRICING[code];
-        let msg = `${COUNTRY_FLAGS[code]} *${COUNTRY_NAMES[code]} — Prices in ${p.curr}*\n\n`;
-        msg += "*Regular Accounts:*\n";
-        for (const [qty, price] of Object.entries(p.regular)) {
-          const popular = qty === "25";
-          msg += `${popular ? "🔥" : "📦"} ${qty} accounts = ${p.sym}${price}${popular ? " (POPULAR)" : ""}\n`;
-        }
-        msg += "\n*👑 Aged Accounts (6mo+) — 3x Success Rate:*\n";
-        for (const [qty, price] of Object.entries(p.aged)) {
-          msg += `👑 ${qty} accounts = ${p.sym}${price}\n`;
-        }
-        msg += "\n*Select quantity:*";
+    // Type selection
+    if (input === "type_regular" || input === "type_aged") {
+      const type = input === "type_aged" ? "aged" : "regular";
+      const price = PER_ACCOUNT_PRICE[type];
+      const label = type === "aged" ? "👑 Aged" : "📦 Regular";
 
-        const regularBtns = Object.keys(p.regular).map((q) => ({
-          text: `📦 ${q} accs`, callback_data: `qty_regular_${q}`,
-        }));
-        const agedBtns = Object.keys(p.aged).map((q) => ({
-          text: `👑 ${q} aged`, callback_data: `qty_aged_${q}`,
-        }));
+      await supabase.from("conversation_states")
+        .update({ state: "awaiting_quantity", selected_type: type, updated_at: new Date().toISOString() })
+        .eq("chat_id", chatId);
 
-        // Chunk into rows of 3
-        const chunk = (arr: any[], size: number) => {
-          const res = [];
-          for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));
-          return res;
-        };
-
-        await sendTelegramMessage(BOT_TOKEN, chatId, msg, {
-          inline_keyboard: [...chunk(regularBtns, 3), ...chunk(agedBtns, 3)],
-        });
-
-        await supabase.from("conversation_states")
-          .update({ state: "awaiting_quantity", selected_country: code, updated_at: new Date().toISOString() })
-          .eq("chat_id", chatId);
-        
-        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-      }
+      await sendTelegramMessage(BOT_TOKEN, chatId,
+        `${label} *Accounts* — ${SYMBOL}${price}/account\n\n` +
+        `Enter the number of accounts you want (1-100):`
+      );
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Quantity selection
-    if (input.startsWith("qty_")) {
-      const parts = input.replace("qty_", "").split("_");
-      const type = parts[0]; // regular or aged
-      const qty = parseInt(parts[1]);
-      const country = state?.selected_country || "US";
-      const p = PRICING[country];
-      const priceTable = type === "aged" ? p.aged : p.regular;
-      const price = priceTable[qty];
-
-      if (!price) {
-        await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Invalid quantity. Please try again.");
+    // Custom quantity input (number 1-100)
+    if (state?.state === "awaiting_quantity") {
+      const qty = parseInt(input);
+      if (isNaN(qty) || qty < 1 || qty > 100) {
+        await sendTelegramMessage(BOT_TOKEN, chatId,
+          "❌ Please enter a valid number between 1 and 100."
+        );
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
+      const type = state.selected_type || "regular";
+      const pricePerAcc = type === "aged" ? PER_ACCOUNT_PRICE.aged : PER_ACCOUNT_PRICE.regular;
+      const totalPrice = qty * pricePerAcc;
+      const label = type === "aged" ? "👑 Aged" : "Regular";
       const orderId = "ORD" + Date.now().toString().slice(-6);
 
       // Save order
@@ -198,35 +157,33 @@ Deno.serve(async (req) => {
         order_id: orderId,
         customer_id: chatId,
         username,
-        country,
-        account_type: type === "aged" ? "Aged" : "Regular",
+        country: "IN",
+        account_type: label,
         quantity: qty,
-        currency: p.curr,
-        amount: price,
+        currency: CURRENCY,
+        amount: totalPrice,
         status: "pending",
       });
 
       await supabase.from("conversation_states")
-        .update({ state: "awaiting_payment", selected_quantity: qty, selected_type: type, pending_order_id: orderId, updated_at: new Date().toISOString() })
+        .update({
+          state: "awaiting_payment",
+          selected_quantity: qty,
+          pending_order_id: orderId,
+          updated_at: new Date().toISOString(),
+        })
         .eq("chat_id", chatId);
 
-      let paymentMsg = `📋 *Order Summary*\n\n` +
+      const paymentMsg =
+        `📋 *Order Summary*\n\n` +
         `🆔 Order: \`${orderId}\`\n` +
-        `🌍 Country: ${COUNTRY_FLAGS[country]} ${COUNTRY_NAMES[country]}\n` +
-        `📦 Type: ${type === "aged" ? "👑 Aged" : "Regular"}\n` +
+        `📦 Type: ${label}\n` +
         `🔢 Quantity: ${qty} accounts\n` +
-        `💰 Total: *${p.sym}${price} ${p.curr}*\n\n`;
-
-      if (p.upi) {
-        paymentMsg += `💳 *Payment via UPI:*\n` +
-          `UPI ID: \`venkat342@fam\`\n` +
-          `Send ₹${price} via GPay / Paytm / PhonePe\n` +
-          `After payment, send screenshot or type "paid"\n`;
-      } else {
-        paymentMsg += `💳 *Payment via USDT:*\n` +
-          `Send equivalent in USDT (TRC20/BEP20)\n` +
-          `After payment, type "paid" with transaction ID\n`;
-      }
+        `💰 Total: *${SYMBOL}${totalPrice} ${CURRENCY}*\n\n` +
+        `💳 *Payment via UPI:*\n` +
+        `UPI ID: \`venkat342@fam\`\n` +
+        `Send ${SYMBOL}${totalPrice} via GPay / Paytm / PhonePe\n` +
+        `After payment, send screenshot or tap "I have paid"`;
 
       await sendTelegramMessage(BOT_TOKEN, chatId, paymentMsg, {
         inline_keyboard: [
@@ -234,7 +191,6 @@ Deno.serve(async (req) => {
           [{ text: "❌ Cancel order", callback_data: "cancel" }],
         ],
       });
-
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -287,7 +243,7 @@ Deno.serve(async (req) => {
         let msg = "📊 *Your Recent Orders:*\n\n";
         for (const o of orders) {
           const statusEmoji = o.status === "delivered" ? "✅" : o.status === "pending" ? "⏳" : o.status === "payment_received" ? "🔍" : "❌";
-          msg += `${statusEmoji} \`${o.order_id}\` — ${o.quantity}x ${o.account_type} (${COUNTRY_FLAGS[o.country] || ""}) — ${o.status}\n`;
+          msg += `${statusEmoji} \`${o.order_id}\` — ${o.quantity}x ${o.account_type} — *${SYMBOL}${o.amount}* — ${o.status.replace("_", " ")}\n`;
         }
         await sendTelegramMessage(BOT_TOKEN, chatId, msg);
       } else {
@@ -320,7 +276,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Support/human
+    // Support
     if (input.includes("support") || input.includes("human") || input.includes("help me")) {
       await sendTelegramMessage(BOT_TOKEN, chatId,
         `🧑‍💻 *Need Human Support?*\n\n` +
