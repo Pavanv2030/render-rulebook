@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck } from "lucide-react";
+import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban } from "lucide-react";
 
-const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "cancelled"];
+const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-warning/20 text-warning",
   payment_received: "bg-primary/20 text-primary",
   approved: "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]",
   delivered: "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]",
+  rejected: "bg-destructive/20 text-destructive",
   cancelled: "bg-destructive/20 text-destructive",
 };
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -15,6 +16,7 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   approved: <ShieldCheck className="w-3.5 h-3.5" />,
   delivered: <CheckCircle className="w-3.5 h-3.5" />,
   cancelled: <XCircle className="w-3.5 h-3.5" />,
+  rejected: <Ban className="w-3.5 h-3.5" />,
 };
 
 const COUNTRIES = [
@@ -63,6 +65,7 @@ const Admin = () => {
   const [selectedUploadCountry, setSelectedUploadCountry] = useState("IN");
   const [selectedUploadType, setSelectedUploadType] = useState("regular");
   const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
+  const [rejectingOrder, setRejectingOrder] = useState<string | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -169,6 +172,29 @@ const Admin = () => {
       setError(err.message);
     } finally {
       setApprovingOrder(null);
+    }
+  };
+
+  const rejectPayment = async (orderId: string) => {
+    const reason = prompt("Enter rejection reason (optional):");
+    if (reason === null) return;
+    setRejectingOrder(orderId);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/admin-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey, "apikey": apiKey },
+        body: JSON.stringify({ action: "reject_payment", orderId, reason: reason || "" }),
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`❌ Order ${orderId} rejected. Customer notified.`);
+      fetchOrders();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRejectingOrder(null);
     }
   };
 
@@ -495,7 +521,18 @@ const Admin = () => {
                                 </button>
                               )}
 
-                              {/* Manual upload ZIP */}
+                              {/* Reject payment */}
+                              {order.status === "payment_received" && (
+                                <button
+                                  onClick={() => rejectPayment(order.order_id)}
+                                  disabled={rejectingOrder === order.order_id}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-xs font-medium disabled:opacity-50"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                  {rejectingOrder === order.order_id ? "..." : "Reject"}
+                                </button>
+                              )}
+
                               {(order.status === "payment_received" || order.status === "pending") && (
                                 <label className="cursor-pointer flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-xs font-medium">
                                   <Upload className="w-3.5 h-3.5" />
