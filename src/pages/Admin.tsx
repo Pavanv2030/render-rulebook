@@ -98,6 +98,14 @@ const Admin = () => {
   const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
   const [editingWalletAddress, setEditingWalletAddress] = useState("");
 
+  // UPI Wallet states
+  const [upiWallets, setUpiWallets] = useState<UpiWallet[]>([]);
+  const [showAddUpi, setShowAddUpi] = useState(false);
+  const [newUpi, setNewUpi] = useState({ upi_id: "", display_name: "" });
+  const [addingUpi, setAddingUpi] = useState(false);
+  const [editingUpiId, setEditingUpiId] = useState<string | null>(null);
+  const [editingUpiAddress, setEditingUpiAddress] = useState("");
+
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const baseUrl = `https://${projectId}.supabase.co/functions/v1`;
