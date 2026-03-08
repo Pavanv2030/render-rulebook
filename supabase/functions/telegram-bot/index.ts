@@ -586,6 +586,23 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
+    // 💳 Payment Method Selection
+    // ════════════════════════════════════════════
+    if (input.startsWith("pay_upi_")) {
+      const orderId = input.replace("pay_upi_", "").toUpperCase();
+      await supabase.from("orders").update({ payment_method: "UPI" }).eq("order_id", orderId);
+      await handleUpiPayment(orderId, chatId, BOT_TOKEN, supabase);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input.startsWith("pay_crypto_")) {
+      const orderId = input.replace("pay_crypto_", "").toUpperCase();
+      await supabase.from("orders").update({ payment_method: "Crypto" }).eq("order_id", orderId);
+      await handleCryptoPayment(orderId, chatId, BOT_TOKEN, supabase);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
     // ✅ Payment Confirmation
     // ════════════════════════════════════════════
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done") || input.includes("paid done")) {
