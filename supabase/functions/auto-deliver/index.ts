@@ -166,6 +166,12 @@ Deno.serve(async (req) => {
           `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
           `accounts_${orderId}.zip`
         );
+        // Send 2-step verification code
+        await sendTelegramMessage(BOT_TOKEN, order.customer_id,
+          `🔐 *Two-Step Verification Code*\n\n` +
+          `Your 2FA code for the accounts: \`123\`\n\n` +
+          `Use this code when prompted during login.`
+        );
       } catch (e) {
         console.error("Failed to send Telegram document:", e);
       }
