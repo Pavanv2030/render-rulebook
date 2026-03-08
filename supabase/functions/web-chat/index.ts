@@ -120,6 +120,30 @@ Deno.serve(async (req) => {
         await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
         reply = `✅ *Payment Noted!*\n\n🆔 Order: \`${state.pending_order_id}\`\n\n⏳ We're verifying your payment. Your accounts will be delivered shortly.\n\n📥 You'll receive a download link once verified! 🚀`;
         buttons = [{ text: "🛒 New Order", data: "start" }];
+
+        // Notify admin via admin bot
+        const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+        const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+        if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+          const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
+          if (order) {
+            const adminBody: any = {
+              chat_id: ADMIN_CHAT_ID,
+              text: `🚨 *NEW PAYMENT (Web)!*\n\n🆔 Order: \`${order.order_id}\`\n👤 Web Customer\n🌍 Country: 🇮🇳 ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 Amount: *₹${order.amount}*\n\n⚡ Use buttons below to take action:`,
+              parse_mode: "Markdown",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [{ text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
+                   { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` }]
+                ]
+              })
+            };
+            await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(adminBody),
+            });
+          }
+        }
+
         newState = { state: "idle", pending_order_id: null };
       } else {
         reply = "❓ No pending order found. Start a new order!";

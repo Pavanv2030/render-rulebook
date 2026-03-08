@@ -173,12 +173,26 @@ Deno.serve(async (req) => {
         await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
         await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
         await sendTelegramMessage(BOT_TOKEN, chatId, `✅ *Payment Noted!*\n\n🆔 Order: \`${state.pending_order_id}\`\n\n⏳ Your payment is being reviewed by our admin.\n📦 Once approved, your accounts will be delivered instantly here!\n\nUse /status to check your order status anytime.`);
-        if (ADMIN_CHAT_ID) {
+        // Notify admin via admin bot
+        const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+        if (ADMIN_CHAT_ID && ADMIN_BOT_TOKEN) {
           const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
           if (order) {
             const countryInfo = COUNTRIES.find(c => c.code === order.country);
-            await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
-              `💰 *New Payment Received!*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 Country: ${countryInfo?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 Amount: ${SYMBOL}${order.amount}\n\nGo to Admin Panel to approve & deliver. ✅`);
+            const adminBody: any = {
+              chat_id: ADMIN_CHAT_ID,
+              text: `🚨 *NEW PAYMENT RECEIVED!*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 Country: ${countryInfo?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 Amount: *${SYMBOL}${order.amount}*\n\n⚡ Use buttons below to take action:`,
+              parse_mode: "Markdown",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [{ text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
+                   { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` }]
+                ]
+              })
+            };
+            await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(adminBody),
+            });
           }
         }
       } else {
