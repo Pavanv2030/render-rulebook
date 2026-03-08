@@ -95,7 +95,13 @@ Deno.serve(async (req) => {
         `💲 /setprice CC regular aged\n` +
         `🌍 /addcountry CODE Name Flag RegPrice AgedPrice\n` +
         `🗑️ /removecountry CODE\n\n` +
-        `_(e.g. /addcountry PK Pakistan 🇵🇰 50 100)_`
+        `*Crypto Wallets:*\n` +
+        `💰 /crypto — List all wallets\n` +
+        `➕ /addwallet SYMBOL Name Network Address\n` +
+        `✏️ /editwallet SYMBOL NewAddress\n` +
+        `🔄 /togglewallet SYMBOL — Enable/disable\n` +
+        `🗑️ /removewallet SYMBOL — Delete wallet\n\n` +
+        `_(e.g. /addwallet USDT Tether TRC20 TAddress)_`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
