@@ -224,7 +224,8 @@ Deno.serve(async (req) => {
       const type = state.selected_type || "regular";
       const country = state.selected_country || "IN";
       const countryInfo = COUNTRIES.find(c => c.code === country);
-      const pricePerAcc = type === "aged" ? PER_ACCOUNT_PRICE.aged : PER_ACCOUNT_PRICE.regular;
+      const pricing = COUNTRY_PRICING[country] || { regular: 50, aged: 100 };
+      const pricePerAcc = pricing[type as "regular" | "aged"];
       const totalPrice = qty * pricePerAcc;
       const label = type === "aged" ? "👑 Aged" : "Regular";
       const orderId = "ORD" + Date.now().toString().slice(-6);
