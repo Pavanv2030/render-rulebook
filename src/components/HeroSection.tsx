@@ -2,16 +2,17 @@ import { motion } from "framer-motion";
 import { Send, Shield, Zap, Users } from "lucide-react";
 import mascotImg from "@/assets/mascot.jpg";
 
-const stats = [
-  { icon: Users, value: "3,847+", label: "Orders Delivered" },
-  { icon: Zap, value: "24/7", label: "Auto Delivery" },
-  { icon: Shield, value: "100%", label: "Working Guarantee" },
-];
+interface Props { t: (key: string) => string; }
 
-const HeroSection = () => {
+const HeroSection = ({ t }: Props) => {
+  const stats = [
+    { icon: Users, value: "3,847+", label: t("hero.stat.orders") },
+    { icon: Zap, value: "24/7", label: t("hero.stat.delivery") },
+    { icon: Shield, value: "100%", label: t("hero.stat.guarantee") },
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden hero-gradient">
-      {/* Animated grid */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
         backgroundSize: "60px 60px",
@@ -24,7 +25,6 @@ const HeroSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center max-w-4xl mx-auto"
         >
-          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -32,7 +32,7 @@ const HeroSection = () => {
             className="inline-flex items-center gap-2 glass neon-border rounded-full px-5 py-2 mb-8"
           >
             <span className="w-2 h-2 rounded-full bg-success animate-pulse-glow" />
-            <span className="text-sm text-muted-foreground">Live & Operational — Instant Delivery Active</span>
+            <span className="text-sm text-muted-foreground">{t("hero.badge")}</span>
           </motion.div>
 
           <div className="flex items-center justify-center gap-4 mb-6">
@@ -45,11 +45,9 @@ const HeroSection = () => {
           </div>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Bulk virtual Telegram accounts for airdrop farming. Instant auto-delivery via bot.
-            Multi-currency payments. Aged & regular accounts available.
+            {t("hero.subtitle")}
           </p>
 
-          {/* CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <motion.a
               whileHover={{ scale: 1.05 }}
@@ -60,14 +58,13 @@ const HeroSection = () => {
               className="inline-flex items-center gap-3 bg-primary text-primary-foreground font-semibold px-8 py-4 rounded-lg text-lg shadow-[0_0_30px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_50px_hsl(var(--primary)/0.5)] transition-shadow"
             >
               <Send className="w-5 h-5" />
-              Open Bot on Telegram
+              {t("hero.cta")}
             </motion.a>
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors px-6 py-4">
-              View Pricing ↓
+              {t("hero.pricing")}
             </a>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
             {stats.map((stat, i) => (
               <motion.div

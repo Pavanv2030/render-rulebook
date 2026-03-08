@@ -159,6 +159,7 @@ export type Database = {
           first_name: string | null
           id: string
           is_blocked: boolean
+          preferred_language: string
           referral_code: string | null
           referred_by: string | null
           telegram_id: string
@@ -172,6 +173,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_blocked?: boolean
+          preferred_language?: string
           referral_code?: string | null
           referred_by?: string | null
           telegram_id: string
@@ -185,6 +187,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_blocked?: boolean
+          preferred_language?: string
           referral_code?: string | null
           referred_by?: string | null
           telegram_id?: string

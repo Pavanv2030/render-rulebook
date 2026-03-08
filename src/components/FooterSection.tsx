@@ -1,6 +1,8 @@
 import { Send } from "lucide-react";
 
-const FooterSection = () => {
+interface Props { t: (key: string) => string; }
+
+const FooterSection = ({ t }: Props) => {
   return (
     <footer className="border-t border-border/50 py-12 px-6">
       <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -11,14 +13,9 @@ const FooterSection = () => {
           <span className="font-semibold text-lg">RIOX Accounts Pro</span>
         </div>
         <p className="text-sm text-muted-foreground text-center">
-          © {new Date().getFullYear()} RIOX Accounts Pro. Premium Telegram accounts for airdrop farming.
+          © {new Date().getFullYear()} RIOX Accounts Pro. {t("footer.copy")}
         </p>
-        <a
-          href="https://t.me/airdro12pbot"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-primary hover:underline"
-        >
+        <a href="https://t.me/airdro12pbot" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
           @airdro12pbot
         </a>
       </div>
