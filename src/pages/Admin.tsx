@@ -821,7 +821,7 @@ const Admin = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {pricing.map(p => {
                   const isEditing = !!editingPricing[p.country_code];
-                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price };
+                  const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price, regular_usdt: p.regular_price_usdt, aged_usdt: p.aged_price_usdt };
                   return (
                     <div key={p.country_code} className={`bg-secondary/50 rounded-xl p-4 ${isEditing ? "ring-1 ring-primary/50" : ""}`}>
                       <div className="flex items-center justify-between mb-3">
@@ -834,7 +834,7 @@ const Admin = () => {
                           </button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">📦 Regular (₹)</label>
                           <input type="number" value={current.regular}
@@ -845,6 +845,18 @@ const Admin = () => {
                           <label className="text-xs text-muted-foreground block mb-1">👑 Aged (₹)</label>
                           <input type="number" value={current.aged}
                             onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">📦 Regular (USDT)</label>
+                          <input type="number" step="0.01" value={current.regular_usdt}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, regular_usdt: Number(e.target.value) } }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">👑 Aged (USDT)</label>
+                          <input type="number" step="0.01" value={current.aged_usdt}
+                            onChange={(e) => setEditingPricing(prev => ({ ...prev, [p.country_code]: { ...current, aged_usdt: Number(e.target.value) } }))}
                             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
                         </div>
                       </div>
