@@ -565,6 +565,7 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     state: "awaiting_payment", selected_quantity: qty, pending_order_id: orderId, updated_at: new Date().toISOString(),
   }).eq("chat_id", chatId);
 
+  // Send order summary first
   await sendMsg(BOT_TOKEN, chatId,
     `╔═══════════════════════╗\n` +
     `║   📋  ORDER CREATED!                ║\n` +
@@ -581,19 +582,16 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     `│  ━━━━━━━━━━━━━━━━━━       │\n` +
     `│  💰 *TOTAL: ${SYMBOL}${totalPrice.toLocaleString()}*       │\n` +
     `│                                                │\n` +
-    `└─────────────────────┘\n\n` +
-    `╔═══════════════════════╗\n` +
-    `║        💳  PAY VIA UPI                 ║\n` +
-    `╠═══════════════════════╣\n` +
-    `║                                                    ║\n` +
-    `║  📱 UPI: \`venkat342@fam\`         ║\n` +
-    `║                                                    ║\n` +
-    `║  Send *${SYMBOL}${totalPrice.toLocaleString()}* via:            ║\n` +
-    `║  • Google Pay  • PhonePe      ║\n` +
-    `║  • Paytm  • Any UPI app        ║\n` +
-    `║                                                    ║\n` +
-    `╚═══════════════════════╝\n\n` +
-    `📸 *Send screenshot* for faster verify!\n` +
+    `└─────────────────────┘`);
+
+  // Send QR code photo with payment instructions
+  const qrUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/bot-assets/upi-scanner.jpg`;
+  await sendPhoto(BOT_TOKEN, chatId, qrUrl,
+    `💳 *PAY VIA UPI*\n\n` +
+    `📱 UPI ID: \`venkat342@fam\`\n` +
+    `💰 Amount: *${SYMBOL}${totalPrice.toLocaleString()}*\n\n` +
+    `Scan the QR above or pay via\nGPay • Paytm • PhonePe\n\n` +
+    `📸 *Send payment screenshot* for\nfaster verification!\n\n` +
     `Or tap *"✅ I Have Paid"* below 👇`,
     { inline_keyboard: [
       [{ text: "✅ I Have Paid", callback_data: "paid" }],
