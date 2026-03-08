@@ -4,7 +4,7 @@ import HowItWorks from "@/components/HowItWorks";
 import PricingSection from "@/components/PricingSection";
 import FAQSection from "@/components/FAQSection";
 import FooterSection from "@/components/FooterSection";
-import TelegramWidget from "@/components/TelegramWidget";
+import ChatWidget from "@/components/ChatWidget";
 
 const Index = () => {
   return (
@@ -15,7 +15,7 @@ const Index = () => {
       <PricingSection />
       <FAQSection />
       <FooterSection />
-      <TelegramWidget />
+      <ChatWidget />
     </div>
   );
 };
