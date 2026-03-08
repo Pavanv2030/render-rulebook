@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
       const caption =
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `    🚀 *AIRDROP ACCOUNTS PRO*\n` +
+        `    🚀 *RIOX ACCOUNTS PRO*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `Hey *${firstName}*! 👋\n\n` +
         `Premium Telegram accounts ready\nfor airdrop farming — delivered\ninstantly to your inbox.\n\n` +
