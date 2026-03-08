@@ -25,7 +25,7 @@ const COUNTRIES = [
 const MAIN_KEYBOARD = {
   keyboard: [
     [{ text: "🛒 Buy Accounts" }, { text: "📊 My Orders" }],
-    [{ text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
+    [{ text: "📖 Guide" }, { text: "🎁 Refer & Earn" }, { text: "🧑‍💻 Support" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -126,6 +126,7 @@ Deno.serve(async (req) => {
     if (input === "📊 my orders") input = "check_status";
     if (input === "🎁 refer & earn") input = "/refer";
     if (input === "🧑‍💻 support") input = "support";
+    if (input === "📖 guide") input = "/guide";
 
     const PRICING = await getPricing(supabase);
 
