@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee, CalendarDays } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from "recharts";
 
 const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
@@ -642,6 +643,59 @@ const Admin = () => {
                 <div className="text-xs text-muted-foreground mt-1">Today's Deliveries</div>
               </div>
             </div>
+
+            {/* Revenue Chart */}
+            {dailyStats.length > 0 && (
+              <div className="glass rounded-2xl p-5">
+                <h3 className="font-semibold flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-primary" /> Revenue & Orders Trend
+                </h3>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={[...dailyStats].reverse()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 18%)" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "hsl(220 10% 50%)", fontSize: 11 }}
+                        tickFormatter={(v) => {
+                          const d = new Date(v + "T00:00:00");
+                          return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                        }}
+                      />
+                      <YAxis yAxisId="revenue" tick={{ fill: "hsl(220 10% 50%)", fontSize: 11 }} tickFormatter={(v) => `₹${v}`} />
+                      <YAxis yAxisId="count" orientation="right" tick={{ fill: "hsl(220 10% 50%)", fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(220 18% 10%)",
+                          border: "1px solid hsl(220 15% 18%)",
+                          borderRadius: "0.75rem",
+                          fontSize: 12,
+                          color: "hsl(200 20% 95%)",
+                        }}
+                        labelFormatter={(v) => {
+                          const d = new Date(v + "T00:00:00");
+                          return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+                        }}
+                        formatter={(value: number, name: string) => {
+                          if (name === "revenue") return [`₹${value.toLocaleString()}`, "Revenue"];
+                          if (name === "delivered") return [value, "Delivered"];
+                          if (name === "orders") return [value, "Orders"];
+                          return [value, name];
+                        }}
+                      />
+                      <Bar yAxisId="revenue" dataKey="revenue" fill="hsl(175 80% 50%)" radius={[4, 4, 0, 0]} opacity={0.8} />
+                      <Line yAxisId="count" type="monotone" dataKey="orders" stroke="hsl(270 60% 60%)" strokeWidth={2} dot={{ r: 3 }} />
+                      <Line yAxisId="count" type="monotone" dataKey="delivered" stroke="hsl(145 70% 45%)" strokeWidth={2} dot={{ r: 3 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-primary inline-block" /> Revenue</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-accent inline-block" /> Orders</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[hsl(var(--success))] inline-block" /> Delivered</span>
+                </div>
+              </div>
+            )}
 
             {/* Daily Breakdown Table */}
             <div className="glass rounded-2xl overflow-hidden">
