@@ -195,7 +195,9 @@ Deno.serve(async (req) => {
     // Type selection
     if (input === "type_regular" || input === "type_aged") {
       const type = input === "type_aged" ? "aged" : "regular";
-      const price = PER_ACCOUNT_PRICE[type];
+      const selectedCountry = state?.selected_country || "IN";
+      const pricing = COUNTRY_PRICING[selectedCountry] || { regular: 50, aged: 100 };
+      const price = pricing[type];
       const label = type === "aged" ? "👑 Aged" : "📦 Regular";
 
       await supabase.from("conversation_states")
