@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Send, Shield, Zap, Users } from "lucide-react";
+import mascotImg from "@/assets/mascot.jpg";
 
 const stats = [
   { icon: Users, value: "3,847+", label: "Orders Delivered" },
