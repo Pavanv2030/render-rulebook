@@ -22,13 +22,11 @@
     .glass { background: rgba(13,17,23,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06); }
     .neon-border { box-shadow: 0 0 15px rgba(0,210,190,0.15); border-color: rgba(0,210,190,0.4); }
 
-    /* Layout */
     .app { padding: 1rem 1.5rem; max-width: 1400px; margin: 0 auto; }
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
     .header h1 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; }
     .header-actions { display: flex; gap: 0.5rem; }
 
-    /* Buttons */
     .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.8125rem; font-weight: 500; border: none; transition: all 0.2s; }
     .btn-primary { background: var(--primary); color: var(--primary-fg); }
     .btn-primary:hover { box-shadow: 0 0 20px rgba(0,210,190,0.3); }
@@ -40,33 +38,27 @@
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.75rem; }
 
-    /* Tabs */
     .tabs { display: flex; gap: 0.375rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.25rem; }
     .tab { padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.8125rem; font-weight: 500; border: none; color: var(--muted); background: var(--secondary); white-space: nowrap; transition: all 0.2s; }
     .tab.active { background: var(--primary); color: var(--primary-fg); }
     .tab:hover:not(.active) { color: var(--fg); }
 
-    /* Cards */
     .card { border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; }
     .card-title { font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
-    /* Grid */
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
     @media (max-width: 768px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-2 { grid-template-columns: 1fr; } }
 
-    /* Stat cards */
     .stat { border-radius: var(--radius); padding: 1rem; text-align: center; }
     .stat-value { font-size: 1.5rem; font-weight: 700; }
     .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
 
-    /* Table */
     table { width: 100%; font-size: 0.8125rem; border-collapse: collapse; }
     th { text-align: left; padding: 0.75rem 1rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
     td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
     tr:hover td { background: rgba(255,255,255,0.02); }
 
-    /* Form */
     .input {
       width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 0.5rem 0.75rem; font-size: 0.8125rem; color: var(--fg); outline: none; transition: border 0.2s;
@@ -76,34 +68,28 @@
     select.input { appearance: none; }
     textarea.input { resize: none; }
 
-    /* Status badges */
     .badge-status { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; border-radius: 100px; font-size: 0.6875rem; font-weight: 500; }
     .badge-pending { background: rgba(234,179,8,0.2); color: var(--warning); }
     .badge-payment_received { background: rgba(0,210,190,0.2); color: var(--primary); }
     .badge-approved, .badge-delivered { background: rgba(34,197,94,0.2); color: var(--success); }
     .badge-rejected, .badge-cancelled { background: rgba(220,60,60,0.2); color: var(--destructive); }
 
-    /* Messages */
     .msg-error { color: var(--destructive); font-size: 0.8125rem; background: rgba(220,60,60,0.1); padding: 0.5rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
     .msg-success { color: var(--success); font-size: 0.8125rem; background: rgba(34,197,94,0.1); padding: 0.5rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
 
-    /* Wallet card */
     .wallet-card { background: var(--secondary); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.75rem; }
     .wallet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
     .wallet-symbol { font-size: 1.125rem; font-weight: 700; color: var(--primary); }
     .wallet-addr { font-size: 0.6875rem; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.3); padding: 0.375rem 0.5rem; border-radius: 0.375rem; word-break: break-all; }
     .wallet-meta { font-size: 0.6875rem; color: var(--muted); margin-top: 0.5rem; display: flex; gap: 0.5rem; }
 
-    /* Login */
     .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
     .login-box { width: 100%; max-width: 360px; border-radius: 1rem; padding: 2rem; }
     .login-box h1 { text-align: center; font-size: 1.5rem; margin-bottom: 1.5rem; }
 
-    /* Scroll */
     .overflow-x { overflow-x: auto; }
     .overflow-y { max-height: 24rem; overflow-y: auto; }
 
-    /* Upload area */
     .upload-area {
       border: 2px dashed var(--border); border-radius: var(--radius); padding: 0.75rem 1rem;
       text-align: center; color: var(--muted); font-size: 0.8125rem; cursor: pointer; transition: all 0.2s;
@@ -113,14 +99,13 @@
 
     .hidden { display: none !important; }
 
-    /* Pricing card in editor */
     .pricing-edit-card { background: var(--secondary); border-radius: var(--radius); padding: 1rem; }
     .pricing-edit-card.editing { box-shadow: inset 0 0 0 1px rgba(0,210,190,0.4); }
   </style>
 </head>
 <body>
 
-<!-- ===================== LOGIN SCREEN ===================== -->
+<!-- LOGIN SCREEN -->
 <div id="loginScreen" class="login-wrapper">
   <div class="login-box glass neon-border">
     <h1>🛡️ Admin Panel</h1>
@@ -132,7 +117,7 @@
   </div>
 </div>
 
-<!-- ===================== MAIN APP ===================== -->
+<!-- MAIN APP -->
 <div id="mainApp" class="app hidden">
   <div class="header">
     <h1>📦 Admin Panel</h1>
@@ -152,6 +137,7 @@
     <button class="tab" data-tab="customers">👥 Customers</button>
     <button class="tab" data-tab="pricing">💰 Pricing</button>
     <button class="tab" data-tab="crypto">🪙 Crypto</button>
+    <button class="tab" data-tab="upi">💳 UPI</button>
     <button class="tab" data-tab="broadcast">📢 Broadcast</button>
   </div>
 
@@ -159,14 +145,8 @@
   <div id="tab-dashboard" class="tab-content">
     <div class="grid-4" id="revenueCards"></div>
     <div class="grid-4" id="orderCards"></div>
-    <div class="card glass" id="stockLevelsCard">
-      <div class="card-title">🗄️ Stock Levels</div>
-      <div id="stockLevelsList"></div>
-    </div>
-    <div class="card glass" id="topCountriesCard">
-      <div class="card-title">🌍 Top Countries by Revenue</div>
-      <div id="topCountriesList"></div>
-    </div>
+    <div class="card glass" id="stockLevelsCard"><div class="card-title">🗄️ Stock Levels</div><div id="stockLevelsList"></div></div>
+    <div class="card glass" id="topCountriesCard"><div class="card-title">🌍 Top Countries by Revenue</div><div id="topCountriesList"></div></div>
   </div>
 
   <!-- ORDERS -->
@@ -185,37 +165,18 @@
     <div class="card glass">
       <div class="card-title">📤 Upload Accounts ZIP</div>
       <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
-        <div>
-          <label class="input-label">Country</label>
-          <select id="uploadCountry" class="input" style="width:auto;"></select>
-        </div>
-        <div>
-          <label class="input-label">Type</label>
-          <select id="uploadType" class="input" style="width:auto;">
-            <option value="regular">📦 Regular</option>
-            <option value="aged">👑 Aged</option>
-          </select>
-        </div>
+        <div><label class="input-label">Country</label><select id="uploadCountry" class="input" style="width:auto;"></select></div>
+        <div><label class="input-label">Type</label><select id="uploadType" class="input" style="width:auto;"><option value="regular">📦 Regular</option><option value="aged">👑 Aged</option></select></div>
       </div>
-      <label class="upload-area" id="uploadArea">
-        📤 Upload ZIP (.session files)
-        <input type="file" accept=".zip" id="masterUploadInput" />
-      </label>
+      <label class="upload-area" id="uploadArea">📤 Upload ZIP (.session files)<input type="file" accept=".zip" id="masterUploadInput" /></label>
     </div>
-    <div class="card glass">
-      <div class="card-title">🗄️ Stock Overview</div>
-      <div id="invStockOverview" class="grid-2" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div>
-    </div>
+    <div class="card glass"><div class="card-title">🗄️ Stock Overview</div><div id="invStockOverview" class="grid-2" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div></div>
     <div class="card glass">
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:1rem;">
         <span class="card-title" style="margin-bottom:0;">🗄️ Inventory Items</span>
         <select id="invFilterCountry" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;"></select>
-        <select id="invFilterType" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;">
-          <option value="all">All Types</option><option value="regular">Regular</option><option value="aged">Aged</option>
-        </select>
-        <select id="invFilterStatus" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;">
-          <option value="available">Available</option><option value="allocated">Allocated</option><option value="all">All</option>
-        </select>
+        <select id="invFilterType" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;"><option value="all">All Types</option><option value="regular">Regular</option><option value="aged">Aged</option></select>
+        <select id="invFilterStatus" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;"><option value="available">Available</option><option value="allocated">Allocated</option><option value="all">All</option></select>
         <button class="btn btn-danger btn-sm hidden" id="deleteSelectedBtn" onclick="deleteSelectedInventory()">🗑️ Delete Selected</button>
       </div>
       <div class="overflow-x overflow-y">
@@ -279,7 +240,6 @@
         <button class="btn btn-primary btn-sm" onclick="toggleAddWallet()">➕ Add Wallet</button>
       </div>
       <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Manage crypto payment addresses. Active wallets appear as payment options in the customer bot.</p>
-
       <div id="addWalletForm" class="hidden" style="background:var(--secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
         <div class="grid-4" style="margin-bottom:0.75rem;">
           <div><label class="input-label">Symbol</label><input type="text" id="newWalletSymbol" class="input" placeholder="USDT" maxlength="10" /></div>
@@ -292,8 +252,29 @@
           <button class="btn btn-secondary btn-sm" onclick="toggleAddWallet()">Cancel</button>
         </div>
       </div>
-
       <div id="walletsList"></div>
+    </div>
+  </div>
+
+  <!-- UPI -->
+  <div id="tab-upi" class="tab-content hidden">
+    <div class="card glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:0;">💳 UPI Wallets</div>
+        <button class="btn btn-primary btn-sm" onclick="toggleAddUpi()">➕ Add UPI</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Manage UPI payment addresses. The first active UPI will be shown to customers for payment.</p>
+      <div id="addUpiForm" class="hidden" style="background:var(--secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
+        <div class="grid-2" style="margin-bottom:0.75rem;">
+          <div><label class="input-label">UPI ID</label><input type="text" id="newUpiId" class="input" placeholder="example@upi" /></div>
+          <div><label class="input-label">Display Name (optional)</label><input type="text" id="newUpiName" class="input" placeholder="My GPay" /></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-primary btn-sm" onclick="addUpi()">➕ Add UPI</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAddUpi()">Cancel</button>
+        </div>
+      </div>
+      <div id="upiList"></div>
     </div>
   </div>
 
@@ -313,20 +294,16 @@
 
 <script>
 // ===================== CONFIG =====================
-// IMPORTANT: Set these before deploying!
 const CONFIG = {
-  // Replace with your Supabase project ID
   PROJECT_ID: "ptjqnvbebnpzaxdhxbtr",
-  // Replace with your Supabase anon/publishable key
   API_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0anFudmJlYm5wemF4ZGh4YnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTM5NzgsImV4cCI6MjA4ODUyOTk3OH0.3v7mWuf1jO1MkonkRHVeTWRNicpuvqotPTgbGKhbubQ",
 };
-
 const BASE_URL = `https://${CONFIG.PROJECT_ID}.supabase.co/functions/v1`;
 
 // ===================== STATE =====================
 let adminKey = localStorage.getItem("admin_key") || "";
 let currentTab = "dashboard";
-let orders = [], customers = [], customerStats = {}, pricing = [], inventoryList = [], cryptoWallets = [];
+let orders = [], customers = [], customerStats = {}, pricing = [], inventoryList = [], cryptoWallets = [], upiWallets = [];
 let dashboard = null, inventoryStats = null;
 let statusFilter = "all";
 let editingPricing = {};
@@ -382,60 +359,44 @@ function loadTabData(tab) {
   if (tab === "customers") fetchCustomers();
   if (tab === "pricing") fetchPricing();
   if (tab === "crypto") fetchCryptoWallets();
+  if (tab === "upi") fetchUpiWallets();
   if (tab === "inventory") { fetchInventoryList(); fetchInventoryStats(); }
 }
 
 // ===================== DATA FETCHING =====================
 async function fetchDashboard() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=dashboard`);
-    if (!result.error) { dashboard = result; renderDashboard(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=dashboard`); if (!result.error) { dashboard = result; renderDashboard(); } } catch {}
 }
 
 async function fetchOrders() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=orders&status=${statusFilter}`);
-    if (!result.error) { orders = result.orders || []; renderOrders(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=orders&status=${statusFilter}`); if (!result.error) { orders = result.orders || []; renderOrders(); } } catch {}
 }
 
 async function fetchInventoryStats() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/upload-master?action=inventory`);
-    if (!result.error) { inventoryStats = result.stats || null; renderInventoryOverview(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/upload-master?action=inventory`); if (!result.error) { inventoryStats = result.stats || null; renderInventoryOverview(); } } catch {}
 }
 
 async function fetchInventoryList() {
   const country = document.getElementById("invFilterCountry")?.value || "all";
   const type = document.getElementById("invFilterType")?.value || "all";
   const status = document.getElementById("invFilterStatus")?.value || "available";
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=inventory_list&country=${country}&type=${type}&inv_status=${status}`);
-    if (!result.error) { inventoryList = result.inventory || []; selectedInvIds.clear(); renderInventoryList(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=inventory_list&country=${country}&type=${type}&inv_status=${status}`); if (!result.error) { inventoryList = result.inventory || []; selectedInvIds.clear(); renderInventoryList(); } } catch {}
 }
 
 async function fetchCustomers() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=customers`);
-    if (!result.error) { customers = result.customers || []; customerStats = result.customerStats || {}; renderCustomers(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=customers`); if (!result.error) { customers = result.customers || []; customerStats = result.customerStats || {}; renderCustomers(); } } catch {}
 }
 
 async function fetchPricing() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=pricing`);
-    if (!result.error) { pricing = result.pricing || []; editingPricing = {}; renderPricing(); populateCountrySelects(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=pricing`); if (!result.error) { pricing = result.pricing || []; editingPricing = {}; renderPricing(); populateCountrySelects(); } } catch {}
 }
 
 async function fetchCryptoWallets() {
-  try {
-    const result = await apiFetch(`${BASE_URL}/admin-api?action=crypto_wallets`);
-    if (!result.error) { cryptoWallets = result.wallets || []; renderCryptoWallets(); }
-  } catch {}
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=crypto_wallets`); if (!result.error) { cryptoWallets = result.wallets || []; renderCryptoWallets(); } } catch {}
+}
+
+async function fetchUpiWallets() {
+  try { const result = await apiFetch(`${BASE_URL}/admin-api?action=upi_wallets`); if (!result.error) { upiWallets = result.wallets || []; renderUpiWallets(); } } catch {}
 }
 
 async function refreshAll() {
@@ -576,6 +537,8 @@ document.getElementById("masterUploadInput").addEventListener("change", async fu
     else { showSuccess(result.message || `Added ${result.added} accounts`); fetchInventoryStats(); fetchInventoryList(); fetchDashboard(); }
   } catch (e) { showError(e.message); }
   document.getElementById("uploadArea").innerHTML = '📤 Upload ZIP (.session files)<input type="file" accept=".zip" id="masterUploadInput" />';
+  // Re-attach event listener
+  document.getElementById("masterUploadInput").addEventListener("change", arguments.callee);
   this.value = "";
 });
 
@@ -741,7 +704,7 @@ function renderCryptoWallets() {
           </div>
           <div style="display:flex;gap:0.375rem;">
             <button class="btn btn-sm ${w.is_active ? 'btn-success' : 'btn-secondary'}" onclick="toggleWallet('${w.id}', ${!w.is_active})" title="${w.is_active ? 'Disable' : 'Enable'}">${w.is_active ? '🟢' : '🔴'}</button>
-            <button class="btn btn-sm btn-secondary" onclick="copyWalletAddr('${w.wallet_address}')" title="Copy">📋</button>
+            <button class="btn btn-sm btn-secondary" onclick="copyAddr('${w.wallet_address}')" title="Copy">📋</button>
             <button class="btn btn-sm btn-danger" onclick="deleteWallet('${w.id}', '${w.coin_symbol}')" title="Delete">🗑️</button>
           </div>
         </div>
@@ -791,7 +754,91 @@ async function deleteWallet(id, symbol) {
   } catch (e) { showError(e.message); }
 }
 
-function copyWalletAddr(addr) { navigator.clipboard.writeText(addr); showSuccess("📋 Address copied!"); }
+function copyAddr(addr) { navigator.clipboard.writeText(addr); showSuccess("📋 Address copied!"); }
+
+// ===================== UPI WALLETS =====================
+function renderUpiWallets() {
+  document.getElementById("upiList").innerHTML = upiWallets.length === 0
+    ? '<div style="text-align:center;color:var(--muted);padding:2rem;"><p style="font-size:1.5rem;opacity:0.5;">💳</p><p style="font-size:0.875rem;">No UPI wallets configured</p><p style="font-size:0.75rem;margin-top:0.25rem;">Add your first UPI ID to enable UPI payments</p></div>'
+    : upiWallets.map(w => `<div class="wallet-card" style="${w.is_active ? '' : 'opacity:0.5;'}">
+        <div class="wallet-header">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="wallet-symbol">💳</span>
+            <span style="font-size:0.875rem;font-weight:500;">${w.display_name || 'UPI'}</span>
+          </div>
+          <div style="display:flex;gap:0.375rem;">
+            <button class="btn btn-sm ${w.is_active ? 'btn-success' : 'btn-secondary'}" onclick="toggleUpi('${w.id}', ${!w.is_active})" title="${w.is_active ? 'Disable' : 'Enable'}">${w.is_active ? '🟢' : '🔴'}</button>
+            <button class="btn btn-sm btn-secondary" onclick="copyAddr('${w.upi_id}')" title="Copy">📋</button>
+            <button class="btn btn-sm btn-secondary" onclick="startEditUpi('${w.id}', '${w.upi_id}')" title="Edit">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteUpi('${w.id}', '${w.upi_id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <div class="wallet-addr" id="upiAddr_${w.id}">${w.upi_id}</div>
+        <div id="upiEdit_${w.id}" class="hidden" style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+          <input type="text" class="input" id="upiEditInput_${w.id}" value="${w.upi_id}" style="flex:1;" />
+          <button class="btn btn-success btn-sm" onclick="saveEditUpi('${w.id}')">💾</button>
+          <button class="btn btn-secondary btn-sm" onclick="cancelEditUpi('${w.id}')">✕</button>
+        </div>
+        <div class="wallet-meta">
+          <span>${w.is_active ? '🟢 Active' : '🔴 Inactive'}</span>
+          <span>•</span>
+          <span>Added ${new Date(w.created_at).toLocaleDateString()}</span>
+        </div>
+      </div>`).join("");
+}
+
+function toggleAddUpi() { document.getElementById("addUpiForm").classList.toggle("hidden"); }
+
+async function addUpi() {
+  const upiId = document.getElementById("newUpiId").value.trim();
+  const displayName = document.getElementById("newUpiName").value.trim();
+  if (!upiId) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_upi_wallet", upi_id: upiId, display_name: displayName }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ UPI ${upiId} added!`); toggleAddUpi(); fetchUpiWallets();
+      document.getElementById("newUpiId").value = ""; document.getElementById("newUpiName").value = "";
+    }
+  } catch (e) { showError(e.message); }
+}
+
+async function toggleUpi(id, active) {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_upi_wallet", id, is_active: active }) });
+    if (result.error) showError(result.error);
+    else { showSuccess("✅ UPI updated!"); fetchUpiWallets(); }
+  } catch (e) { showError(e.message); }
+}
+
+function startEditUpi(id, currentUpi) {
+  document.getElementById("upiEdit_" + id).classList.remove("hidden");
+  document.getElementById("upiEdit_" + id).style.display = "flex";
+  document.getElementById("upiEditInput_" + id).value = currentUpi;
+}
+
+function cancelEditUpi(id) {
+  document.getElementById("upiEdit_" + id).classList.add("hidden");
+  document.getElementById("upiEdit_" + id).style.display = "none";
+}
+
+async function saveEditUpi(id) {
+  const newUpiId = document.getElementById("upiEditInput_" + id).value.trim();
+  if (!newUpiId) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_upi_wallet", id, upi_id: newUpiId }) });
+    if (result.error) showError(result.error);
+    else { showSuccess("✅ UPI updated!"); fetchUpiWallets(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function deleteUpi(id, upiId) {
+  if (!confirm(`Delete UPI ${upiId}?`)) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_upi_wallet", id }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ UPI ${upiId} removed!`); fetchUpiWallets(); }
+  } catch (e) { showError(e.message); }
+}
 
 // ===================== BROADCAST =====================
 async function sendBroadcast() {
