@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIOX Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: hsl(220,20%,6%); --fg: hsl(200,20%,95%); --card: hsl(220,18%,10%);
+      --primary: hsl(175,80%,50%); --primary-fg: hsl(220,20%,6%);
+      --secondary: hsl(220,15%,16%); --muted: hsl(220,10%,50%);
+      --accent: hsl(270,60%,60%); --border: hsl(220,15%,18%);
+      --success: hsl(145,70%,45%); --warning: hsl(40,90%,55%);
+      --destructive: hsl(0,72%,55%); --radius: 0.75rem;
+    }
+    body { background: var(--bg); color: var(--fg); font-family: 'Space Grotesk', sans-serif; line-height: 1.5; }
+    code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+    .glass { background: rgba(13,17,23,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06); }
+    .neon-border { box-shadow: 0 0 15px rgba(0,210,190,0.15); border-color: rgba(0,210,190,0.4); }
+
+    /* Layout */
+    .app { padding: 1rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; }
+    .header-actions { display: flex; gap: 0.5rem; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.8125rem; font-weight: 500; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: var(--primary-fg); }
+    .btn-primary:hover { box-shadow: 0 0 20px rgba(0,210,190,0.3); }
+    .btn-secondary { background: var(--secondary); color: var(--muted); }
+    .btn-secondary:hover { color: var(--fg); }
+    .btn-success { background: rgba(34,197,94,0.2); color: var(--success); }
+    .btn-danger { background: rgba(220,60,60,0.2); color: var(--destructive); }
+    .btn-danger:hover { background: rgba(220,60,60,0.3); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.75rem; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0.375rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.25rem; }
+    .tab { padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.8125rem; font-weight: 500; border: none; color: var(--muted); background: var(--secondary); white-space: nowrap; transition: all 0.2s; }
+    .tab.active { background: var(--primary); color: var(--primary-fg); }
+    .tab:hover:not(.active) { color: var(--fg); }
+
+    /* Cards */
+    .card { border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .card-title { font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    @media (max-width: 768px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-2 { grid-template-columns: 1fr; } }
+
+    /* Stat cards */
+    .stat { border-radius: var(--radius); padding: 1rem; text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* Table */
+    table { width: 100%; font-size: 0.8125rem; border-collapse: collapse; }
+    th { text-align: left; padding: 0.75rem 1rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Form */
+    .input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.5rem 0.75rem; font-size: 0.8125rem; color: var(--fg); outline: none; transition: border 0.2s;
+    }
+    .input:focus { border-color: rgba(0,210,190,0.5); }
+    .input-label { font-size: 0.6875rem; color: var(--muted); display: block; margin-bottom: 0.25rem; }
+    select.input { appearance: none; }
+    textarea.input { resize: none; }
+
+    /* Status badges */
+    .badge-status { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; border-radius: 100px; font-size: 0.6875rem; font-weight: 500; }
+    .badge-pending { background: rgba(234,179,8,0.2); color: var(--warning); }
+    .badge-payment_received { background: rgba(0,210,190,0.2); color: var(--primary); }
+    .badge-approved, .badge-delivered { background: rgba(34,197,94,0.2); color: var(--success); }
+    .badge-rejected, .badge-cancelled { background: rgba(220,60,60,0.2); color: var(--destructive); }
+
+    /* Messages */
+    .msg-error { color: var(--destructive); font-size: 0.8125rem; background: rgba(220,60,60,0.1); padding: 0.5rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
+    .msg-success { color: var(--success); font-size: 0.8125rem; background: rgba(34,197,94,0.1); padding: 0.5rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
+
+    /* Wallet card */
+    .wallet-card { background: var(--secondary); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.75rem; }
+    .wallet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .wallet-symbol { font-size: 1.125rem; font-weight: 700; color: var(--primary); }
+    .wallet-addr { font-size: 0.6875rem; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.3); padding: 0.375rem 0.5rem; border-radius: 0.375rem; word-break: break-all; }
+    .wallet-meta { font-size: 0.6875rem; color: var(--muted); margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+
+    /* Login */
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+    .login-box { width: 100%; max-width: 360px; border-radius: 1rem; padding: 2rem; }
+    .login-box h1 { text-align: center; font-size: 1.5rem; margin-bottom: 1.5rem; }
+
+    /* Scroll */
+    .overflow-x { overflow-x: auto; }
+    .overflow-y { max-height: 24rem; overflow-y: auto; }
+
+    /* Upload area */
+    .upload-area {
+      border: 2px dashed var(--border); border-radius: var(--radius); padding: 0.75rem 1rem;
+      text-align: center; color: var(--muted); font-size: 0.8125rem; cursor: pointer; transition: all 0.2s;
+    }
+    .upload-area:hover { border-color: rgba(0,210,190,0.5); color: var(--fg); }
+    .upload-area input { display: none; }
+
+    .hidden { display: none !important; }
+
+    /* Pricing card in editor */
+    .pricing-edit-card { background: var(--secondary); border-radius: var(--radius); padding: 1rem; }
+    .pricing-edit-card.editing { box-shadow: inset 0 0 0 1px rgba(0,210,190,0.4); }
+  </style>
+</head>
+<body>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="loginScreen" class="login-wrapper">
+  <div class="login-box glass neon-border">
+    <h1>🛡️ Admin Panel</h1>
+    <div id="loginError" class="msg-error hidden"></div>
+    <form id="loginForm">
+      <input type="password" id="passwordInput" class="input" placeholder="Enter admin password" style="margin-bottom:1rem;" />
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem;">Login</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div id="mainApp" class="app hidden">
+  <div class="header">
+    <h1>📦 Admin Panel</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="refreshAll()" id="refreshBtn">🔄 Refresh</button>
+      <button class="btn btn-danger" onclick="logout()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <div id="globalError" class="msg-error hidden"></div>
+  <div id="globalSuccess" class="msg-success hidden"></div>
+
+  <div class="tabs" id="tabsContainer">
+    <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
+    <button class="tab" data-tab="orders">📦 Orders</button>
+    <button class="tab" data-tab="inventory">🗄️ Inventory</button>
+    <button class="tab" data-tab="customers">👥 Customers</button>
+    <button class="tab" data-tab="pricing">💰 Pricing</button>
+    <button class="tab" data-tab="crypto">🪙 Crypto</button>
+    <button class="tab" data-tab="broadcast">📢 Broadcast</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content">
+    <div class="grid-4" id="revenueCards"></div>
+    <div class="grid-4" id="orderCards"></div>
+    <div class="card glass" id="stockLevelsCard">
+      <div class="card-title">🗄️ Stock Levels</div>
+      <div id="stockLevelsList"></div>
+    </div>
+    <div class="card glass" id="topCountriesCard">
+      <div class="card-title">🌍 Top Countries by Revenue</div>
+      <div id="topCountriesList"></div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div id="tab-orders" class="tab-content hidden">
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;" id="statusFilters"></div>
+    <div class="card glass overflow-x">
+      <table>
+        <thead><tr><th>Order ID</th><th>Country</th><th>Type</th><th>Qty</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="ordersTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div id="tab-inventory" class="tab-content hidden">
+    <div class="card glass">
+      <div class="card-title">📤 Upload Accounts ZIP</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
+        <div>
+          <label class="input-label">Country</label>
+          <select id="uploadCountry" class="input" style="width:auto;"></select>
+        </div>
+        <div>
+          <label class="input-label">Type</label>
+          <select id="uploadType" class="input" style="width:auto;">
+            <option value="regular">📦 Regular</option>
+            <option value="aged">👑 Aged</option>
+          </select>
+        </div>
+      </div>
+      <label class="upload-area" id="uploadArea">
+        📤 Upload ZIP (.session files)
+        <input type="file" accept=".zip" id="masterUploadInput" />
+      </label>
+    </div>
+    <div class="card glass">
+      <div class="card-title">🗄️ Stock Overview</div>
+      <div id="invStockOverview" class="grid-2" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div>
+    </div>
+    <div class="card glass">
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:1rem;">
+        <span class="card-title" style="margin-bottom:0;">🗄️ Inventory Items</span>
+        <select id="invFilterCountry" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;"></select>
+        <select id="invFilterType" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;">
+          <option value="all">All Types</option><option value="regular">Regular</option><option value="aged">Aged</option>
+        </select>
+        <select id="invFilterStatus" class="input" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem;">
+          <option value="available">Available</option><option value="allocated">Allocated</option><option value="all">All</option>
+        </select>
+        <button class="btn btn-danger btn-sm hidden" id="deleteSelectedBtn" onclick="deleteSelectedInventory()">🗑️ Delete Selected</button>
+      </div>
+      <div class="overflow-x overflow-y">
+        <table>
+          <thead><tr><th><input type="checkbox" id="selectAllInv" /></th><th>File</th><th>Country</th><th>Type</th><th>Status</th><th>Order</th><th>Date</th></tr></thead>
+          <tbody id="invTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMERS -->
+  <div id="tab-customers" class="tab-content hidden">
+    <div class="card glass overflow-x">
+      <div class="card-title">👥 All Customers</div>
+      <table>
+        <thead><tr><th>Username</th><th>Name</th><th>Telegram ID</th><th>Orders</th><th>Delivered</th><th>Total Spent</th><th>Joined</th></tr></thead>
+        <tbody id="customersTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div id="tab-pricing" class="tab-content hidden">
+    <div class="card glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:0;">🌍 Manage Countries</div>
+        <button class="btn btn-primary btn-sm" onclick="toggleAddCountry()">➕ Add Country</button>
+      </div>
+      <div id="addCountryForm" class="hidden" style="background:var(--secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
+        <div class="grid-4" style="margin-bottom:0.75rem;">
+          <div><label class="input-label">Code</label><input type="text" id="newCountryCode" class="input" placeholder="PK" maxlength="3" /></div>
+          <div><label class="input-label">Name</label><input type="text" id="newCountryName" class="input" placeholder="Pakistan" /></div>
+          <div><label class="input-label">Flag</label><input type="text" id="newCountryFlag" class="input" placeholder="🇵🇰" value="🌍" /></div>
+          <div><label class="input-label">Regular ₹</label><input type="number" id="newCountryRegular" class="input" value="50" /></div>
+          <div><label class="input-label">Aged ₹</label><input type="number" id="newCountryAged" class="input" value="100" /></div>
+          <div><label class="input-label">Regular USDT</label><input type="number" id="newCountryRegularUsdt" class="input" step="0.01" value="0" /></div>
+          <div><label class="input-label">Aged USDT</label><input type="number" id="newCountryAgedUsdt" class="input" step="0.01" value="0" /></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-primary btn-sm" onclick="addCountry()">➕ Add Country</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAddCountry()">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div class="card glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:0;">💰 Dynamic Pricing Editor</div>
+        <button class="btn btn-success btn-sm hidden" id="savePricingBtn" onclick="savePricing()">💾 Save Changes</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Edit prices below. Changes apply to the Telegram bot after saving.</p>
+      <div class="grid-2" id="pricingEditorGrid"></div>
+    </div>
+  </div>
+
+  <!-- CRYPTO -->
+  <div id="tab-crypto" class="tab-content hidden">
+    <div class="card glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:0;">🪙 Crypto Wallets</div>
+        <button class="btn btn-primary btn-sm" onclick="toggleAddWallet()">➕ Add Wallet</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Manage crypto payment addresses. Active wallets appear as payment options in the customer bot.</p>
+
+      <div id="addWalletForm" class="hidden" style="background:var(--secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
+        <div class="grid-4" style="margin-bottom:0.75rem;">
+          <div><label class="input-label">Symbol</label><input type="text" id="newWalletSymbol" class="input" placeholder="USDT" maxlength="10" /></div>
+          <div><label class="input-label">Coin Name</label><input type="text" id="newWalletName" class="input" placeholder="Tether" /></div>
+          <div><label class="input-label">Network</label><input type="text" id="newWalletNetwork" class="input" placeholder="TRC20" /></div>
+          <div><label class="input-label">Address</label><input type="text" id="newWalletAddr" class="input" placeholder="TYourWallet..." /></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-primary btn-sm" onclick="addWallet()">➕ Add Wallet</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAddWallet()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="walletsList"></div>
+    </div>
+  </div>
+
+  <!-- BROADCAST -->
+  <div id="tab-broadcast" class="tab-content hidden">
+    <div class="card glass" style="max-width:700px;">
+      <div class="card-title">📢 Broadcast Message</div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Send a message to ALL customers via Telegram. Supports Markdown.</p>
+      <textarea id="broadcastMsg" class="input" rows="6" placeholder="Type your announcement here..." style="margin-bottom:1rem;"></textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.75rem;color:var(--muted);" id="broadcastCount">? customers will receive this</span>
+        <button class="btn btn-primary" onclick="sendBroadcast()">📤 Send Broadcast</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+// IMPORTANT: Set these before deploying!
+const CONFIG = {
+  // Replace with your Supabase project ID
+  PROJECT_ID: "ptjqnvbebnpzaxdhxbtr",
+  // Replace with your Supabase anon/publishable key
+  API_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0anFudmJlYm5wemF4ZGh4YnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTM5NzgsImV4cCI6MjA4ODUyOTk3OH0.3v7mWuf1jO1MkonkRHVeTWRNicpuvqotPTgbGKhbubQ",
+};
+
+const BASE_URL = `https://${CONFIG.PROJECT_ID}.supabase.co/functions/v1`;
+
+// ===================== STATE =====================
+let adminKey = localStorage.getItem("admin_key") || "";
+let currentTab = "dashboard";
+let orders = [], customers = [], customerStats = {}, pricing = [], inventoryList = [], cryptoWallets = [];
+let dashboard = null, inventoryStats = null;
+let statusFilter = "all";
+let editingPricing = {};
+let selectedInvIds = new Set();
+
+// ===================== API =====================
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(endpoint, {
+    ...options,
+    headers: { "x-admin-key": adminKey, "apikey": CONFIG.API_KEY, ...(options.headers || {}) },
+  });
+  if (res.status === 401) { logout(); showError("Invalid admin password"); throw new Error("Unauthorized"); }
+  return res.json();
+}
+
+// ===================== AUTH =====================
+document.getElementById("loginForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const pw = document.getElementById("passwordInput").value.trim();
+  if (pw) { adminKey = pw; localStorage.setItem("admin_key", pw); document.getElementById("passwordInput").value = ""; initApp(); }
+});
+
+function logout() {
+  adminKey = ""; localStorage.removeItem("admin_key");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("mainApp").classList.add("hidden");
+}
+
+function initApp() {
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+  document.getElementById("loginError").classList.add("hidden");
+  refreshAll();
+}
+
+// ===================== MESSAGES =====================
+function showError(msg) { const el = document.getElementById("globalError"); el.textContent = msg; el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 5000); }
+function showSuccess(msg) { const el = document.getElementById("globalSuccess"); el.textContent = msg; el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 5000); }
+
+// ===================== TABS =====================
+document.getElementById("tabsContainer").addEventListener("click", (e) => {
+  if (e.target.classList.contains("tab")) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    e.target.classList.add("active");
+    currentTab = e.target.dataset.tab;
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+    document.getElementById("tab-" + currentTab).classList.remove("hidden");
+    loadTabData(currentTab);
+  }
+});
+
+function loadTabData(tab) {
+  if (tab === "customers") fetchCustomers();
+  if (tab === "pricing") fetchPricing();
+  if (tab === "crypto") fetchCryptoWallets();
+  if (tab === "inventory") { fetchInventoryList(); fetchInventoryStats(); }
+}
+
+// ===================== DATA FETCHING =====================
+async function fetchDashboard() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=dashboard`);
+    if (!result.error) { dashboard = result; renderDashboard(); }
+  } catch {}
+}
+
+async function fetchOrders() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=orders&status=${statusFilter}`);
+    if (!result.error) { orders = result.orders || []; renderOrders(); }
+  } catch {}
+}
+
+async function fetchInventoryStats() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/upload-master?action=inventory`);
+    if (!result.error) { inventoryStats = result.stats || null; renderInventoryOverview(); }
+  } catch {}
+}
+
+async function fetchInventoryList() {
+  const country = document.getElementById("invFilterCountry")?.value || "all";
+  const type = document.getElementById("invFilterType")?.value || "all";
+  const status = document.getElementById("invFilterStatus")?.value || "available";
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=inventory_list&country=${country}&type=${type}&inv_status=${status}`);
+    if (!result.error) { inventoryList = result.inventory || []; selectedInvIds.clear(); renderInventoryList(); }
+  } catch {}
+}
+
+async function fetchCustomers() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=customers`);
+    if (!result.error) { customers = result.customers || []; customerStats = result.customerStats || {}; renderCustomers(); }
+  } catch {}
+}
+
+async function fetchPricing() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=pricing`);
+    if (!result.error) { pricing = result.pricing || []; editingPricing = {}; renderPricing(); populateCountrySelects(); }
+  } catch {}
+}
+
+async function fetchCryptoWallets() {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=crypto_wallets`);
+    if (!result.error) { cryptoWallets = result.wallets || []; renderCryptoWallets(); }
+  } catch {}
+}
+
+async function refreshAll() {
+  fetchDashboard(); fetchOrders(); fetchInventoryStats(); fetchPricing();
+}
+
+// ===================== RENDER: DASHBOARD =====================
+function renderDashboard() {
+  if (!dashboard) return;
+  document.getElementById("revenueCards").innerHTML = [
+    { label: "Total Revenue", value: `₹${dashboard.totalRevenue.toLocaleString()}`, color: "var(--primary)" },
+    { label: "Today's Revenue", value: `₹${dashboard.todayRevenue.toLocaleString()}`, color: "var(--success)" },
+    { label: "This Week", value: `₹${dashboard.weekRevenue.toLocaleString()}`, color: "var(--accent)" },
+    { label: "This Month", value: `₹${dashboard.monthRevenue.toLocaleString()}`, color: "var(--warning)" },
+  ].map(s => `<div class="stat glass"><div class="stat-value" style="color:${s.color}">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join("");
+
+  document.getElementById("orderCards").innerHTML = [
+    { label: "Total Orders", value: dashboard.totalOrders, color: "var(--fg)" },
+    { label: "Today's Orders", value: dashboard.todayOrders, color: "var(--primary)" },
+    { label: "Pending", value: dashboard.pendingCount, color: "var(--warning)" },
+    { label: "Total Customers", value: dashboard.totalCustomers, color: "var(--accent)" },
+  ].map(s => `<div class="stat glass"><div class="stat-value" style="color:${s.color}">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join("");
+
+  const sl = dashboard.stockLevels || {};
+  document.getElementById("stockLevelsList").innerHTML = Object.entries(sl).length === 0
+    ? '<p style="color:var(--muted);text-align:center;padding:1rem;">No stock available</p>'
+    : Object.entries(sl).map(([code, levels]) => {
+        const total = levels.regular + levels.aged;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--secondary);border-radius:0.5rem;padding:0.5rem 0.75rem;margin-bottom:0.375rem;">
+          <span style="font-size:0.875rem;">${code}</span>
+          <div style="display:flex;gap:0.75rem;font-size:0.75rem;">
+            <span style="color:var(--primary);">📦 ${levels.regular}</span>
+            <span style="color:var(--accent);">👑 ${levels.aged}</span>
+            <span style="font-weight:700;color:${total < 10 ? 'var(--destructive)' : 'var(--success)'};">${total} total</span>
+          </div>
+        </div>`;
+      }).join("");
+
+  document.getElementById("topCountriesList").innerHTML = (dashboard.topCountries || []).length === 0
+    ? '<p style="color:var(--muted);text-align:center;padding:1rem;">No data</p>'
+    : dashboard.topCountries.map((c, i) =>
+        `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.375rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+          <span style="font-size:0.875rem;">${i + 1}. ${c.country}</span>
+          <span style="font-weight:600;color:var(--primary);">₹${c.revenue.toLocaleString()}</span>
+        </div>`).join("");
+}
+
+// ===================== RENDER: ORDERS =====================
+function renderOrders() {
+  const statuses = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
+  document.getElementById("statusFilters").innerHTML = statuses.map(s => {
+    const count = s === "all" ? "" : ` (${orders.filter(o => o.status === s).length})`;
+    return `<button class="btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}" onclick="setStatusFilter('${s}')">${s === "all" ? "All" : s.replace("_", " ")}${count}</button>`;
+  }).join("");
+
+  const filtered = statusFilter === "all" ? orders : orders.filter(o => o.status === statusFilter);
+  document.getElementById("ordersTableBody").innerHTML = filtered.length === 0
+    ? '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:3rem;">No orders found</td></tr>'
+    : filtered.map(o => {
+        let actions = "";
+        if (o.status === "payment_received") {
+          actions += `<button class="btn btn-success btn-sm" onclick="approvePayment('${o.order_id}')">✅ Approve</button> `;
+          actions += `<button class="btn btn-danger btn-sm" onclick="rejectPayment('${o.order_id}')">❌ Reject</button> `;
+        }
+        if (o.status === "payment_received" || o.status === "pending") {
+          actions += `<label class="btn btn-sm" style="background:rgba(0,210,190,0.2);color:var(--primary);cursor:pointer;">📤 ZIP<input type="file" accept=".zip" style="display:none" onchange="uploadFile('${o.order_id}', this.files[0])" /></label>`;
+        }
+        if (o.delivery_file_path) {
+          actions += ` <button class="btn btn-success btn-sm" onclick="downloadFile('${o.delivery_file_path}')">⬇️ DL</button>`;
+        }
+        return `<tr>
+          <td class="mono" style="font-size:0.6875rem;color:var(--primary);">${o.order_id}</td>
+          <td>${o.country}</td><td>${o.account_type}</td><td>${o.quantity}</td>
+          <td style="font-weight:500;">₹${o.amount.toLocaleString()}</td>
+          <td><span class="badge-status badge-${o.status}">${o.status.replace("_", " ")}</span></td>
+          <td style="font-size:0.75rem;color:var(--muted);">${new Date(o.created_at).toLocaleDateString()}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("");
+}
+
+function setStatusFilter(s) { statusFilter = s; renderOrders(); }
+
+// ===================== ORDER ACTIONS =====================
+async function approvePayment(orderId) {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_payment", orderId }) });
+    if (result.error === "insufficient_stock") showError(`Not enough stock for ${orderId}!`);
+    else if (result.error) showError(result.error);
+    else { showSuccess(`✅ Order ${orderId} approved & delivered!`); refreshAll(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function rejectPayment(orderId) {
+  const reason = prompt("Enter rejection reason (optional):");
+  if (reason === null) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_payment", orderId, reason }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`❌ Order ${orderId} rejected.`); fetchOrders(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function uploadFile(orderId, file) {
+  if (!file) return;
+  try {
+    const fd = new FormData(); fd.append("orderId", orderId); fd.append("file", file);
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", body: fd });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ File uploaded for ${orderId}`); fetchOrders(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function downloadFile(filePath) {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "get_download_url", filePath }) });
+    if (result.url) window.open(result.url, "_blank");
+  } catch (e) { showError(e.message); }
+}
+
+// ===================== INVENTORY =====================
+function populateCountrySelects() {
+  const countries = pricing.length > 0 ? pricing.map(p => ({ code: p.country_code, name: p.country_name, flag: p.flag })) : [{ code: "IN", name: "India", flag: "🇮🇳" }];
+  const opts = countries.map(c => `<option value="${c.code}">${c.flag} ${c.name}</option>`).join("");
+  document.getElementById("uploadCountry").innerHTML = opts;
+  document.getElementById("invFilterCountry").innerHTML = `<option value="all">All Countries</option>` + opts;
+}
+
+document.getElementById("masterUploadInput").addEventListener("change", async function () {
+  const file = this.files[0]; if (!file) return;
+  const country = document.getElementById("uploadCountry").value;
+  const type = document.getElementById("uploadType").value;
+  document.getElementById("uploadArea").textContent = "Extracting & uploading...";
+  try {
+    const fd = new FormData(); fd.append("accountType", type); fd.append("country", country); fd.append("file", file);
+    const result = await apiFetch(`${BASE_URL}/upload-master`, { method: "POST", body: fd });
+    if (result.error) showError(result.error);
+    else { showSuccess(result.message || `Added ${result.added} accounts`); fetchInventoryStats(); fetchInventoryList(); fetchDashboard(); }
+  } catch (e) { showError(e.message); }
+  document.getElementById("uploadArea").innerHTML = '📤 Upload ZIP (.session files)<input type="file" accept=".zip" id="masterUploadInput" />';
+  this.value = "";
+});
+
+["invFilterCountry", "invFilterType", "invFilterStatus"].forEach(id => {
+  document.getElementById(id).addEventListener("change", fetchInventoryList);
+});
+
+document.getElementById("selectAllInv").addEventListener("change", function () {
+  if (this.checked) { selectedInvIds = new Set(inventoryList.map(i => i.id)); } else { selectedInvIds.clear(); }
+  renderInventoryList();
+});
+
+function renderInventoryOverview() {
+  if (!inventoryStats) return;
+  const countries = pricing.length > 0 ? pricing.map(p => ({ code: p.country_code, name: p.country_name, flag: p.flag })) : [];
+  document.getElementById("invStockOverview").innerHTML = countries.map(c => {
+    const stats = inventoryStats[c.code]; if (!stats) return "";
+    const total = (stats.regular?.available || 0) + (stats.aged?.available || 0); if (total === 0) return "";
+    return `<div style="background:var(--secondary);border-radius:0.5rem;padding:0.5rem 0.75rem;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:0.875rem;">${c.flag} ${c.name}</span>
+      <div style="display:flex;gap:0.5rem;font-size:0.75rem;">
+        <span style="color:var(--primary);">📦${stats.regular?.available || 0}</span>
+        <span style="color:var(--accent);">👑${stats.aged?.available || 0}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderInventoryList() {
+  const delBtn = document.getElementById("deleteSelectedBtn");
+  if (selectedInvIds.size > 0) { delBtn.classList.remove("hidden"); delBtn.textContent = `🗑️ Delete ${selectedInvIds.size} selected`; } else { delBtn.classList.add("hidden"); }
+
+  document.getElementById("invTableBody").innerHTML = inventoryList.length === 0
+    ? '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No items found</td></tr>'
+    : inventoryList.map(item => `<tr>
+        <td><input type="checkbox" ${selectedInvIds.has(item.id) ? "checked" : ""} onchange="toggleInvSelect('${item.id}', this.checked)" /></td>
+        <td class="mono" style="font-size:0.6875rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${item.file_name}</td>
+        <td>${item.country}</td><td>${item.account_type}</td>
+        <td><span class="badge-status ${item.status === 'available' ? 'badge-delivered' : 'badge-pending'}">${item.status}</span></td>
+        <td style="color:var(--muted);">${item.order_id || "-"}</td>
+        <td style="font-size:0.75rem;color:var(--muted);">${new Date(item.created_at).toLocaleDateString()}</td>
+      </tr>`).join("");
+}
+
+function toggleInvSelect(id, checked) {
+  if (checked) selectedInvIds.add(id); else selectedInvIds.delete(id);
+  renderInventoryList();
+}
+
+async function deleteSelectedInventory() {
+  if (selectedInvIds.size === 0) return;
+  if (!confirm(`Delete ${selectedInvIds.size} inventory items?`)) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_inventory", ids: Array.from(selectedInvIds) }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ Deleted ${result.deleted} items`); selectedInvIds.clear(); fetchInventoryList(); fetchInventoryStats(); fetchDashboard(); }
+  } catch (e) { showError(e.message); }
+}
+
+// ===================== CUSTOMERS =====================
+function renderCustomers() {
+  document.getElementById("customersTableBody").innerHTML = customers.length === 0
+    ? '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem;">No customers found</td></tr>'
+    : customers.map(c => {
+        const stats = customerStats[c.telegram_id] || { total_orders: 0, total_spent: 0, delivered: 0 };
+        return `<tr>
+          <td style="color:var(--primary);">@${c.username || "—"}</td>
+          <td>${c.first_name || "—"}</td>
+          <td class="mono" style="font-size:0.75rem;color:var(--muted);">${c.telegram_id}</td>
+          <td>${stats.total_orders}</td>
+          <td style="color:var(--success);">${stats.delivered}</td>
+          <td style="font-weight:500;">₹${stats.total_spent.toLocaleString()}</td>
+          <td style="font-size:0.75rem;color:var(--muted);">${new Date(c.created_at).toLocaleDateString()}</td>
+        </tr>`;
+      }).join("");
+  document.getElementById("broadcastCount").textContent = `${customers.length || "?"} customers will receive this`;
+}
+
+// ===================== PRICING =====================
+function renderPricing() {
+  const saveBtn = document.getElementById("savePricingBtn");
+  if (Object.keys(editingPricing).length > 0) saveBtn.classList.remove("hidden"); else saveBtn.classList.add("hidden");
+
+  document.getElementById("pricingEditorGrid").innerHTML = pricing.map(p => {
+    const current = editingPricing[p.country_code] || { regular: p.regular_price, aged: p.aged_price, regular_usdt: p.regular_price_usdt, aged_usdt: p.aged_price_usdt };
+    const isEditing = !!editingPricing[p.country_code];
+    return `<div class="pricing-edit-card ${isEditing ? 'editing' : ''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <span style="font-weight:500;">${p.flag} ${p.country_name}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:0.75rem;color:var(--muted);">${p.country_code}</span>
+          <button class="btn btn-danger" style="padding:0.25rem;" onclick="removeCountry('${p.country_code}', '${p.country_name}')">✕</button>
+        </div>
+      </div>
+      <div class="grid-4">
+        <div><label class="input-label">📦 Regular (₹)</label><input type="number" class="input" value="${current.regular}" onchange="updatePricing('${p.country_code}', 'regular', this.value)" /></div>
+        <div><label class="input-label">👑 Aged (₹)</label><input type="number" class="input" value="${current.aged}" onchange="updatePricing('${p.country_code}', 'aged', this.value)" /></div>
+        <div><label class="input-label">📦 Regular (USDT)</label><input type="number" step="0.01" class="input" value="${current.regular_usdt}" onchange="updatePricing('${p.country_code}', 'regular_usdt', this.value)" /></div>
+        <div><label class="input-label">👑 Aged (USDT)</label><input type="number" step="0.01" class="input" value="${current.aged_usdt}" onchange="updatePricing('${p.country_code}', 'aged_usdt', this.value)" /></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function updatePricing(code, field, value) {
+  const p = pricing.find(x => x.country_code === code);
+  if (!editingPricing[code]) {
+    editingPricing[code] = { regular: p.regular_price, aged: p.aged_price, regular_usdt: p.regular_price_usdt, aged_usdt: p.aged_price_usdt };
+  }
+  editingPricing[code][field] = Number(value);
+  document.getElementById("savePricingBtn").classList.remove("hidden");
+  document.getElementById("savePricingBtn").textContent = `💾 Save ${Object.keys(editingPricing).length} changes`;
+}
+
+async function savePricing() {
+  try {
+    const updates = Object.entries(editingPricing).map(([code, p]) => ({ country_code: code, regular_price: p.regular, aged_price: p.aged, regular_price_usdt: p.regular_usdt, aged_price_usdt: p.aged_usdt }));
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_pricing", pricing: updates }) });
+    if (result.error) showError(result.error);
+    else { showSuccess("✅ Pricing updated!"); fetchPricing(); }
+  } catch (e) { showError(e.message); }
+}
+
+function toggleAddCountry() { document.getElementById("addCountryForm").classList.toggle("hidden"); }
+
+async function addCountry() {
+  const code = document.getElementById("newCountryCode").value.trim().toUpperCase();
+  const name = document.getElementById("newCountryName").value.trim();
+  if (!code || !name) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      action: "add_country", country_code: code, country_name: name,
+      flag: document.getElementById("newCountryFlag").value || "🌍",
+      regular_price: Number(document.getElementById("newCountryRegular").value),
+      aged_price: Number(document.getElementById("newCountryAged").value),
+      regular_price_usdt: Number(document.getElementById("newCountryRegularUsdt").value),
+      aged_price_usdt: Number(document.getElementById("newCountryAgedUsdt").value),
+    }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ Country ${name} added!`); toggleAddCountry(); fetchPricing(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function removeCountry(code, name) {
+  if (!confirm(`Remove ${name}?`)) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove_country", country_code: code }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ ${code} removed!`); fetchPricing(); }
+  } catch (e) { showError(e.message); }
+}
+
+// ===================== CRYPTO WALLETS =====================
+function renderCryptoWallets() {
+  document.getElementById("walletsList").innerHTML = cryptoWallets.length === 0
+    ? '<div style="text-align:center;color:var(--muted);padding:2rem;"><p style="font-size:1.5rem;opacity:0.5;">🪙</p><p style="font-size:0.875rem;">No crypto wallets configured</p><p style="font-size:0.75rem;margin-top:0.25rem;">Add your first wallet to enable crypto payments</p></div>'
+    : cryptoWallets.map(w => `<div class="wallet-card" style="${w.is_active ? '' : 'opacity:0.5;'}">
+        <div class="wallet-header">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="wallet-symbol">${w.coin_symbol}</span>
+            <span style="font-size:0.875rem;color:var(--muted);">${w.coin_name}</span>
+            ${w.network ? `<span style="font-size:0.6875rem;background:rgba(139,92,246,0.2);color:var(--accent);padding:0.125rem 0.5rem;border-radius:100px;">${w.network}</span>` : ''}
+          </div>
+          <div style="display:flex;gap:0.375rem;">
+            <button class="btn btn-sm ${w.is_active ? 'btn-success' : 'btn-secondary'}" onclick="toggleWallet('${w.id}', ${!w.is_active})" title="${w.is_active ? 'Disable' : 'Enable'}">${w.is_active ? '🟢' : '🔴'}</button>
+            <button class="btn btn-sm btn-secondary" onclick="copyWalletAddr('${w.wallet_address}')" title="Copy">📋</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteWallet('${w.id}', '${w.coin_symbol}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <div class="wallet-addr">${w.wallet_address}</div>
+        <div class="wallet-meta">
+          <span>${w.is_active ? '🟢 Active' : '🔴 Inactive'}</span>
+          <span>•</span>
+          <span>Added ${new Date(w.created_at).toLocaleDateString()}</span>
+        </div>
+      </div>`).join("");
+}
+
+function toggleAddWallet() { document.getElementById("addWalletForm").classList.toggle("hidden"); }
+
+async function addWallet() {
+  const symbol = document.getElementById("newWalletSymbol").value.trim().toUpperCase();
+  const name = document.getElementById("newWalletName").value.trim();
+  const addr = document.getElementById("newWalletAddr").value.trim();
+  if (!symbol || !name || !addr) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      action: "add_crypto_wallet", coin_symbol: symbol, coin_name: name,
+      network: document.getElementById("newWalletNetwork").value.trim(), wallet_address: addr,
+    }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ ${symbol} wallet added!`); toggleAddWallet(); fetchCryptoWallets();
+      document.getElementById("newWalletSymbol").value = ""; document.getElementById("newWalletName").value = "";
+      document.getElementById("newWalletNetwork").value = ""; document.getElementById("newWalletAddr").value = "";
+    }
+  } catch (e) { showError(e.message); }
+}
+
+async function toggleWallet(id, active) {
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_crypto_wallet", id, is_active: active }) });
+    if (result.error) showError(result.error);
+    else { showSuccess("✅ Wallet updated!"); fetchCryptoWallets(); }
+  } catch (e) { showError(e.message); }
+}
+
+async function deleteWallet(id, symbol) {
+  if (!confirm(`Delete ${symbol} wallet?`)) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_crypto_wallet", id }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ ${symbol} wallet removed!`); fetchCryptoWallets(); }
+  } catch (e) { showError(e.message); }
+}
+
+function copyWalletAddr(addr) { navigator.clipboard.writeText(addr); showSuccess("📋 Address copied!"); }
+
+// ===================== BROADCAST =====================
+async function sendBroadcast() {
+  const msg = document.getElementById("broadcastMsg").value.trim();
+  if (!msg) return;
+  if (!confirm("Send this message to ALL customers?")) return;
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast", message: msg }) });
+    if (result.error) showError(result.error);
+    else { showSuccess(`✅ Broadcast sent! ${result.sent} delivered, ${result.failed} failed.`); document.getElementById("broadcastMsg").value = ""; }
+  } catch (e) { showError(e.message); }
+}
+
+// ===================== INIT =====================
+if (adminKey) initApp();
+</script>
+</body>
+</html>

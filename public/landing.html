@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIOX Accounts Pro — Premium Telegram Accounts for Airdrop Farming</title>
+  <meta name="description" content="Bulk virtual Telegram accounts for airdrop farming. Instant auto-delivery via bot. Multi-currency payments. Aged & regular accounts available." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: hsl(220, 20%, 6%);
+      --fg: hsl(200, 20%, 95%);
+      --card: hsl(220, 18%, 10%);
+      --primary: hsl(175, 80%, 50%);
+      --primary-fg: hsl(220, 20%, 6%);
+      --secondary: hsl(220, 15%, 16%);
+      --muted: hsl(220, 10%, 50%);
+      --accent: hsl(270, 60%, 60%);
+      --border: hsl(220, 15%, 18%);
+      --success: hsl(145, 70%, 45%);
+      --warning: hsl(40, 90%, 55%);
+      --destructive: hsl(0, 72%, 55%);
+      --radius: 0.75rem;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Space Grotesk', sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Glass */
+    .glass {
+      background: rgba(13, 17, 23, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .glass-hover { transition: all 0.3s; }
+    .glass-hover:hover { border-color: rgba(0, 210, 190, 0.4); }
+
+    .neon-border {
+      box-shadow: 0 0 15px rgba(0, 210, 190, 0.15), inset 0 0 15px rgba(0, 210, 190, 0.05);
+      border-color: rgba(0, 210, 190, 0.4);
+    }
+
+    .neon-text {
+      color: var(--primary);
+      text-shadow: 0 0 20px rgba(0, 210, 190, 0.5), 0 0 40px rgba(0, 210, 190, 0.2);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 0%, rgba(0, 210, 190, 0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+    }
+    .hero-grid {
+      position: absolute; inset: 0; opacity: 0.03;
+      background-image: linear-gradient(var(--primary) 1px, transparent 1px), linear-gradient(90deg, var(--primary) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .hero-content { position: relative; z-index: 10; text-align: center; max-width: 800px; margin: 0 auto; padding: 5rem 1.5rem; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1.25rem; border-radius: 100px; margin-bottom: 2rem;
+      font-size: 0.875rem; color: var(--muted);
+    }
+    .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse-glow 2s infinite; }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 210, 190, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(0, 210, 190, 0); }
+    }
+
+    .hero h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 700; line-height: 1.1; margin-bottom: 1.5rem; }
+    .hero p { font-size: 1.125rem; color: var(--muted); max-width: 600px; margin: 0 auto 2.5rem; }
+
+    .cta-group { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 4rem; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.75rem;
+      background: var(--primary); color: var(--primary-fg);
+      font-weight: 600; padding: 1rem 2rem; border-radius: var(--radius);
+      font-size: 1.125rem; border: none; cursor: pointer;
+      box-shadow: 0 0 30px rgba(0, 210, 190, 0.3);
+      transition: box-shadow 0.3s, transform 0.15s;
+    }
+    .btn-primary:hover { box-shadow: 0 0 50px rgba(0, 210, 190, 0.5); transform: scale(1.05); }
+    .btn-secondary { color: var(--muted); padding: 1rem 1.5rem; transition: color 0.3s; }
+    .btn-secondary:hover { color: var(--fg); }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; max-width: 600px; margin: 0 auto; }
+    .stat-card { border-radius: var(--radius); padding: 1.25rem; text-align: center; }
+    .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; }
+    .stat-card .stat-label { font-size: 0.875rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* ===== SECTIONS ===== */
+    section { padding: 6rem 1.5rem; }
+    .section-title { text-align: center; margin-bottom: 4rem; }
+    .section-title h2 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; margin-bottom: 1rem; }
+    .section-title p { color: var(--muted); font-size: 1.125rem; max-width: 600px; margin: 0 auto; }
+
+    /* Features */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; max-width: 1000px; margin: 0 auto; }
+    .feature-card { border-radius: 1rem; padding: 1.75rem; }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: var(--radius);
+      background: rgba(0, 210, 190, 0.1); display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.25rem; font-size: 1.5rem;
+    }
+    .feature-card h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+
+    /* How it works */
+    .steps { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    .step { border-radius: 1rem; padding: 1.5rem; display: flex; align-items: flex-start; gap: 1.5rem; }
+    .step-num { font-size: 1.75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+    .step h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .step p { font-size: 0.875rem; color: var(--muted); }
+
+    /* Pricing */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 700px; margin: 0 auto; }
+    .pricing-card { border-radius: 1rem; padding: 2rem; position: relative; overflow: hidden; }
+    .pricing-card .price { font-size: 3rem; font-weight: 700; text-align: center; padding: 1.5rem 0; }
+    .pricing-card .per { color: var(--muted); text-align: center; margin-top: 0.5rem; }
+    .pricing-card ul { list-style: none; margin: 1.5rem 0; }
+    .pricing-card li { font-size: 0.875rem; color: var(--muted); padding: 0.4rem 0; }
+    .pricing-card .example { text-align: center; font-size: 0.75rem; color: var(--muted); }
+    .pricing-badge {
+      position: absolute; top: 0; right: 0;
+      background: rgba(139, 92, 246, 0.2); color: var(--accent);
+      font-size: 0.625rem; font-weight: 700; padding: 0.25rem 1rem;
+      border-bottom-left-radius: var(--radius);
+    }
+
+    /* FAQ */
+    .faq-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+    .faq-item { border-radius: var(--radius); padding: 0; overflow: hidden; }
+    .faq-q {
+      width: 100%; background: none; border: none; color: var(--fg);
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; font-weight: 500;
+      padding: 1.25rem 1.5rem; text-align: left; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      transition: color 0.3s;
+    }
+    .faq-q:hover { color: var(--primary); }
+    .faq-q::after { content: '+'; font-size: 1.25rem; color: var(--muted); transition: transform 0.3s; }
+    .faq-item.open .faq-q::after { content: '−'; }
+    .faq-a { color: var(--muted); font-size: 0.875rem; padding: 0 1.5rem 1.25rem; display: none; }
+    .faq-item.open .faq-a { display: block; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border); padding: 3rem 1.5rem;
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    footer .logo { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; font-size: 1.125rem; }
+    footer .logo-icon { width: 32px; height: 32px; border-radius: var(--radius); background: rgba(0, 210, 190, 0.2); display: flex; align-items: center; justify-content: center; }
+    footer p { font-size: 0.875rem; color: var(--muted); text-align: center; flex: 1; min-width: 200px; }
+    footer a.bot-link { font-size: 0.875rem; color: var(--primary); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 2.5rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="badge glass neon-border">
+        <span class="dot"></span>
+        <span>Live & Operational — Instant Delivery Active</span>
+      </div>
+      <h1><span class="gradient-text">RIOX</span><br/>Accounts Pro</h1>
+      <p>Bulk virtual Telegram accounts for airdrop farming. Instant auto-delivery via bot. Multi-currency payments. Aged & regular accounts available.</p>
+      <div class="cta-group">
+        <a href="https://t.me/airdro12pbot" target="_blank" rel="noopener noreferrer" class="btn-primary">
+          ✈️ Open Bot on Telegram
+        </a>
+        <a href="#pricing" class="btn-secondary">View Pricing ↓</a>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card glass">
+          <div class="stat-value neon-text">3,847+</div>
+          <div class="stat-label">Orders Delivered</div>
+        </div>
+        <div class="stat-card glass">
+          <div class="stat-value neon-text">24/7</div>
+          <div class="stat-label">Auto Delivery</div>
+        </div>
+        <div class="stat-card glass">
+          <div class="stat-value neon-text">100%</div>
+          <div class="stat-label">Working Guarantee</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section style="background: radial-gradient(ellipse at 50% 0%, rgba(0,210,190,0.06) 0%, transparent 60%);">
+    <div class="container">
+      <div class="section-title">
+        <h2>Why <span class="gradient-text">RIOX Accounts</span>?</h2>
+        <p>Everything you need for successful airdrop farming at scale</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">🤖</div>
+          <h3>Fully Automated Bot</h3>
+          <p>24/7 Telegram bot handles orders, payments, and delivery without human intervention.</p>
+        </div>
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">💳</div>
+          <h3>Multi-Currency Payments</h3>
+          <p>Pay with UPI (India), USDT (TRC20/BEP20), or Telegram Stars — your choice.</p>
+        </div>
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">🌍</div>
+          <h3>8 Countries Supported</h3>
+          <p>Accounts from India, USA, Pakistan, Nigeria, Bangladesh, Philippines, Brazil & Turkey.</p>
+        </div>
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">📦</div>
+          <h3>Instant ZIP Delivery</h3>
+          <p>Receive your accounts as a ZIP file directly in Telegram within seconds after payment.</p>
+        </div>
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">🛡️</div>
+          <h3>100% Working Guarantee</h3>
+          <p>Every account is verified before delivery. Non-working accounts replaced for free.</p>
+        </div>
+        <div class="feature-card glass glass-hover">
+          <div class="feature-icon">⏰</div>
+          <h3>Aged Accounts Available</h3>
+          <p>6+ month old accounts with higher trust scores for premium airdrop opportunities.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section>
+    <div class="container">
+      <div class="section-title">
+        <h2>How It <span class="gradient-text">Works</span></h2>
+      </div>
+      <div class="steps">
+        <div class="step glass glass-hover">
+          <div class="step-num neon-text">01</div>
+          <div><h3>Open Our Bot</h3><p>Search @airdro12pbot on Telegram and tap /start</p></div>
+        </div>
+        <div class="step glass glass-hover">
+          <div class="step-num neon-text">02</div>
+          <div><h3>Select Country & Quantity</h3><p>Choose your country, pick regular or aged, select quantity</p></div>
+        </div>
+        <div class="step glass glass-hover">
+          <div class="step-num neon-text">03</div>
+          <div><h3>Make Payment</h3><p>Pay via UPI, USDT, or Telegram Stars — instant confirmation</p></div>
+        </div>
+        <div class="step glass glass-hover">
+          <div class="step-num neon-text">04</div>
+          <div><h3>Get Your Accounts</h3><p>ZIP file delivered automatically in seconds. Start farming!</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="container">
+      <div class="section-title">
+        <h2>Simple <span class="gradient-text">Pricing</span></h2>
+        <p>Pay per account — order any quantity from 1 to 100</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card glass neon-border">
+          <h3 style="display:flex;align-items:center;gap:0.75rem;">📦 Regular Accounts</h3>
+          <p style="font-size:0.875rem;color:var(--muted);margin-bottom:1rem;">Fresh accounts, ready to use</p>
+          <div class="price neon-text">₹50</div>
+          <div class="per">per account</div>
+          <ul>
+            <li>✅ Min 1 account, Max 100</li>
+            <li>✅ Instant delivery via ZIP</li>
+            <li>✅ 100% working guaranteed</li>
+          </ul>
+          <div class="example">Example: 10 accounts = ₹500 · 50 accounts = ₹2,500</div>
+        </div>
+        <div class="pricing-card glass" style="border:1px solid rgba(139,92,246,0.3);">
+          <div class="pricing-badge">3x SUCCESS RATE</div>
+          <h3 style="display:flex;align-items:center;gap:0.75rem;">👑 Aged Accounts (6mo+)</h3>
+          <p style="font-size:0.875rem;color:var(--muted);margin-bottom:1rem;">Higher trust score, better for premium airdrops</p>
+          <div class="price" style="color:var(--accent);">₹100</div>
+          <div class="per">per account</div>
+          <ul>
+            <li>👑 6+ months account history</li>
+            <li>✅ Min 1 account, Max 100</li>
+            <li>✅ Ideal for high-value airdrops</li>
+          </ul>
+          <div class="example">Example: 10 accounts = ₹1,000 · 25 accounts = ₹2,500</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:3rem;">
+        <a href="https://t.me/airdro12pbot" target="_blank" rel="noopener noreferrer" class="btn-primary">
+          ✈️ Order Now via Telegram
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section>
+    <div class="container">
+      <div class="section-title">
+        <h2>Frequently Asked <span class="gradient-text">Questions</span></h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What are these accounts used for?</button>
+          <div class="faq-a">These are virtual Telegram accounts used for airdrop farming — participating in crypto airdrops that require multiple Telegram accounts.</div>
+        </div>
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">How quickly will I receive my accounts?</button>
+          <div class="faq-a">Delivery is instant and automated. Once your payment is confirmed, you'll receive a ZIP file containing your accounts within seconds.</div>
+        </div>
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What payment methods do you accept?</button>
+          <div class="faq-a">We accept UPI (for Indian customers), USDT via TRC20 and BEP20 networks, and Telegram Stars.</div>
+        </div>
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What's the difference between Regular and Aged accounts?</button>
+          <div class="faq-a">Aged accounts are 6+ months old with established history. They have higher trust scores and are 3x more successful for premium airdrops.</div>
+        </div>
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What if some accounts don't work?</button>
+          <div class="faq-a">We offer a 100% working guarantee. Any non-working accounts will be replaced for free. Just contact support through the bot.</div>
+        </div>
+        <div class="faq-item glass">
+          <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">Do you have a referral program?</button>
+          <div class="faq-a">Yes! Use the /refer command in our bot to get your unique referral link. Earn 5% commission on every sale from your referrals.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="logo">
+      <div class="logo-icon">✈️</div>
+      <span>RIOX Accounts Pro</span>
+    </div>
+    <p>© 2026 RIOX Accounts Pro. Premium Telegram accounts for airdrop farming.</p>
+    <a href="https://t.me/airdro12pbot" target="_blank" rel="noopener noreferrer" class="bot-link">@airdro12pbot</a>
+  </footer>
+
+</body>
+</html>
