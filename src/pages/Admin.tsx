@@ -73,7 +73,7 @@ const Admin = () => {
   // New states
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerStats, setCustomerStats] = useState<Record<string, { total_orders: number; total_spent: number; delivered: number }>>({});
+  const [customerStats, setCustomerStats] = useState<Record<string, { total_orders: number; total_spent: number; delivered: number; total_accounts: number }>>({});
   const [pricing, setPricing] = useState<PricingRow[]>([]);
   const [editingPricing, setEditingPricing] = useState<Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }>>({});
   const [savingPricing, setSavingPricing] = useState(false);
