@@ -96,13 +96,17 @@ Deno.serve(async (req) => {
           quantity: qty, currency: "INR", amount: totalPrice, status: "pending",
         });
 
+        // Fetch active UPI from DB
+        const { data: upiWallets } = await supabase.from("upi_wallets").select("*").eq("is_active", true).order("created_at").limit(1);
+        const upiId = upiWallets && upiWallets.length > 0 ? upiWallets[0].upi_id : "venkat342@fam";
+
         reply = `📋 *Order Summary*\n\n` +
           `🆔 Order: \`${orderId}\`\n` +
           `📦 Type: ${type === "aged" ? "👑 Aged" : "Regular"}\n` +
           `🔢 Quantity: ${qty} accounts\n` +
           `💰 Total: *₹${totalPrice.toLocaleString()} INR*\n\n` +
           `💳 *Payment via UPI:*\n` +
-          `UPI ID: venkat342@fam\n` +
+          `UPI ID: ${upiId}\n` +
           `Send ₹${totalPrice.toLocaleString()} via GPay/Paytm/PhonePe\n` +
           `Scan the QR code below to pay!\n`;
 

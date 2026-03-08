@@ -408,11 +408,47 @@ Deno.serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // ========== UPI WALLETS ==========
+      if (body.action === "add_upi_wallet") {
+        const { upi_id, display_name } = body;
+        if (!upi_id) return new Response(JSON.stringify({ error: "upi_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await supabase.from("upi_wallets").insert({ upi_id, display_name: display_name || "", is_active: true });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "update_upi_wallet") {
+        const { id, upi_id, display_name, is_active } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (upi_id !== undefined) updateData.upi_id = upi_id;
+        if (display_name !== undefined) updateData.display_name = display_name;
+        if (is_active !== undefined) updateData.is_active = is_active;
+        const { error } = await supabase.from("upi_wallets").update(updateData).eq("id", id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "delete_upi_wallet") {
+        const { id } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await supabase.from("upi_wallets").delete().eq("id", id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // GET crypto wallets
     if (req.method === "GET" && action === "crypto_wallets") {
       const { data, error } = await supabase.from("crypto_wallets").select("*").order("coin_symbol");
+      if (error) throw error;
+      return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // GET UPI wallets
+    if (req.method === "GET" && action === "upi_wallets") {
+      const { data, error } = await supabase.from("upi_wallets").select("*").order("created_at");
       if (error) throw error;
       return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

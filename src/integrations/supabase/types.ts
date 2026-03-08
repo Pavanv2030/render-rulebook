@@ -283,6 +283,36 @@ export type Database = {
           },
         ]
       }
+      upi_wallets: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+          qr_image_path: string | null
+          updated_at: string
+          upi_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          qr_image_path?: string | null
+          updated_at?: string
+          upi_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          qr_image_path?: string | null
+          updated_at?: string
+          upi_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

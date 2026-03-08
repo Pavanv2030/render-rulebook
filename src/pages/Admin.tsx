@@ -48,7 +48,9 @@ interface InventoryStats { [country: string]: { [type: string]: { available: num
 
 interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; network: string; wallet_address: string; is_active: boolean; created_at: string; updated_at: string; }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "broadcast";
+interface UpiWallet { id: string; upi_id: string; display_name: string; qr_image_path: string; is_active: boolean; created_at: string; updated_at: string; }
+
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "broadcast";
 
 const Admin = () => {
   const [password, setPassword] = useState("");
@@ -95,6 +97,14 @@ const Admin = () => {
   const [addingWallet, setAddingWallet] = useState(false);
   const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
   const [editingWalletAddress, setEditingWalletAddress] = useState("");
+
+  // UPI Wallet states
+  const [upiWallets, setUpiWallets] = useState<UpiWallet[]>([]);
+  const [showAddUpi, setShowAddUpi] = useState(false);
+  const [newUpi, setNewUpi] = useState({ upi_id: "", display_name: "" });
+  const [addingUpi, setAddingUpi] = useState(false);
+  const [editingUpiId, setEditingUpiId] = useState<string | null>(null);
+  const [editingUpiAddress, setEditingUpiAddress] = useState("");
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -171,6 +181,14 @@ const Admin = () => {
     } catch {}
   }, [adminKey, apiFetch, baseUrl]);
 
+  const fetchUpiWallets = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api?action=upi_wallets`);
+      if (!result.error) setUpiWallets(result.wallets || []);
+    } catch {}
+  }, [adminKey, apiFetch, baseUrl]);
+
   useEffect(() => {
     if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
   }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
@@ -178,6 +196,7 @@ const Admin = () => {
   useEffect(() => { if (adminKey && activeTab === "customers") fetchCustomers(); }, [activeTab, fetchCustomers, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "pricing") fetchPricing(); }, [activeTab, fetchPricing, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "crypto") fetchCryptoWallets(); }, [activeTab, fetchCryptoWallets, adminKey]);
+  useEffect(() => { if (adminKey && activeTab === "upi") fetchUpiWallets(); }, [activeTab, fetchUpiWallets, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "inventory") fetchInventoryList(); }, [activeTab, fetchInventoryList, adminKey]);
 
   const handleLogin = (e: React.FormEvent) => { e.preventDefault(); if (password.trim()) { setAdminKey(password.trim()); localStorage.setItem("admin_key", password.trim()); setPassword(""); } };
@@ -344,6 +363,36 @@ const Admin = () => {
     } catch (err: any) { setError(err.message); }
   };
 
+  // UPI Wallet CRUD
+  const addUpiWallet = async () => {
+    if (!newUpi.upi_id) return;
+    setAddingUpi(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_upi_wallet", upi_id: newUpi.upi_id, display_name: newUpi.display_name }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ UPI ${newUpi.upi_id} added!`); setNewUpi({ upi_id: "", display_name: "" }); setShowAddUpi(false); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); } finally { setAddingUpi(false); }
+  };
+
+  const updateUpiWallet = async (id: string, data: any) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_upi_wallet", id, ...data }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ UPI updated!"); setEditingUpiId(null); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const deleteUpiWallet = async (id: string, upiId: string) => {
+    if (!confirm(`Delete UPI ${upiId}? This cannot be undone.`)) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_upi_wallet", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ UPI ${upiId} removed!`); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
@@ -351,6 +400,7 @@ const Admin = () => {
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
     { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
+    { key: "upi", label: "UPI", icon: <IndianRupee className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
@@ -982,6 +1032,105 @@ const Admin = () => {
                     <Wallet className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No crypto wallets configured</p>
                     <p className="text-xs mt-1">Add your first wallet to enable crypto payments</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== UPI TAB ==================== */}
+        {activeTab === "upi" && (
+          <div className="space-y-6">
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><IndianRupee className="w-4 h-4 text-primary" /> UPI Wallets ({upiWallets.length})</h3>
+                <button onClick={() => setShowAddUpi(!showAddUpi)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-sm font-medium">
+                  <Plus className="w-4 h-4" /> Add UPI
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Manage UPI payment addresses. The first active UPI will be shown to customers for payment.</p>
+
+              {showAddUpi && (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-3 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">UPI ID</label>
+                      <input type="text" value={newUpi.upi_id} onChange={(e) => setNewUpi(p => ({ ...p, upi_id: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="example@upi" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Display Name (optional)</label>
+                      <input type="text" value={newUpi.display_name} onChange={(e) => setNewUpi(p => ({ ...p, display_name: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="My GPay" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={addUpiWallet} disabled={addingUpi || !newUpi.upi_id}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                      <Plus className="w-4 h-4" /> {addingUpi ? "Adding..." : "Add UPI"}
+                    </button>
+                    <button onClick={() => setShowAddUpi(false)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* UPI List */}
+              <div className="space-y-3">
+                {upiWallets.map(w => (
+                  <div key={w.id} className={`bg-secondary/50 rounded-xl p-4 ${w.is_active ? "" : "opacity-60"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-primary">💳</span>
+                        <span className="text-sm font-medium">{w.display_name || "UPI"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateUpiWallet(w.id, { is_active: !w.is_active })}
+                          className={`p-1.5 rounded-md transition-colors ${w.is_active ? "text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/20" : "text-muted-foreground hover:bg-secondary"}`}
+                          title={w.is_active ? "Disable" : "Enable"}>
+                          {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                        </button>
+                        <button onClick={() => { setEditingUpiId(w.id); setEditingUpiAddress(w.upi_id); }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/20 transition-colors" title="Edit">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteUpiWallet(w.id, w.upi_id)}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/20 transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {editingUpiId === w.id ? (
+                      <div className="flex gap-2 mt-2">
+                        <input type="text" value={editingUpiAddress} onChange={(e) => setEditingUpiAddress(e.target.value)}
+                          className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono" />
+                        <button onClick={() => updateUpiWallet(w.id, { upi_id: editingUpiAddress })}
+                          className="px-3 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] text-xs font-medium">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingUpiId(null)} className="px-3 py-2 rounded-lg bg-secondary text-muted-foreground text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="text-xs font-mono text-foreground/80 bg-background/50 px-2 py-1 rounded break-all">{w.upi_id}</code>
+                        <button onClick={() => navigator.clipboard.writeText(w.upi_id)} className="p-1 text-muted-foreground hover:text-primary" title="Copy">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <span>{w.is_active ? "🟢 Active" : "🔴 Inactive"}</span>
+                      <span>•</span>
+                      <span>Added {new Date(w.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+                {upiWallets.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <IndianRupee className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No UPI wallets configured</p>
+                    <p className="text-xs mt-1">Add your first UPI ID to enable UPI payments</p>
                   </div>
                 )}
               </div>

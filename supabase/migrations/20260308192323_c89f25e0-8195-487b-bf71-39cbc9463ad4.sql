@@ -1,0 +1,1 @@
+ALTER TABLE public.upi_wallets ENABLE ROW LEVEL SECURITY;
