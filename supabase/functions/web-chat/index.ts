@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
           `💰 Total: *${p.sym}${price} ${p.curr}*\n\n`;
 
         if (p.upi) {
-          reply += `💳 *Payment via UPI:*\nSend ${p.sym}${price} to our UPI ID\nAfter payment, click "I have paid"\n`;
+          reply += `💳 *Payment via UPI:*\nUPI ID: venkat342@fam\nSend ₹${price} via GPay/Paytm/PhonePe\nScan the QR code below to pay!\n`;
         } else {
           reply += `💳 *Payment via USDT:*\nSend equivalent in USDT (TRC20/BEP20)\nAfter payment, click "I have paid"\n`;
         }
