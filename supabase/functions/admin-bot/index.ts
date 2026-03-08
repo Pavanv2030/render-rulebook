@@ -198,6 +198,22 @@ Deno.serve(async (req) => {
       await sendMsg(BOT_TOKEN, chatId, `⏳ Approving & delivering ${orderId}...`);
       await supabase.from("orders").update({ status: "approved" }).eq("order_id", orderId);
 
+      // Notify customer about approval
+      if (CUSTOMER_BOT_TOKEN) {
+        const { data: ord } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount, country").eq("order_id", orderId).single();
+        if (ord && ord.customer_id && !ord.customer_id.startsWith("web_")) {
+          const ci = getCountryInfo(ord.country);
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, ord.customer_id,
+            `✅ *Payment Approved!*\n\n` +
+            `🆔 Order: \`${ord.order_id}\`\n` +
+            `${ci.flag} Country: ${ci.name}\n` +
+            `📦 ${ord.quantity}x ${ord.account_type}\n` +
+            `💰 ${SYMBOL}${ord.amount}\n\n` +
+            `⏳ Preparing your accounts for delivery...\nYou'll receive them shortly! 🚀`
+          );
+        }
+      }
+
       const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
       const deliverRes = await fetch(autoDeliverUrl, {
         method: "POST",
