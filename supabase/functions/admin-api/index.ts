@@ -312,6 +312,40 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true, deleted: ids.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // Add country
+      if (body.action === "add_country") {
+        const { country_code, country_name, flag, regular_price, aged_price } = body;
+        if (!country_code || !country_name) {
+          return new Response(JSON.stringify({ error: "country_code and country_name required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error } = await supabase.from("country_pricing").upsert({
+          country_code: country_code.toUpperCase(),
+          country_name,
+          flag: flag || "🌍",
+          regular_price: regular_price || 50,
+          aged_price: aged_price || 100,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "country_code" });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Remove country
+      if (body.action === "remove_country") {
+        const { country_code } = body;
+        if (!country_code) {
+          return new Response(JSON.stringify({ error: "country_code required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Check if there's inventory or orders for this country
+        const { data: invCheck } = await supabase.from("account_inventory").select("id").eq("country", country_code).eq("status", "available").limit(1);
+        if (invCheck && invCheck.length > 0) {
+          return new Response(JSON.stringify({ error: "Cannot remove country with available inventory. Delete inventory first." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error } = await supabase.from("country_pricing").delete().eq("country_code", country_code);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       // Broadcast message
       if (body.action === "broadcast") {
         const { message } = body;
