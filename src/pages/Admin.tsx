@@ -156,8 +156,8 @@ const Admin = () => {
   }, [adminKey, apiFetch, baseUrl, invFilterCountry, invFilterType, invFilterStatus]);
 
   useEffect(() => {
-    if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); }
-  }, [fetchOrders, fetchInventory, fetchDashboard]);
+    if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
+  }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
 
   useEffect(() => { if (adminKey && activeTab === "customers") fetchCustomers(); }, [activeTab, fetchCustomers, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "pricing") fetchPricing(); }, [activeTab, fetchPricing, adminKey]);
