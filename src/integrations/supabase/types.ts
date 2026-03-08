@@ -94,6 +94,8 @@ export type Database = {
           created_at: string
           currency: string
           customer_id: string
+          delivered_at: string | null
+          delivery_file_path: string | null
           id: string
           order_id: string
           payment_method: string | null
@@ -110,6 +112,8 @@ export type Database = {
           created_at?: string
           currency: string
           customer_id: string
+          delivered_at?: string | null
+          delivery_file_path?: string | null
           id?: string
           order_id: string
           payment_method?: string | null
@@ -126,6 +130,8 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_id?: string
+          delivered_at?: string | null
+          delivery_file_path?: string | null
           id?: string
           order_id?: string
           payment_method?: string | null

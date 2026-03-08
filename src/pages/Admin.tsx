@@ -47,12 +47,6 @@ const Admin = () => {
     setLoading(true);
     setError("");
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("admin-api", {
-        body: null,
-        headers: { "x-admin-key": adminKey },
-      });
-
-      // Use GET with query params via fetch
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const url = `https://${projectId}.supabase.co/functions/v1/admin-api?action=orders&status=${statusFilter}`;
       const res = await fetch(url, {
