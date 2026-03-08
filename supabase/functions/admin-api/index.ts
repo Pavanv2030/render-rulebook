@@ -158,6 +158,46 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Reject payment
+      if (body.action === "reject_payment") {
+        const { orderId, reason } = body;
+
+        await supabase.from("orders").update({ status: "rejected" }).eq("order_id", orderId);
+
+        // Notify customer via Telegram
+        if (BOT_TOKEN) {
+          const { data: order } = await supabase.from("orders")
+            .select("customer_id, order_id, quantity, account_type, amount")
+            .eq("order_id", orderId)
+            .single();
+
+          if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
+            await sendTelegramMessage(BOT_TOKEN, order.customer_id,
+              `❌ *Payment Declined*\n\n` +
+              `🆔 Order: \`${order.order_id}\`\n` +
+              `📦 ${order.quantity}x ${order.account_type}\n` +
+              `💰 ₹${order.amount}\n\n` +
+              `${reason ? `📝 Reason: ${reason}\n\n` : ""}` +
+              `Please re-check your payment and try again.\n` +
+              `Type /start to place a new order.`
+            );
+          }
+        }
+
+        // Reset conversation state
+        const { data: order } = await supabase.from("orders")
+          .select("customer_id").eq("order_id", orderId).single();
+        if (order) {
+          await supabase.from("conversation_states")
+            .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
+            .eq("chat_id", order.customer_id);
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (body.action === "update_status") {
         const { orderId, status } = body;
         const updateData: any = { status };
