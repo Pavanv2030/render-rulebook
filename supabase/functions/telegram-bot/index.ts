@@ -185,9 +185,66 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
+    // 📢 Channel Join Check Helper
+    // ════════════════════════════════════════════
+    const CHANNEL_USERNAME = "riox239";
+
+    async function checkChannelMembership(botToken: string, userId: string): Promise<boolean> {
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: `@${CHANNEL_USERNAME}`, user_id: userId }),
+        });
+        const data = await res.json();
+        const status = data?.result?.status;
+        return ["member", "administrator", "creator"].includes(status);
+      } catch (e) { console.error("Channel check failed:", e); return false; }
+    }
+
+    // ════════════════════════════════════════════
+    // ✅ "Joined" callback — verify membership
+    // ════════════════════════════════════════════
+    if (input === "check_joined") {
+      const isMember = await checkChannelMembership(BOT_TOKEN, chatId);
+      if (!isMember) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `❌ *You haven't joined yet!*\n\nPlease join our channel first, then tap "✅ Joined" again.`,
+          { inline_keyboard: [
+            [{ text: "📢 Join Channel", url: "https://t.me/riox239" }],
+            [{ text: "✅ Joined", callback_data: "check_joined" }],
+          ]});
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      // Member verified — fall through to /start logic below
+      input = "start";
+    }
+
+    // ════════════════════════════════════════════
     // 🏠 /start — Welcome
     // ════════════════════════════════════════════
     if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu" || input === "home") {
+
+      // ── Channel join gate for new users ──
+      const isMember = await checkChannelMembership(BOT_TOKEN, chatId);
+      if (!isMember) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `╔═══════════════════════╗\n` +
+          `║  📢  JOIN OUR CHANNEL         ║\n` +
+          `╚═══════════════════════╝\n\n` +
+          `Hey *${firstName}*! 👋\n\n` +
+          `Before you start, please join our\nofficial channel for:\n\n` +
+          `🔹 Latest deals & discounts\n` +
+          `🔹 Stock updates\n` +
+          `🔹 Important announcements\n` +
+          `🔹 Tips & tricks\n\n` +
+          `👇 *Tap "Join Channel" then come\nback and tap "✅ Joined"*`,
+          { inline_keyboard: [
+            [{ text: "📢 Join @riox239", url: "https://t.me/riox239" }],
+            [{ text: "✅ Joined", callback_data: "check_joined" }],
+          ]});
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
       // Check if first-time user — send promo video
       const { data: existingOrders } = await supabase.from("orders").select("id").eq("customer_id", chatId).limit(1);
       if (!existingOrders || existingOrders.length === 0) {
