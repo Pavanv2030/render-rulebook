@@ -154,7 +154,7 @@
     <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;" id="statusFilters"></div>
     <div class="card glass overflow-x">
       <table>
-        <thead><tr><th>Order ID</th><th>Country</th><th>Type</th><th>Qty</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Country</th><th>Type</th><th>Qty</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody id="ordersTableBody"></tbody>
       </table>
     </div>
@@ -454,7 +454,7 @@ function renderOrders() {
 
   const filtered = statusFilter === "all" ? orders : orders.filter(o => o.status === statusFilter);
   document.getElementById("ordersTableBody").innerHTML = filtered.length === 0
-    ? '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:3rem;">No orders found</td></tr>'
+    ? '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:3rem;">No orders found</td></tr>'
     : filtered.map(o => {
         let actions = "";
         if (o.status === "payment_received") {
@@ -467,8 +467,17 @@ function renderOrders() {
         if (o.delivery_file_path) {
           actions += ` <button class="btn btn-success btn-sm" onclick="downloadFile('${o.delivery_file_path}')">⬇️ DL</button>`;
         }
+        const hist = o.customer_history || {};
+        const custName = o.customer_username ? `@${o.customer_username}` : (o.customer_name || o.customer_id?.slice(0, 12) || "Unknown");
+        const custInfo = hist.total_orders ? `${hist.total_orders} orders • ${hist.total_accounts} accs • ₹${(hist.total_spent || 0).toLocaleString()}` : '';
         return `<tr>
           <td class="mono" style="font-size:0.6875rem;color:var(--primary);">${o.order_id}</td>
+          <td>
+            <div style="display:flex;flex-direction:column;gap:0.125rem;">
+              <span style="color:var(--primary);font-weight:500;font-size:0.75rem;">${custName}</span>
+              ${custInfo ? `<span style="font-size:0.625rem;color:var(--muted);">${custInfo}</span>` : ''}
+            </div>
+          </td>
           <td>${o.country}</td><td>${o.account_type}</td><td>${o.quantity}</td>
           <td style="font-weight:500;">₹${o.amount.toLocaleString()}</td>
           <td><span class="badge-status badge-${o.status}">${o.status.replace("_", " ")}</span></td>

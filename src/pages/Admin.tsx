@@ -39,7 +39,7 @@ const COUNTRIES = [
 
 const PIE_COLORS = ["hsl(175, 80%, 50%)", "hsl(270, 60%, 60%)", "hsl(145, 70%, 45%)", "hsl(40, 90%, 55%)", "hsl(0, 72%, 55%)", "hsl(200, 70%, 50%)", "hsl(320, 60%, 50%)", "hsl(60, 80%, 45%)"];
 
-interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; }
+interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; customer_username?: string | null; customer_name?: string | null; customer_history?: { total_orders: number; total_accounts: number; total_spent: number; delivered: number }; }
 interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; }
 interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; regular_price_usdt: number; aged_price_usdt: number; }
 interface InventoryItem { id: string; file_name: string; file_path: string; account_type: string; country: string; status: string; order_id: string | null; created_at: string; }
@@ -573,14 +573,27 @@ const Admin = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
-                    {["Order ID", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
+                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {orders.filter(o => statusFilter === "all" || o.status === statusFilter).map((order) => {
                       const ci = getCountryInfo(order.country);
+                      const hist = order.customer_history;
                       return (
                         <tr key={order.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs text-primary">{order.order_id}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-primary font-medium text-xs">
+                                {order.customer_username ? `@${order.customer_username}` : order.customer_name || order.customer_id?.slice(0, 12) || "Unknown"}
+                              </span>
+                              {hist && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {hist.total_orders} orders • {hist.total_accounts} accs • ₹{hist.total_spent.toLocaleString()} spent
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3">{ci.flag} {ci.name}</td>
                           <td className="px-4 py-3">{order.account_type}</td>
                           <td className="px-4 py-3">{order.quantity}</td>
@@ -621,7 +634,7 @@ const Admin = () => {
                         </tr>
                       );
                     })}
-                    {orders.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No orders found</td></tr>}
+                    {orders.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">No orders found</td></tr>}
                   </tbody>
                 </table>
               </div>
