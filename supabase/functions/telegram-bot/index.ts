@@ -687,7 +687,7 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
-    // 📊 Order Status
+    // 📊 Order Status (list all)
     // ════════════════════════════════════════════
     if (input === "/status" || input === "check_status" || input === "/myorders") {
       const limit = input === "/myorders" ? 20 : 5;
@@ -713,10 +713,12 @@ Deno.serve(async (req) => {
         msg += `┌─────────────────────┐\n`;
         msg += `│ 📈 ${orders.length} orders │ ✅ ${delivered} delivered │\n`;
         msg += `│ 💰 Total spent: *${SYMBOL}${totalSpent}*    │\n`;
-        msg += `└─────────────────────┘`;
+        msg += `└─────────────────────┘\n\n`;
+        msg += `💡 _Track a specific order:_\n/track ORD123456`;
 
         await sendMsg(BOT_TOKEN, chatId, msg, { inline_keyboard: [
           [{ text: "🔄 Refresh", callback_data: "check_status" }, { text: "📜 Full History", callback_data: "/myorders" }],
+          [{ text: "🔄 Reorder Last", callback_data: "/reorder" }],
           [{ text: "🛒 New Order", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
         ]});
       } else {
@@ -726,6 +728,146 @@ Deno.serve(async (req) => {
             [{ text: "🛒 Buy My First Accounts", callback_data: "start" }],
           ]});
       }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 🔍 /track ORDER_ID — Track Specific Order
+    // ════════════════════════════════════════════
+    if (input.startsWith("/track ") || input.startsWith("track_")) {
+      const trackId = input.startsWith("track_") ? input.replace("track_", "").toUpperCase() : input.replace("/track ", "").toUpperCase();
+      
+      const { data: order } = await supabase.from("orders").select("*").eq("order_id", trackId).eq("customer_id", chatId).single();
+      
+      if (!order) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `❌ *Order not found!*\n\nNo order with ID \`${trackId}\` was found under your account.\n\n💡 _Check /status for your order list._`,
+          { inline_keyboard: [
+            [{ text: "📊 My Orders", callback_data: "check_status" }],
+            [{ text: "🏠 Menu", callback_data: "home" }],
+          ]});
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const ci = COUNTRIES.find(c => c.code === order.country);
+      const createdDate = new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const deliveredDate = order.delivered_at ? new Date(order.delivered_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+
+      const statusEmoji: Record<string, string> = { pending: "🟡", payment_received: "🔵", approved: "🟢", delivered: "✅", rejected: "🔴", cancelled: "⚪" };
+      const statusLabel: Record<string, string> = { pending: "Pending Payment", payment_received: "Under Review", approved: "Approved — Delivering", delivered: "Delivered ✓", rejected: "Rejected", cancelled: "Cancelled" };
+
+      // Progress bar
+      const steps = ["Ordered", "Paid", "Verified", "Delivered"];
+      const stepMap: Record<string, number> = { pending: 1, payment_received: 2, approved: 3, delivered: 4, rejected: 2, cancelled: 0 };
+      const currentStep = stepMap[order.status] || 0;
+      const progress = steps.map((s, i) => i < currentStep ? `✅ ${s}` : i === currentStep ? `▸ *${s}*` : `○ ${s}`).join(" → ");
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║   🔍  ORDER TRACKING               ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `🆔 Order: \`${order.order_id}\`\n\n` +
+        `┌─── 📦 *Details* ───┐\n` +
+        `│  ${ci?.flag || "🌍"} Country: *${ci?.name || order.country}*\n` +
+        `│  📦 Type: *${order.account_type}*\n` +
+        `│  🔢 Qty: *${order.quantity}* accounts\n` +
+        `│  💰 Amount: *${SYMBOL}${order.amount}*\n` +
+        `│  💳 Payment: ${order.payment_method || "—"}\n` +
+        `└─────────────────────┘\n\n` +
+        `${statusEmoji[order.status] || "⚪"} Status: *${statusLabel[order.status] || order.status}*\n\n` +
+        `📊 *Progress:*\n${progress}\n\n` +
+        `📅 Ordered: ${createdDate}\n` +
+        `📥 Delivered: ${deliveredDate}`,
+        { inline_keyboard: [
+          [{ text: "🔄 Refresh", callback_data: `track_${order.order_id}` }],
+          [{ text: "📊 All Orders", callback_data: "check_status" }],
+          [{ text: "🛒 New Order", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 🔄 Reorder — Repeat Last Delivered Order
+    // ════════════════════════════════════════════
+    if (input === "/reorder" || input === "reorder") {
+      const { data: lastOrder } = await supabase.from("orders").select("*")
+        .eq("customer_id", chatId).eq("status", "delivered")
+        .order("created_at", { ascending: false }).limit(1).single();
+
+      if (!lastOrder) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `❌ *No previous orders found!*\n\nYou need to complete at least one order before you can reorder.\n\nStart your first order below! 👇`,
+          { inline_keyboard: [
+            [{ text: "🛒 Buy Accounts", callback_data: "start" }],
+          ]});
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const ci = COUNTRIES.find(c => c.code === lastOrder.country);
+      const type = lastOrder.account_type?.toLowerCase() === "aged" ? "aged" : "regular";
+      const pricing = PRICING[lastOrder.country] || { regular: 50, aged: 100 };
+      const price = pricing[type as "regular" | "aged"];
+      const total = price * lastOrder.quantity;
+      const label = type === "aged" ? "👑 Aged" : "📦 Regular";
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║   🔄  QUICK REORDER                 ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `Your last order:\n\n` +
+        `┌─── 📦 *Details* ───┐\n` +
+        `│  ${ci?.flag || "🌍"} *${ci?.name || lastOrder.country}*\n` +
+        `│  ${label}\n` +
+        `│  🔢 *${lastOrder.quantity}* accounts\n` +
+        `│  💰 *${SYMBOL}${total}* total\n` +
+        `└─────────────────────┘\n\n` +
+        `Want to reorder the same? 👇`,
+        { inline_keyboard: [
+          [{ text: `✅ Reorder — ${SYMBOL}${total}`, callback_data: `reorder_confirm_${lastOrder.country}_${type}_${lastOrder.quantity}` }],
+          [{ text: "✏️ Modify Order", callback_data: `country_${lastOrder.country}` }],
+          [{ text: "🛒 New Order", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
+        ]});
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Handle reorder confirmation
+    if (input.startsWith("reorder_confirm_")) {
+      const parts = input.replace("reorder_confirm_", "").split("_");
+      const reCountry = parts[0].toUpperCase();
+      const reType = parts[1] || "regular";
+      const reQty = parseInt(parts[2]) || 1;
+
+      // Set state and process like a normal order
+      await supabase.from("conversation_states").update({
+        state: "awaiting_quantity", selected_country: reCountry, selected_type: reType, updated_at: new Date().toISOString(),
+      }).eq("chat_id", chatId);
+
+      // Refresh state
+      const { data: updatedState } = await supabase.from("conversation_states").select("*").eq("chat_id", chatId).single();
+      return await processQuantity(reQty, updatedState, chatId, username, firstName, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID);
+    }
+
+    // ════════════════════════════════════════════
+    // 🔔 Stock Alert Subscription
+    // ════════════════════════════════════════════
+    if (input.startsWith("alert_stock_")) {
+      const parts = input.replace("alert_stock_", "").split("_");
+      const alertCountry = parts[0].toUpperCase();
+      const alertType = parts[1] || "regular";
+      const ci = COUNTRIES.find(c => c.code === alertCountry);
+
+      await supabase.from("stock_alerts").upsert({
+        chat_id: chatId, country: alertCountry, account_type: alertType, notified: false,
+      }, { onConflict: "chat_id,country,account_type" });
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `🔔 *Stock Alert Set!*\n\n` +
+        `You'll be notified when\n${ci?.flag || "🌍"} *${ci?.name || alertCountry}* — ${alertType === "aged" ? "👑 Aged" : "📦 Regular"}\nis back in stock! 📬\n\n` +
+        `We'll message you as soon as\nnew accounts are available.`,
+        { inline_keyboard: [
+          [{ text: "🛒 Browse Other Countries", callback_data: "start" }],
+          [{ text: "🏠 Menu", callback_data: "home" }],
+        ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
