@@ -89,6 +89,12 @@ const Admin = () => {
   const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 });
   const [addingCountry, setAddingCountry] = useState(false);
   const [removingCountry, setRemovingCountry] = useState<string | null>(null);
+  const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
+  const [showAddWallet, setShowAddWallet] = useState(false);
+  const [newWallet, setNewWallet] = useState({ coin_name: "", coin_symbol: "", network: "", wallet_address: "" });
+  const [addingWallet, setAddingWallet] = useState(false);
+  const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
+  const [editingWalletAddress, setEditingWalletAddress] = useState("");
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
