@@ -315,6 +315,35 @@ const Admin = () => {
     return Object.entries(statsMap).sort(([a], [b]) => b.localeCompare(a)).map(([date, data]) => ({ date, ...data }));
   }, [orders]);
 
+  const addCryptoWallet = async () => {
+    if (!newWallet.coin_name || !newWallet.coin_symbol || !newWallet.wallet_address) return;
+    setAddingWallet(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_crypto_wallet", ...newWallet, coin_symbol: newWallet.coin_symbol.toUpperCase() }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ ${newWallet.coin_symbol.toUpperCase()} wallet added!`); setNewWallet({ coin_name: "", coin_symbol: "", network: "", wallet_address: "" }); setShowAddWallet(false); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); } finally { setAddingWallet(false); }
+  };
+
+  const updateCryptoWallet = async (id: string, data: any) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_crypto_wallet", id, ...data }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Wallet updated!"); setEditingWalletId(null); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const deleteCryptoWallet = async (id: string, symbol: string) => {
+    if (!confirm(`Delete ${symbol} wallet? This cannot be undone.`)) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_crypto_wallet", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ ${symbol} wallet removed!`); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
