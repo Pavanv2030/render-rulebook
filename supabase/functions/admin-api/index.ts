@@ -287,13 +287,14 @@ Deno.serve(async (req) => {
 
       // Update pricing
       if (body.action === "update_pricing") {
-        const { pricing } = body; // Array of { country_code, regular_price, aged_price }
+        const { pricing } = body;
         for (const p of pricing) {
-          await supabase.from("country_pricing").update({
-            regular_price: p.regular_price,
-            aged_price: p.aged_price,
-            updated_at: new Date().toISOString(),
-          }).eq("country_code", p.country_code);
+          const updateData: any = { updated_at: new Date().toISOString() };
+          if (p.regular_price !== undefined) updateData.regular_price = p.regular_price;
+          if (p.aged_price !== undefined) updateData.aged_price = p.aged_price;
+          if (p.regular_price_usdt !== undefined) updateData.regular_price_usdt = p.regular_price_usdt;
+          if (p.aged_price_usdt !== undefined) updateData.aged_price_usdt = p.aged_price_usdt;
+          await supabase.from("country_pricing").update(updateData).eq("country_code", p.country_code);
         }
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
