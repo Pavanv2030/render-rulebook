@@ -58,12 +58,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Ensure bucket exists
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const exists = buckets?.some((b: any) => b.id === "account-files");
-        if (!exists) {
-          await supabase.storage.createBucket("account-files", { public: false });
-        }
+        // Bucket "account-files" is pre-created via migration
 
         const filePath = `orders/${orderId}/${file.name}`;
         const { error: uploadError } = await supabase.storage
