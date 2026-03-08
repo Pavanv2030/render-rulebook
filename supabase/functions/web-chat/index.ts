@@ -205,7 +205,22 @@ Deno.serve(async (req) => {
         .upsert({ chat_id: chatId, ...newState, updated_at: new Date().toISOString() }, { onConflict: "chat_id" });
     }
 
-    return new Response(JSON.stringify({ reply, buttons }), {
+    // Find upiAmount and orderId from newState if applicable
+    const responseData: any = { reply, buttons };
+    if (newState.pending_order_id && newState.state === "awaiting_payment") {
+      const country = newState.selected_country || state?.selected_country;
+      if (country && PRICING[country]?.upi) {
+        const p = PRICING[country];
+        const priceTable = (newState.selected_type === "aged") ? p.aged : p.regular;
+        const price = priceTable?.[newState.selected_quantity];
+        if (price) {
+          responseData.upiAmount = price;
+          responseData.orderId = newState.pending_order_id;
+        }
+      }
+    }
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
