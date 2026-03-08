@@ -883,8 +883,14 @@ async function handleUpiPayment(orderId: string, chatId: string, BOT_TOKEN: stri
 // ₿ Crypto Payment Handler
 // ════════════════════════════════════════════
 async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: string, supabase: any) {
-  const { data: order } = await supabase.from("orders").select("amount").eq("order_id", orderId).single();
+  const { data: order } = await supabase.from("orders").select("amount, country, account_type, quantity").eq("order_id", orderId).single();
   if (!order) return;
+
+  // Get USDT pricing for this order
+  const { data: countryPricing } = await supabase.from("country_pricing").select("regular_price_usdt, aged_price_usdt").eq("country_code", order.country).single();
+  const type = order.account_type?.toLowerCase() === "aged" ? "aged" : "regular";
+  const usdtPrice = countryPricing ? (type === "aged" ? Number(countryPricing.aged_price_usdt) : Number(countryPricing.regular_price_usdt)) : 0;
+  const totalUsdt = usdtPrice * order.quantity;
 
   // Get active crypto wallets from DB
   const { data: wallets } = await supabase.from("crypto_wallets").select("*").eq("is_active", true).order("coin_symbol");
@@ -903,8 +909,13 @@ async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: s
     `║   ₿  CRYPTO PAYMENT                ║\n` +
     `╚═══════════════════════╝\n\n` +
     `🆔 Order: \`${orderId}\`\n` +
-    `💰 Amount: *${SYMBOL}${order.amount.toLocaleString()}*\n\n` +
-    `Send the equivalent amount in any\nof the following cryptocurrencies:\n\n`;
+    `💰 Amount (INR): *${SYMBOL}${order.amount.toLocaleString()}*\n`;
+
+  if (totalUsdt > 0) {
+    msg += `💲 Amount (USDT): *$${totalUsdt.toFixed(2)}*\n`;
+  }
+
+  msg += `\nSend the equivalent amount in any\nof the following cryptocurrencies:\n\n`;
 
   const coinEmojis: Record<string, string> = { BTC: "₿", ETH: "⟠", USDT: "💲", USDC: "💵", BNB: "🔶", SOL: "◎", XRP: "✕", DOGE: "🐕", LTC: "Ł", TRX: "🔺" };
 
@@ -916,7 +927,11 @@ async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: s
 
   msg += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `📸 After sending, *send a screenshot*\nor the *transaction hash* here.\n\n`;
-  msg += `⚠️ *Send exact equivalent amount*\nin your chosen crypto.\n\n`;
+  if (totalUsdt > 0) {
+    msg += `💲 *Send exactly $${totalUsdt.toFixed(2)} USDT*\nor equivalent in other crypto.\n\n`;
+  } else {
+    msg += `⚠️ *Send exact equivalent amount*\nin your chosen crypto.\n\n`;
+  }
   msg += `⏱️ Admin will verify & approve\nwithin *15–30 minutes*.`;
 
   await sendMsg(BOT_TOKEN, chatId, msg, {
