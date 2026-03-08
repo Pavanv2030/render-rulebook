@@ -99,6 +99,68 @@ Deno.serve(async (req) => {
     const PRICING = await getPricing(supabase);
 
     // ═══════════════════════════════════════
+    // 📸 Photo/Screenshot Handler
+    // ═══════════════════════════════════════
+    const photo = update.message?.photo;
+    if (photo && photo.length > 0 && (state?.state === "awaiting_payment" || state?.state === "payment_review") && state?.pending_order_id) {
+      const fileId = photo[photo.length - 1].file_id; // highest resolution
+      const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+
+      // Mark as payment_received
+      await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
+      await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `   📸 *SCREENSHOT RECEIVED*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `✅ Your payment screenshot for\n` +
+        `order \`${state.pending_order_id}\` has been\nforwarded to our admin.\n\n` +
+        `⏱️ Verification time: *5–15 min*\n\n` +
+        `💡 _You'll be notified once your\naccounts are ready!_`,
+        { inline_keyboard: [
+          [{ text: "📊 Check Status", callback_data: "check_status" }],
+          [{ text: "🛒 Place Another Order", callback_data: "start" }],
+        ]});
+
+      // Forward screenshot + order info to admin bot
+      if (ADMIN_CHAT_ID && ADMIN_BOT_TOKEN) {
+        const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
+        if (order) {
+          const ci = COUNTRIES.find(c => c.code === order.country);
+          // Send photo with caption to admin
+          await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendPhoto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: ADMIN_CHAT_ID,
+              photo: fileId,
+              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
+              parse_mode: "Markdown",
+            }),
+          });
+          // Send action buttons separately
+          await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: ADMIN_CHAT_ID,
+              text: `⚡ *Take action on ${order.order_id}:*`,
+              parse_mode: "Markdown",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [{ text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
+                   { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` }]
+                ]
+              }),
+            }),
+          });
+        }
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ═══════════════════════════════════════
     // 🏠 /start — Welcome Screen
     // ═══════════════════════════════════════
     if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu") {
@@ -440,7 +502,8 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     `📱 UPI ID: \`venkat342@fam\`\n\n` +
     `Send exactly *${SYMBOL}${totalPrice.toLocaleString()}* via:\n` +
     `  • Google Pay\n  • PhonePe\n  • Paytm\n  • Any UPI app\n\n` +
-    `After paying, tap *"✅ I Have Paid"*\nbelow to confirm! 👇`,
+    `📸 *Send payment screenshot* here\nfor faster verification!\n\n` +
+    `Or tap *"✅ I Have Paid"* below 👇`,
     { inline_keyboard: [
       [{ text: "✅ I Have Paid", callback_data: "paid" }],
       [{ text: "❌ Cancel Order", callback_data: "cancel" }],
