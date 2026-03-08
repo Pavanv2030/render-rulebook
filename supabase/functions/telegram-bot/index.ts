@@ -219,7 +219,8 @@ Deno.serve(async (req) => {
 
       if (p.upi) {
         paymentMsg += `💳 *Payment via UPI:*\n` +
-          `Send ${p.sym}${price} to our UPI ID\n` +
+          `UPI ID: \`venkat342@fam\`\n` +
+          `Send ₹${price} via GPay / Paytm / PhonePe\n` +
           `After payment, send screenshot or type "paid"\n`;
       } else {
         paymentMsg += `💳 *Payment via USDT:*\n` +
