@@ -151,7 +151,7 @@ const ChatWidget = () => {
                   <Bot className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <div className="font-semibold text-sm">AirdropAccounts Bot</div>
+                  <div className="font-semibold text-sm">RIOX Bot</div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     Online

@@ -35,11 +35,14 @@ const HeroSection = () => {
             <span className="text-sm text-muted-foreground">Live & Operational — Instant Delivery Active</span>
           </motion.div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
-            Premium Telegram
-            <br />
-            <span className="gradient-text">Airdrop Accounts</span>
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <img src={mascotImg} alt="RIOX Mascot" className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.2)]" />
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]">
+              <span className="gradient-text">RIOX</span>
+              <br />
+              <span className="text-foreground">Accounts Pro</span>
+            </h1>
+          </div>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Bulk virtual Telegram accounts for airdrop farming. Instant auto-delivery via bot.
