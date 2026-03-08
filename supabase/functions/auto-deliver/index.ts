@@ -162,6 +162,27 @@ Deno.serve(async (req) => {
       .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
       .eq("chat_id", order.customer_id);
 
+    // Check low stock and alert admin
+    if (BOT_TOKEN && ADMIN_CHAT_ID) {
+      for (const type of ["regular", "aged"]) {
+        const { data: remaining } = await supabase
+          .from("account_inventory")
+          .select("id", { count: "exact" })
+          .eq("account_type", type)
+          .eq("status", "available");
+
+        const count = remaining?.length || 0;
+        if (count < LOW_STOCK_THRESHOLD) {
+          await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
+            `🚨 *LOW STOCK ALERT*\n\n` +
+            `${type === "aged" ? "👑 Aged" : "📦 Regular"} accounts: *${count}* remaining\n` +
+            `Threshold: ${LOW_STOCK_THRESHOLD}\n\n` +
+            `Please upload more .session files to restock! ⚡`
+          );
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       delivered: availableAccounts.length,
