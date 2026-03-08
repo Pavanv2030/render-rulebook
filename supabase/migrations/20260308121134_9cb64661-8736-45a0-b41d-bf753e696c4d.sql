@@ -1,0 +1,1 @@
+ALTER TABLE public.country_pricing ENABLE ROW LEVEL SECURITY;
