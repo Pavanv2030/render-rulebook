@@ -366,6 +366,55 @@ Deno.serve(async (req) => {
       }
     }
 
+      // ========== CRYPTO WALLETS ==========
+      if (body.action === "get_crypto_wallets") {
+        const { data, error } = await supabase.from("crypto_wallets").select("*").order("coin_symbol");
+        if (error) throw error;
+        return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "add_crypto_wallet") {
+        const { coin_name, coin_symbol, network, wallet_address } = body;
+        if (!coin_name || !coin_symbol || !wallet_address) {
+          return new Response(JSON.stringify({ error: "coin_name, coin_symbol, and wallet_address required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error } = await supabase.from("crypto_wallets").insert({
+          coin_name, coin_symbol: coin_symbol.toUpperCase(), network: network || "", wallet_address, is_active: true,
+        });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "update_crypto_wallet") {
+        const { id, coin_name, coin_symbol, network, wallet_address, is_active } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (coin_name !== undefined) updateData.coin_name = coin_name;
+        if (coin_symbol !== undefined) updateData.coin_symbol = coin_symbol.toUpperCase();
+        if (network !== undefined) updateData.network = network;
+        if (wallet_address !== undefined) updateData.wallet_address = wallet_address;
+        if (is_active !== undefined) updateData.is_active = is_active;
+        const { error } = await supabase.from("crypto_wallets").update(updateData).eq("id", id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "delete_crypto_wallet") {
+        const { id } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await supabase.from("crypto_wallets").delete().eq("id", id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // GET crypto wallets
+    if (req.method === "GET" && action === "crypto_wallets") {
+      const { data, error } = await supabase.from("crypto_wallets").select("*").order("coin_symbol");
+      if (error) throw error;
+      return new Response(JSON.stringify({ wallets: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
