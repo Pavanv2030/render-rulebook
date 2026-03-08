@@ -294,6 +294,50 @@ const Admin = () => {
     } catch {}
   };
 
+  const toggleBlockCustomer = async (telegramId: string, block: boolean) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "block_customer", telegram_id: telegramId, block }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`${block ? "🚫 Customer blocked" : "✅ Customer unblocked"}`); fetchCustomers();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const sendCustomerMessage = async (telegramId: string) => {
+    if (!customerMsg.trim()) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send_customer_message", telegram_id: telegramId, message: customerMsg }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Message sent!"); setCustomerMsg(""); setSendingMsgTo(null);
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const bulkApprove = async () => {
+    if (selectedOrderIds.size === 0) return;
+    if (!confirm(`Approve & deliver ${selectedOrderIds.size} orders?`)) return;
+    setBulkActioning(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulk_approve", orderIds: Array.from(selectedOrderIds) }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Bulk approve: ${result.delivered} delivered, ${result.failed} failed`);
+      if (result.errors?.length) setError(result.errors.join("; "));
+      setSelectedOrderIds(new Set()); fetchOrders(); fetchInventory(); fetchDashboard();
+    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
+  };
+
+  const bulkReject = async () => {
+    if (selectedOrderIds.size === 0) return;
+    const reason = prompt("Enter rejection reason (optional):"); if (reason === null) return;
+    setBulkActioning(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulk_reject", orderIds: Array.from(selectedOrderIds), reason: reason || "" }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`❌ Bulk reject: ${result.rejected} orders rejected`);
+      setSelectedOrderIds(new Set()); fetchOrders();
+    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
+  };
+
   const getCountryInfo = (code: string) => {
     const fromPricing = pricing.find(p => p.country_code === code);
     if (fromPricing) return { code: fromPricing.country_code, flag: fromPricing.flag, name: fromPricing.country_name };
