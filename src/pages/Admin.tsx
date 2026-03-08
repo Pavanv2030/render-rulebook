@@ -252,7 +252,38 @@ const Admin = () => {
     } catch {}
   };
 
-  const getCountryInfo = (code: string) => COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
+  const getCountryInfo = (code: string) => {
+    const fromPricing = pricing.find(p => p.country_code === code);
+    if (fromPricing) return { code: fromPricing.country_code, flag: fromPricing.flag, name: fromPricing.country_name };
+    return COUNTRIES.find(c => c.code === code) || { code, flag: "🌍", name: code };
+  };
+
+  // Derive dynamic country list from pricing (DB) + fallback COUNTRIES
+  const dynamicCountries = useMemo(() => {
+    if (pricing.length > 0) return pricing.map(p => ({ code: p.country_code, flag: p.flag, name: p.country_name }));
+    return COUNTRIES;
+  }, [pricing]);
+
+  const addCountry = async () => {
+    if (!newCountry.code || !newCountry.name) return;
+    setAddingCountry(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 }); setShowAddCountry(false); fetchPricing();
+    } catch (err: any) { setError(err.message); } finally { setAddingCountry(false); }
+  };
+
+  const removeCountry = async (countryCode: string) => {
+    const country = pricing.find(p => p.country_code === countryCode);
+    if (!confirm(`Remove ${country?.country_name || countryCode}? This cannot be undone.`)) return;
+    setRemovingCountry(countryCode); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove_country", country_code: countryCode }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Country ${countryCode} removed!`); fetchPricing();
+    } catch (err: any) { setError(err.message); } finally { setRemovingCountry(null); }
+  };
 
   const dailyStats = useMemo(() => {
     const statsMap: Record<string, { orders: number; delivered: number; revenue: number; rejected: number; countries: Record<string, number> }> = {};
