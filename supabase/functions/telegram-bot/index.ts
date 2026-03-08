@@ -208,10 +208,25 @@ Deno.serve(async (req) => {
         await sendTelegramMessage(BOT_TOKEN, chatId,
           `✅ *Payment Noted!*\n\n` +
           `🆔 Order: \`${state.pending_order_id}\`\n\n` +
-          `⏳ We're verifying your payment. Your accounts will be delivered shortly.\n` +
-          `📦 You'll receive a ZIP file directly here once confirmed.\n\n` +
+          `⏳ Processing your order... Your accounts will be delivered shortly.\n` +
+          `📦 You'll receive a ZIP file directly here!\n\n` +
           `Use /status to check your order status anytime.`
         );
+
+        // Trigger auto-delivery
+        try {
+          const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
+          await fetch(autoDeliverUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({ orderId: state.pending_order_id }),
+          });
+        } catch (e) {
+          console.error("Auto-deliver trigger failed:", e);
+        }
       } else {
         await sendTelegramMessage(BOT_TOKEN, chatId, "❓ No pending order found. Start a new order with /start");
       }
