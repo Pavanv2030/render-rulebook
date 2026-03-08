@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversation_states: {
+        Row: {
+          chat_id: string
+          id: string
+          pending_order_id: string | null
+          selected_country: string | null
+          selected_quantity: number | null
+          selected_type: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: string
+          id?: string
+          pending_order_id?: string | null
+          selected_country?: string | null
+          selected_quantity?: number | null
+          selected_type?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: string
+          id?: string
+          pending_order_id?: string | null
+          selected_country?: string | null
+          selected_quantity?: number | null
+          selected_type?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          country: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          referral_code: string | null
+          referred_by: string | null
+          telegram_id: string
+          total_orders: number | null
+          total_spent: number | null
+          username: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          telegram_id: string
+          total_orders?: number | null
+          total_spent?: number | null
+          username?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          telegram_id?: string
+          total_orders?: number | null
+          total_spent?: number | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          account_type: string
+          amount: number
+          country: string
+          created_at: string
+          currency: string
+          customer_id: string
+          id: string
+          order_id: string
+          payment_method: string | null
+          quantity: number
+          referral_code: string | null
+          status: string
+          transaction_id: string | null
+          username: string | null
+        }
+        Insert: {
+          account_type?: string
+          amount: number
+          country: string
+          created_at?: string
+          currency: string
+          customer_id: string
+          id?: string
+          order_id: string
+          payment_method?: string | null
+          quantity: number
+          referral_code?: string | null
+          status?: string
+          transaction_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          account_type?: string
+          amount?: number
+          country?: string
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          id?: string
+          order_id?: string
+          payment_method?: string | null
+          quantity?: number
+          referral_code?: string | null
+          status?: string
+          transaction_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          commission: number | null
+          created_at: string
+          id: string
+          order_id: string | null
+          referred_telegram_id: string
+          referrer_telegram_id: string
+        }
+        Insert: {
+          commission?: number | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referred_telegram_id: string
+          referrer_telegram_id: string
+        }
+        Update: {
+          commission?: number | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referred_telegram_id?: string
+          referrer_telegram_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
