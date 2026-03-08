@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
 
       // Add country
       if (body.action === "add_country") {
-        const { country_code, country_name, flag, regular_price, aged_price } = body;
+        const { country_code, country_name, flag, regular_price, aged_price, regular_price_usdt, aged_price_usdt } = body;
         if (!country_code || !country_name) {
           return new Response(JSON.stringify({ error: "country_code and country_name required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
@@ -325,6 +325,8 @@ Deno.serve(async (req) => {
           flag: flag || "🌍",
           regular_price: regular_price || 50,
           aged_price: aged_price || 100,
+          regular_price_usdt: regular_price_usdt || 0,
+          aged_price_usdt: aged_price_usdt || 0,
           updated_at: new Date().toISOString(),
         }, { onConflict: "country_code" });
         if (error) throw error;
