@@ -521,7 +521,18 @@ const Admin = () => {
                                 </button>
                               )}
 
-                              {/* Manual upload ZIP */}
+                              {/* Reject payment */}
+                              {order.status === "payment_received" && (
+                                <button
+                                  onClick={() => rejectPayment(order.order_id)}
+                                  disabled={rejectingOrder === order.order_id}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-xs font-medium disabled:opacity-50"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                  {rejectingOrder === order.order_id ? "..." : "Reject"}
+                                </button>
+                              )}
+
                               {(order.status === "payment_received" || order.status === "pending") && (
                                 <label className="cursor-pointer flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-xs font-medium">
                                   <Upload className="w-3.5 h-3.5" />
