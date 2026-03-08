@@ -46,7 +46,7 @@ const FeaturesSection = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Why <span className="gradient-text">AirdropAccounts</span>?
+            Why <span className="gradient-text">RIOX Accounts</span>?
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Everything you need for successful airdrop farming at scale

@@ -8,10 +8,10 @@ const FooterSection = () => {
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
             <Send className="w-4 h-4 text-primary" />
           </div>
-          <span className="font-semibold text-lg">AirdropAccounts Pro</span>
+          <span className="font-semibold text-lg">RIOX Accounts Pro</span>
         </div>
         <p className="text-sm text-muted-foreground text-center">
-          © {new Date().getFullYear()} AirdropAccounts Pro. Premium Telegram accounts for airdrop farming.
+          © {new Date().getFullYear()} RIOX Accounts Pro. Premium Telegram accounts for airdrop farming.
         </p>
         <a
           href="https://t.me/airdro12pbot"
