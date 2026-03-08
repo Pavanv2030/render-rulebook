@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import UpiPaymentModal from "./UpiPaymentModal";
 
 interface Message {
   id: string;
@@ -52,6 +53,7 @@ const ChatWidget = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [upiModal, setUpiModal] = useState<{ amount: number; orderId: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionId = useRef(getSessionId());
 
@@ -83,6 +85,11 @@ const ChatWidget = () => {
         buttons: data.buttons,
       };
       setMessages((prev) => [...prev, botMsg]);
+
+      // Show UPI modal if payment via UPI detected
+      if (data.reply?.includes("Payment via UPI") && data.upiAmount && data.orderId) {
+        setUpiModal({ amount: data.upiAmount, orderId: data.orderId });
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => [
@@ -241,6 +248,17 @@ const ChatWidget = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <UpiPaymentModal
+        isOpen={!!upiModal}
+        onClose={() => setUpiModal(null)}
+        amount={upiModal?.amount || 0}
+        orderId={upiModal?.orderId || ""}
+        onPaid={() => {
+          setUpiModal(null);
+          sendMessage("paid");
+        }}
+      />
     </>
   );
 };
