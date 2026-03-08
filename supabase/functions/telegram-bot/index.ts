@@ -520,8 +520,8 @@ Deno.serve(async (req) => {
         `╚══════════════════╝\n\n` +
         `👇 *Select account type:*`,
         { inline_keyboard: [
-          [{ text: `📦 Regular — ${SYMBOL}${pricing.regular}/acc`, callback_data: "type_regular" }],
-          [{ text: `👑 Aged — ${SYMBOL}${pricing.aged}/acc`, callback_data: "type_aged" }],
+          ...(stock.regular > 0 ? [[{ text: `📦 Regular — ${SYMBOL}${pricing.regular}/acc`, callback_data: "type_regular" }]] : [[{ text: `🔔 Notify when Regular back`, callback_data: `alert_stock_${code}_regular` }]]),
+          ...(stock.aged > 0 ? [[{ text: `👑 Aged — ${SYMBOL}${pricing.aged}/acc`, callback_data: "type_aged" }]] : [[{ text: `🔔 Notify when Aged back`, callback_data: `alert_stock_${code}_aged` }]]),
           [{ text: "🔙 Change Country", callback_data: "start" }, { text: "🏠 Menu", callback_data: "home" }],
         ]});
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
