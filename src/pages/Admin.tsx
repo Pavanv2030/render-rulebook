@@ -83,6 +83,10 @@ const Admin = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [viewingCustomerOrders, setViewingCustomerOrders] = useState<string | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
+  const [showAddCountry, setShowAddCountry] = useState(false);
+  const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 });
+  const [addingCountry, setAddingCountry] = useState(false);
+  const [removingCountry, setRemovingCountry] = useState<string | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
