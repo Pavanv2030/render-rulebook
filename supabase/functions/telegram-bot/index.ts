@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
 
     // Fallback
     await sendTelegramMessage(BOT_TOKEN, chatId,
-      `🤖 *AirdropAccounts Pro Bot*\n\nAvailable commands:\n🛒 /start — Browse & order accounts\n📊 /status — Check your order status\n🎁 /refer — Get referral link (earn 5%)\n🧑‍💻 Type "support" — Contact human agent\n\nNeed accounts? Just type /start to begin! 🚀`);
+      `🤖 *AirdropAccounts Pro Bot*\n\nAvailable commands:\n🛒 /start — Browse & order accounts\n📊 /status — Check recent orders\n📦 /myorders — Full order history\n🎁 /refer — Get referral link (earn 5%)\n🧑‍💻 Type "support" — Contact human agent\n\nNeed accounts? Just type /start to begin! 🚀`);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
   } catch (error) {
     console.error("Bot error:", error);
