@@ -46,7 +46,9 @@ interface InventoryItem { id: string; file_name: string; file_path: string; acco
 interface DashboardData { totalRevenue: number; todayRevenue: number; weekRevenue: number; monthRevenue: number; totalOrders: number; todayOrders: number; weekOrders: number; monthOrders: number; deliveredCount: number; pendingCount: number; totalCustomers: number; topCountries: { country: string; revenue: number }[]; stockLevels: Record<string, { regular: number; aged: number }>; }
 interface InventoryStats { [country: string]: { [type: string]: { available: number; total: number } } }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "broadcast";
+interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; network: string; wallet_address: string; is_active: boolean; created_at: string; updated_at: string; }
+
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "broadcast";
 
 const Admin = () => {
   const [password, setPassword] = useState("");
