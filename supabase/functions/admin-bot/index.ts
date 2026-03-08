@@ -95,7 +95,13 @@ Deno.serve(async (req) => {
         `💲 /setprice CC regular aged\n` +
         `🌍 /addcountry CODE Name Flag RegPrice AgedPrice\n` +
         `🗑️ /removecountry CODE\n\n` +
-        `_(e.g. /addcountry PK Pakistan 🇵🇰 50 100)_`
+        `*Crypto Wallets:*\n` +
+        `💰 /crypto — List all wallets\n` +
+        `➕ /addwallet SYMBOL Name Network Address\n` +
+        `✏️ /editwallet SYMBOL NewAddress\n` +
+        `🔄 /togglewallet SYMBOL — Enable/disable\n` +
+        `🗑️ /removewallet SYMBOL — Delete wallet\n\n` +
+        `_(e.g. /addwallet USDT Tether TRC20 TAddress)_`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
@@ -435,6 +441,124 @@ Deno.serve(async (req) => {
         const ci = getCountryInfo(countryCode);
         await sendMsg(BOT_TOKEN, chatId,
           `✅ *Pricing Updated!*\n\n${ci.flag} *${ci.name}*\n📦 Regular: ${SYMBOL}${regular}\n👑 Aged: ${SYMBOL}${aged}\n\n_Changes apply immediately to the customer bot._`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /crypto — List crypto wallets ====================
+    if (input === "/crypto") {
+      const { data: wallets } = await supabase.from("crypto_wallets").select("*").order("coin_symbol");
+      if (!wallets || wallets.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, "💰 *No crypto wallets configured.*\n\nAdd one with:\n`/addwallet SYMBOL CoinName Network Address`\n\nExample:\n`/addwallet USDT Tether TRC20 TYourWalletAddress`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      let msg = "💰 *Crypto Wallets:*\n\n";
+      for (const w of wallets) {
+        const status = w.is_active ? "🟢 Active" : "🔴 Inactive";
+        msg += `*${w.coin_symbol}* — ${w.coin_name}${w.network ? ` (${w.network})` : ""}\n`;
+        msg += `\`${w.wallet_address}\`\n${status}\n\n`;
+      }
+      msg += `_Commands:_\n/addwallet — Add new\n/editwallet — Update address\n/togglewallet — Enable/disable\n/removewallet — Delete`;
+      await sendMsg(BOT_TOKEN, chatId, msg);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /addwallet ====================
+    if (input.startsWith("/addwallet ")) {
+      // /addwallet SYMBOL CoinName Network Address
+      const parts = text.split(" ");
+      const symbol = parts[1]?.toUpperCase();
+      const coinName = parts[2];
+      const network = parts[3] || "";
+      const address = parts.slice(4).join(" ") || parts[3] || "";
+
+      if (!symbol || !coinName || !address) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: `/addwallet SYMBOL CoinName Network Address`\n\nExamples:\n`/addwallet USDT Tether TRC20 TYourAddress`\n`/addwallet BTC Bitcoin Mainnet bc1YourAddress`\n`/addwallet ETH Ethereum ERC20 0xYourAddress`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // If network is actually the address (3 parts only)
+      let finalNetwork = network;
+      let finalAddress = address;
+      if (parts.length === 4) {
+        finalNetwork = "";
+        finalAddress = parts[3];
+      } else {
+        finalNetwork = parts[3];
+        finalAddress = parts.slice(4).join(" ");
+      }
+
+      const { error } = await supabase.from("crypto_wallets").insert({
+        coin_symbol: symbol, coin_name: coinName, network: finalNetwork, wallet_address: finalAddress, is_active: true,
+      });
+      if (error) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
+      } else {
+        await sendMsg(BOT_TOKEN, chatId, `✅ *Wallet Added!*\n\n*${symbol}* — ${coinName}${finalNetwork ? ` (${finalNetwork})` : ""}\n\`${finalAddress}\`\n\n_Available immediately in the customer bot._`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /editwallet ====================
+    if (input.startsWith("/editwallet ")) {
+      // /editwallet SYMBOL NewAddress
+      const parts = text.split(" ");
+      const symbol = parts[1]?.toUpperCase();
+      const newAddress = parts.slice(2).join(" ");
+
+      if (!symbol || !newAddress) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: `/editwallet SYMBOL NewAddress`\nExample: `/editwallet USDT TNewWalletAddress`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { data: existing } = await supabase.from("crypto_wallets").select("id").eq("coin_symbol", symbol).limit(1);
+      if (!existing || existing.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ No wallet found for *${symbol}*. Use /addwallet to create one.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { error } = await supabase.from("crypto_wallets").update({ wallet_address: newAddress, updated_at: new Date().toISOString() }).eq("coin_symbol", symbol);
+      if (error) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
+      } else {
+        await sendMsg(BOT_TOKEN, chatId, `✅ *${symbol} wallet updated!*\n\nNew address: \`${newAddress}\``);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /togglewallet ====================
+    if (input.startsWith("/togglewallet ")) {
+      const symbol = text.split(" ")[1]?.toUpperCase();
+      if (!symbol) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: `/togglewallet SYMBOL`\nExample: `/togglewallet BTC`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { data: wallet } = await supabase.from("crypto_wallets").select("id, is_active, coin_symbol").eq("coin_symbol", symbol).single();
+      if (!wallet) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ No wallet found for *${symbol}*.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const newStatus = !wallet.is_active;
+      await supabase.from("crypto_wallets").update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq("id", wallet.id);
+      await sendMsg(BOT_TOKEN, chatId, `✅ *${symbol}* is now ${newStatus ? "🟢 Active" : "🔴 Inactive"}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /removewallet ====================
+    if (input.startsWith("/removewallet ")) {
+      const symbol = text.split(" ")[1]?.toUpperCase();
+      if (!symbol) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: `/removewallet SYMBOL`\nExample: `/removewallet BTC`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { error } = await supabase.from("crypto_wallets").delete().eq("coin_symbol", symbol);
+      if (error) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
+      } else {
+        await sendMsg(BOT_TOKEN, chatId, `✅ *${symbol} wallet removed!*`);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }

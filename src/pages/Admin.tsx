@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle,
   Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee,
-  CalendarDays, Users, DollarSign, Megaphone, Trash2, Eye, Send, Edit3, Save, Plus, X
+  CalendarDays, Users, DollarSign, Megaphone, Trash2, Eye, Send, Edit3, Save, Plus, X, Wallet, ToggleLeft, ToggleRight, Copy
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, PieChart, Pie, Cell } from "recharts";
 
@@ -46,7 +46,9 @@ interface InventoryItem { id: string; file_name: string; file_path: string; acco
 interface DashboardData { totalRevenue: number; todayRevenue: number; weekRevenue: number; monthRevenue: number; totalOrders: number; todayOrders: number; weekOrders: number; monthOrders: number; deliveredCount: number; pendingCount: number; totalCustomers: number; topCountries: { country: string; revenue: number }[]; stockLevels: Record<string, { regular: number; aged: number }>; }
 interface InventoryStats { [country: string]: { [type: string]: { available: number; total: number } } }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "broadcast";
+interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; network: string; wallet_address: string; is_active: boolean; created_at: string; updated_at: string; }
+
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "broadcast";
 
 const Admin = () => {
   const [password, setPassword] = useState("");
@@ -87,6 +89,12 @@ const Admin = () => {
   const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 });
   const [addingCountry, setAddingCountry] = useState(false);
   const [removingCountry, setRemovingCountry] = useState<string | null>(null);
+  const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
+  const [showAddWallet, setShowAddWallet] = useState(false);
+  const [newWallet, setNewWallet] = useState({ coin_name: "", coin_symbol: "", network: "", wallet_address: "" });
+  const [addingWallet, setAddingWallet] = useState(false);
+  const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
+  const [editingWalletAddress, setEditingWalletAddress] = useState("");
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -155,12 +163,21 @@ const Admin = () => {
     } catch {}
   }, [adminKey, apiFetch, baseUrl, invFilterCountry, invFilterType, invFilterStatus]);
 
+  const fetchCryptoWallets = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api?action=crypto_wallets`);
+      if (!result.error) setCryptoWallets(result.wallets || []);
+    } catch {}
+  }, [adminKey, apiFetch, baseUrl]);
+
   useEffect(() => {
     if (adminKey) { fetchOrders(); fetchInventory(); fetchDashboard(); fetchPricing(); }
   }, [fetchOrders, fetchInventory, fetchDashboard, fetchPricing]);
 
   useEffect(() => { if (adminKey && activeTab === "customers") fetchCustomers(); }, [activeTab, fetchCustomers, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "pricing") fetchPricing(); }, [activeTab, fetchPricing, adminKey]);
+  useEffect(() => { if (adminKey && activeTab === "crypto") fetchCryptoWallets(); }, [activeTab, fetchCryptoWallets, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "inventory") fetchInventoryList(); }, [activeTab, fetchInventoryList, adminKey]);
 
   const handleLogin = (e: React.FormEvent) => { e.preventDefault(); if (password.trim()) { setAdminKey(password.trim()); localStorage.setItem("admin_key", password.trim()); setPassword(""); } };
@@ -298,12 +315,42 @@ const Admin = () => {
     return Object.entries(statsMap).sort(([a], [b]) => b.localeCompare(a)).map(([date, data]) => ({ date, ...data }));
   }, [orders]);
 
+  const addCryptoWallet = async () => {
+    if (!newWallet.coin_name || !newWallet.coin_symbol || !newWallet.wallet_address) return;
+    setAddingWallet(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_crypto_wallet", ...newWallet, coin_symbol: newWallet.coin_symbol.toUpperCase() }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ ${newWallet.coin_symbol.toUpperCase()} wallet added!`); setNewWallet({ coin_name: "", coin_symbol: "", network: "", wallet_address: "" }); setShowAddWallet(false); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); } finally { setAddingWallet(false); }
+  };
+
+  const updateCryptoWallet = async (id: string, data: any) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_crypto_wallet", id, ...data }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Wallet updated!"); setEditingWalletId(null); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const deleteCryptoWallet = async (id: string, symbol: string) => {
+    if (!confirm(`Delete ${symbol} wallet? This cannot be undone.`)) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_crypto_wallet", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ ${symbol} wallet removed!`); fetchCryptoWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
     { key: "inventory", label: "Inventory", icon: <Database className="w-4 h-4" /> },
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
+    { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
@@ -804,6 +851,117 @@ const Admin = () => {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== CRYPTO TAB ==================== */}
+        {activeTab === "crypto" && (
+          <div className="space-y-6">
+            {/* Add Wallet */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-primary" /> Crypto Wallets ({cryptoWallets.length})</h3>
+                <button onClick={() => setShowAddWallet(!showAddWallet)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-sm font-medium">
+                  <Plus className="w-4 h-4" /> Add Wallet
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Manage crypto payment addresses. Active wallets appear as payment options in the customer bot.</p>
+
+              {showAddWallet && (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-3 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Symbol (e.g. BTC)</label>
+                      <input type="text" maxLength={10} value={newWallet.coin_symbol} onChange={(e) => setNewWallet(p => ({ ...p, coin_symbol: e.target.value.toUpperCase() }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="USDT" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Coin Name</label>
+                      <input type="text" value={newWallet.coin_name} onChange={(e) => setNewWallet(p => ({ ...p, coin_name: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="Tether" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Network</label>
+                      <input type="text" value={newWallet.network} onChange={(e) => setNewWallet(p => ({ ...p, network: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="TRC20" />
+                    </div>
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="text-xs text-muted-foreground block mb-1">Wallet Address</label>
+                      <input type="text" value={newWallet.wallet_address} onChange={(e) => setNewWallet(p => ({ ...p, wallet_address: e.target.value }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" placeholder="TYourWalletAddress..." />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={addCryptoWallet} disabled={addingWallet || !newWallet.coin_symbol || !newWallet.coin_name || !newWallet.wallet_address}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                      <Plus className="w-4 h-4" /> {addingWallet ? "Adding..." : "Add Wallet"}
+                    </button>
+                    <button onClick={() => setShowAddWallet(false)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet List */}
+              <div className="space-y-3">
+                {cryptoWallets.map(w => (
+                  <div key={w.id} className={`bg-secondary/50 rounded-xl p-4 ${w.is_active ? "" : "opacity-60"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-primary">{w.coin_symbol}</span>
+                        <span className="text-sm text-muted-foreground">{w.coin_name}</span>
+                        {w.network && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">{w.network}</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateCryptoWallet(w.id, { is_active: !w.is_active })}
+                          className={`p-1.5 rounded-md transition-colors ${w.is_active ? "text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/20" : "text-muted-foreground hover:bg-secondary"}`}
+                          title={w.is_active ? "Disable" : "Enable"}>
+                          {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                        </button>
+                        <button onClick={() => { setEditingWalletId(w.id); setEditingWalletAddress(w.wallet_address); }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/20 transition-colors" title="Edit address">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteCryptoWallet(w.id, w.coin_symbol)}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/20 transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {editingWalletId === w.id ? (
+                      <div className="flex gap-2 mt-2">
+                        <input type="text" value={editingWalletAddress} onChange={(e) => setEditingWalletAddress(e.target.value)}
+                          className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono" />
+                        <button onClick={() => updateCryptoWallet(w.id, { wallet_address: editingWalletAddress })}
+                          className="px-3 py-2 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] text-xs font-medium">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingWalletId(null)} className="px-3 py-2 rounded-lg bg-secondary text-muted-foreground text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="text-xs font-mono text-foreground/80 bg-background/50 px-2 py-1 rounded break-all">{w.wallet_address}</code>
+                        <button onClick={() => navigator.clipboard.writeText(w.wallet_address)} className="p-1 text-muted-foreground hover:text-primary" title="Copy">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <span>{w.is_active ? "🟢 Active" : "🔴 Inactive"}</span>
+                      <span>•</span>
+                      <span>Added {new Date(w.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+                {cryptoWallets.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Wallet className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No crypto wallets configured</p>
+                    <p className="text-xs mt-1">Add your first wallet to enable crypto payments</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

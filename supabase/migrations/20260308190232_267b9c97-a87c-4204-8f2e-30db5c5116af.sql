@@ -1,0 +1,1 @@
+ALTER TABLE public.crypto_wallets ENABLE ROW LEVEL SECURITY;

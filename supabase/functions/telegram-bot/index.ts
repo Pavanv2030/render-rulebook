@@ -586,6 +586,23 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
+    // 💳 Payment Method Selection
+    // ════════════════════════════════════════════
+    if (input.startsWith("pay_upi_")) {
+      const orderId = input.replace("pay_upi_", "").toUpperCase();
+      await supabase.from("orders").update({ payment_method: "UPI" }).eq("order_id", orderId);
+      await handleUpiPayment(orderId, chatId, BOT_TOKEN, supabase);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input.startsWith("pay_crypto_")) {
+      const orderId = input.replace("pay_crypto_", "").toUpperCase();
+      await supabase.from("orders").update({ payment_method: "Crypto" }).eq("order_id", orderId);
+      await handleCryptoPayment(orderId, chatId, BOT_TOKEN, supabase);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
     // ✅ Payment Confirmation
     // ════════════════════════════════════════════
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done") || input.includes("paid done")) {
@@ -828,21 +845,85 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     `│  ━━━━━━━━━━━━━━━━━━       │\n` +
     `│  💰 *TOTAL: ${SYMBOL}${totalPrice.toLocaleString()}*       │\n` +
     `│                                                │\n` +
-    `└─────────────────────┘`);
+    `└─────────────────────┘\n\n` +
+    `👇 *Choose payment method:*`,
+    { inline_keyboard: [
+      [{ text: "💳 UPI Payment", callback_data: `pay_upi_${orderId}` }],
+      [{ text: "₿ Crypto Payment", callback_data: `pay_crypto_${orderId}` }],
+      [{ text: "❌ Cancel Order", callback_data: "cancel" }],
+    ]});
 
-  // Send QR code photo with payment instructions
-  const qrUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/bot-assets/upi-scanner.jpg`;
+  return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+}
+
+// ════════════════════════════════════════════
+// 💳 UPI Payment Handler
+// ════════════════════════════════════════════
+async function handleUpiPayment(orderId: string, chatId: string, BOT_TOKEN: string, supabase: any) {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const { data: order } = await supabase.from("orders").select("amount").eq("order_id", orderId).single();
+  if (!order) return;
+
+  const qrUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/upi-scanner.jpg`;
   await sendPhoto(BOT_TOKEN, chatId, qrUrl,
     `💳 *PAY VIA UPI*\n\n` +
     `📱 UPI ID: \`venkat342@fam\`\n` +
-    `💰 Amount: *${SYMBOL}${totalPrice.toLocaleString()}*\n\n` +
+    `💰 Amount: *${SYMBOL}${order.amount.toLocaleString()}*\n\n` +
     `Scan the QR above or pay via\nGPay • Paytm • PhonePe\n\n` +
     `📸 *Send payment screenshot* for\nfaster verification!\n\n` +
     `Or tap *"✅ I Have Paid"* below 👇`,
     { inline_keyboard: [
       [{ text: "✅ I Have Paid", callback_data: "paid" }],
+      [{ text: "₿ Switch to Crypto", callback_data: `pay_crypto_${orderId}` }],
       [{ text: "❌ Cancel Order", callback_data: "cancel" }, { text: "🧑‍💻 Help", callback_data: "support" }],
     ]});
+}
 
-  return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+// ════════════════════════════════════════════
+// ₿ Crypto Payment Handler
+// ════════════════════════════════════════════
+async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: string, supabase: any) {
+  const { data: order } = await supabase.from("orders").select("amount").eq("order_id", orderId).single();
+  if (!order) return;
+
+  // Get active crypto wallets from DB
+  const { data: wallets } = await supabase.from("crypto_wallets").select("*").eq("is_active", true).order("coin_symbol");
+
+  if (!wallets || wallets.length === 0) {
+    await sendMsg(BOT_TOKEN, chatId,
+      `❌ *Crypto payments not available*\n\nNo crypto wallets are currently configured. Please use UPI payment instead.`,
+      { inline_keyboard: [
+        [{ text: "💳 Pay via UPI", callback_data: `pay_upi_${orderId}` }],
+        [{ text: "❌ Cancel Order", callback_data: "cancel" }],
+      ]});
+    return;
+  }
+
+  let msg = `╔═══════════════════════╗\n` +
+    `║   ₿  CRYPTO PAYMENT                ║\n` +
+    `╚═══════════════════════╝\n\n` +
+    `🆔 Order: \`${orderId}\`\n` +
+    `💰 Amount: *${SYMBOL}${order.amount.toLocaleString()}*\n\n` +
+    `Send the equivalent amount in any\nof the following cryptocurrencies:\n\n`;
+
+  const coinEmojis: Record<string, string> = { BTC: "₿", ETH: "⟠", USDT: "💲", USDC: "💵", BNB: "🔶", SOL: "◎", XRP: "✕", DOGE: "🐕", LTC: "Ł", TRX: "🔺" };
+
+  for (const w of wallets) {
+    const emoji = coinEmojis[w.coin_symbol] || "🪙";
+    msg += `${emoji} *${w.coin_symbol}*${w.network ? ` (${w.network})` : ""}\n`;
+    msg += `\`${w.wallet_address}\`\n\n`;
+  }
+
+  msg += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  msg += `📸 After sending, *send a screenshot*\nor the *transaction hash* here.\n\n`;
+  msg += `⚠️ *Send exact equivalent amount*\nin your chosen crypto.\n\n`;
+  msg += `⏱️ Admin will verify & approve\nwithin *15–30 minutes*.`;
+
+  await sendMsg(BOT_TOKEN, chatId, msg, {
+    inline_keyboard: [
+      [{ text: "✅ I Have Paid", callback_data: "paid" }],
+      [{ text: "💳 Switch to UPI", callback_data: `pay_upi_${orderId}` }],
+      [{ text: "❌ Cancel Order", callback_data: "cancel" }, { text: "🧑‍💻 Help", callback_data: "support" }],
+    ],
+  });
 }
