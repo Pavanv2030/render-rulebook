@@ -65,6 +65,7 @@ const Admin = () => {
   const [selectedUploadCountry, setSelectedUploadCountry] = useState("IN");
   const [selectedUploadType, setSelectedUploadType] = useState("regular");
   const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
+  const [rejectingOrder, setRejectingOrder] = useState<string | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
