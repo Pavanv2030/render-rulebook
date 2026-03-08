@@ -56,7 +56,31 @@ Deno.serve(async (req) => {
       if (status && status !== "all") query = query.eq("status", status);
       const { data, error } = await query;
       if (error) throw error;
-      return new Response(JSON.stringify({ orders: data }), {
+
+      // Enrich orders with customer info and purchase history
+      const customerIds = [...new Set((data || []).map((o: any) => o.customer_id))];
+      const { data: customersData } = await supabase.from("customers").select("telegram_id, username, first_name").in("telegram_id", customerIds);
+      const { data: allOrders } = await supabase.from("orders").select("customer_id, amount, status, quantity").in("customer_id", customerIds);
+      
+      const customerMap: Record<string, any> = {};
+      (customersData || []).forEach((c: any) => { customerMap[c.telegram_id] = c; });
+      
+      const customerHistory: Record<string, { total_orders: number; total_accounts: number; total_spent: number; delivered: number }> = {};
+      (allOrders || []).forEach((o: any) => {
+        if (!customerHistory[o.customer_id]) customerHistory[o.customer_id] = { total_orders: 0, total_accounts: 0, total_spent: 0, delivered: 0 };
+        customerHistory[o.customer_id].total_orders++;
+        customerHistory[o.customer_id].total_accounts += o.quantity;
+        if (o.status === "delivered") { customerHistory[o.customer_id].delivered++; customerHistory[o.customer_id].total_spent += o.amount; }
+      });
+
+      const enrichedOrders = (data || []).map((o: any) => ({
+        ...o,
+        customer_username: customerMap[o.customer_id]?.username || o.username || null,
+        customer_name: customerMap[o.customer_id]?.first_name || null,
+        customer_history: customerHistory[o.customer_id] || { total_orders: 0, total_accounts: 0, total_spent: 0, delivered: 0 },
+      }));
+
+      return new Response(JSON.stringify({ orders: enrichedOrders }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
