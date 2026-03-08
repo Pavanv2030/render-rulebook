@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_inventory: {
+        Row: {
+          account_type: string
+          allocated_at: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          order_id: string | null
+          status: string
+        }
+        Insert: {
+          account_type?: string
+          allocated_at?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          order_id?: string | null
+          status?: string
+        }
+        Update: {
+          account_type?: string
+          allocated_at?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          order_id?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       conversation_states: {
         Row: {
           chat_id: string
