@@ -6,15 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Per-account pricing: ₹50 regular, ₹100 aged — same for all countries
 const PER_ACCOUNT_PRICE = { regular: 50, aged: 100 };
 const CURRENCY = "INR";
 const SYMBOL = "₹";
 
+const COUNTRIES = [
+  { code: "IN", flag: "🇮🇳", name: "India" },
+  { code: "US", flag: "🇺🇸", name: "USA" },
+  { code: "UK", flag: "🇬🇧", name: "UK" },
+  { code: "ET", flag: "🇪🇹", name: "Ethiopia" },
+  { code: "AR", flag: "🇦🇷", name: "Argentina" },
+];
+
 async function sendTelegramMessage(botToken: string, chatId: string, text: string, replyMarkup?: any) {
   const body: any = { chat_id: chatId, text, parse_mode: "Markdown" };
   if (replyMarkup) body.reply_markup = JSON.stringify(replyMarkup);
-  
+
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -43,11 +50,12 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
     const update = await req.json();
-    
+
     const message = update.message || update.callback_query?.message;
     const callbackQuery = update.callback_query;
     const chatId = String(message?.chat?.id || callbackQuery?.from?.id);
@@ -90,20 +98,49 @@ Deno.serve(async (req) => {
 
     // ========== ROUTING ==========
 
-    // /start, hi, hello → Welcome
+    // /start → Welcome with country selection
     if (input === "/start" || input === "hi" || input === "hello" || input === "start") {
+      const countryButtons = COUNTRIES.map(c => [
+        { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` }
+      ]);
+
       await sendTelegramMessage(BOT_TOKEN, chatId,
         `👋 *Welcome to AirdropAccounts Pro, ${firstName}!*\n\n` +
         `🚀 Premium Telegram accounts for airdrop farming.\n\n` +
         `⭐ *Why trust us?*\n` +
         `✅ 3,847+ verified orders delivered\n` +
-        `🔒 Instant auto-delivery after payment\n` +
-        `💯 100% working accounts guaranteed\n` +
-        `🎁 Free sample for new buyers — type /sample\n\n` +
+        `🔒 Delivery after payment verification\n` +
+        `💯 100% working accounts guaranteed\n\n` +
         `📦 *Pricing:*\n` +
         `• Regular: ${SYMBOL}${PER_ACCOUNT_PRICE.regular}/account\n` +
         `• Aged (6mo+): ${SYMBOL}${PER_ACCOUNT_PRICE.aged}/account\n\n` +
-        `*Choose account type:*`,
+        `🌍 *Select your country:*`,
+        { inline_keyboard: countryButtons }
+      );
+
+      await supabase.from("conversation_states")
+        .update({ state: "awaiting_country", updated_at: new Date().toISOString() })
+        .eq("chat_id", chatId);
+
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Country selection
+    if (input.startsWith("country_")) {
+      const countryCode = input.replace("country_", "").toUpperCase();
+      const country = COUNTRIES.find(c => c.code === countryCode);
+
+      if (!country) {
+        await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Invalid country. Please try /start again.");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      await supabase.from("conversation_states")
+        .update({ state: "awaiting_type", selected_country: countryCode, updated_at: new Date().toISOString() })
+        .eq("chat_id", chatId);
+
+      await sendTelegramMessage(BOT_TOKEN, chatId,
+        `${country.flag} *${country.name}* selected!\n\n*Choose account type:*`,
         {
           inline_keyboard: [
             [
@@ -113,9 +150,6 @@ Deno.serve(async (req) => {
           ],
         }
       );
-      await supabase.from("conversation_states")
-        .update({ state: "awaiting_type", updated_at: new Date().toISOString() })
-        .eq("chat_id", chatId);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -136,7 +170,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Custom quantity input (number 1-100)
+    // Quantity input
     if (state?.state === "awaiting_quantity") {
       const qty = parseInt(input);
       if (isNaN(qty) || qty < 1 || qty > 100) {
@@ -147,17 +181,19 @@ Deno.serve(async (req) => {
       }
 
       const type = state.selected_type || "regular";
+      const country = state.selected_country || "IN";
+      const countryInfo = COUNTRIES.find(c => c.code === country);
       const pricePerAcc = type === "aged" ? PER_ACCOUNT_PRICE.aged : PER_ACCOUNT_PRICE.regular;
       const totalPrice = qty * pricePerAcc;
       const label = type === "aged" ? "👑 Aged" : "Regular";
       const orderId = "ORD" + Date.now().toString().slice(-6);
 
-      // Save order
+      // Save order with country
       await supabase.from("orders").insert({
         order_id: orderId,
         customer_id: chatId,
         username,
-        country: "IN",
+        country,
         account_type: label,
         quantity: qty,
         currency: CURRENCY,
@@ -177,6 +213,7 @@ Deno.serve(async (req) => {
       const paymentMsg =
         `📋 *Order Summary*\n\n` +
         `🆔 Order: \`${orderId}\`\n` +
+        `🌍 Country: ${countryInfo?.flag || ""} ${countryInfo?.name || country}\n` +
         `📦 Type: ${label}\n` +
         `🔢 Quantity: ${qty} accounts\n` +
         `💰 Total: *${SYMBOL}${totalPrice} ${CURRENCY}*\n\n` +
@@ -194,7 +231,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Payment confirmation
+    // Payment confirmation — notify admin for approval (NO auto-deliver)
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done")) {
       if (state?.pending_order_id) {
         await supabase.from("orders")
@@ -208,24 +245,30 @@ Deno.serve(async (req) => {
         await sendTelegramMessage(BOT_TOKEN, chatId,
           `✅ *Payment Noted!*\n\n` +
           `🆔 Order: \`${state.pending_order_id}\`\n\n` +
-          `⏳ Processing your order... Your accounts will be delivered shortly.\n` +
-          `📦 You'll receive a ZIP file directly here!\n\n` +
+          `⏳ Your payment is being reviewed by our admin.\n` +
+          `📦 Once approved, your accounts will be delivered instantly here!\n\n` +
           `Use /status to check your order status anytime.`
         );
 
-        // Trigger auto-delivery
-        try {
-          const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
-          await fetch(autoDeliverUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            },
-            body: JSON.stringify({ orderId: state.pending_order_id }),
-          });
-        } catch (e) {
-          console.error("Auto-deliver trigger failed:", e);
+        // Notify admin about new payment
+        if (ADMIN_CHAT_ID) {
+          const { data: order } = await supabase.from("orders")
+            .select("*")
+            .eq("order_id", state.pending_order_id)
+            .single();
+
+          if (order) {
+            const countryInfo = COUNTRIES.find(c => c.code === order.country);
+            await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
+              `💰 *New Payment Received!*\n\n` +
+              `🆔 Order: \`${order.order_id}\`\n` +
+              `👤 @${username} (${firstName})\n` +
+              `🌍 Country: ${countryInfo?.flag || ""} ${order.country}\n` +
+              `📦 ${order.quantity}x ${order.account_type}\n` +
+              `💵 Amount: ${SYMBOL}${order.amount}\n\n` +
+              `Go to Admin Panel to approve & deliver. ✅`
+            );
+          }
         }
       } else {
         await sendTelegramMessage(BOT_TOKEN, chatId, "❓ No pending order found. Start a new order with /start");
@@ -258,7 +301,8 @@ Deno.serve(async (req) => {
         let msg = "📊 *Your Recent Orders:*\n\n";
         for (const o of orders) {
           const statusEmoji = o.status === "delivered" ? "✅" : o.status === "pending" ? "⏳" : o.status === "payment_received" ? "🔍" : "❌";
-          msg += `${statusEmoji} \`${o.order_id}\` — ${o.quantity}x ${o.account_type} — *${SYMBOL}${o.amount}* — ${o.status.replace("_", " ")}\n`;
+          const ci = COUNTRIES.find(c => c.code === o.country);
+          msg += `${statusEmoji} \`${o.order_id}\` — ${ci?.flag || ""} ${o.quantity}x ${o.account_type} — *${SYMBOL}${o.amount}* — ${o.status.replace("_", " ")}\n`;
         }
         await sendTelegramMessage(BOT_TOKEN, chatId, msg);
       } else {
