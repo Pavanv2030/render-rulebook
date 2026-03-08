@@ -285,9 +285,9 @@ const Admin = () => {
     if (!newCountry.code || !newCountry.name) return;
     setAddingCountry(true); setError(""); setSuccessMsg("");
     try {
-      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged }) });
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged, regular_price_usdt: newCountry.regular_usdt, aged_price_usdt: newCountry.aged_usdt }) });
       if (result.error) throw new Error(result.error);
-      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100 }); setShowAddCountry(false); fetchPricing();
+      setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 }); setShowAddCountry(false); fetchPricing();
     } catch (err: any) { setError(err.message); } finally { setAddingCountry(false); }
   };
 
