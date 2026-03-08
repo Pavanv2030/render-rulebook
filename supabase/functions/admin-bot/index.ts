@@ -87,12 +87,15 @@ Deno.serve(async (req) => {
         `👥 /customers — Top customers\n` +
         `💰 /pricing — View current pricing\n` +
         `📢 /broadcast <msg> — Message all customers\n\n` +
-        `*Order Actions (reply with):*\n` +
+        `*Order Actions:*\n` +
         `✅ /approve ORDxxxxxx\n` +
         `❌ /reject ORDxxxxxx <reason>\n` +
         `📥 /deliver ORDxxxxxx\n\n` +
+        `*Country & Pricing:*\n` +
         `💲 /setprice CC regular aged\n` +
-        `_(e.g. /setprice IN 60 120)_`
+        `🌍 /addcountry CODE Name Flag RegPrice AgedPrice\n` +
+        `🗑️ /removecountry CODE\n\n` +
+        `_(e.g. /addcountry PK Pakistan 🇵🇰 50 100)_`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
