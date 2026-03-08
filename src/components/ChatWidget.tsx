@@ -248,6 +248,17 @@ const ChatWidget = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <UpiPaymentModal
+        isOpen={!!upiModal}
+        onClose={() => setUpiModal(null)}
+        amount={upiModal?.amount || 0}
+        orderId={upiModal?.orderId || ""}
+        onPaid={() => {
+          setUpiModal(null);
+          sendMessage("paid");
+        }}
+      />
     </>
   );
 };
