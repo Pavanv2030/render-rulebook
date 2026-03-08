@@ -232,7 +232,7 @@ const Admin = () => {
   const savePricing = async () => {
     setSavingPricing(true); setError(""); setSuccessMsg("");
     try {
-      const updates = Object.entries(editingPricing).map(([code, p]) => ({ country_code: code, regular_price: p.regular, aged_price: p.aged }));
+      const updates = Object.entries(editingPricing).map(([code, p]) => ({ country_code: code, regular_price: p.regular, aged_price: p.aged, regular_price_usdt: p.regular_usdt, aged_price_usdt: p.aged_usdt }));
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_pricing", pricing: updates }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ Pricing updated successfully!"); setEditingPricing({}); fetchPricing();
