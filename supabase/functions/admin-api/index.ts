@@ -86,14 +86,20 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === "GET" && action === "customers") {
-      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      const search = url.searchParams.get("search") || "";
+      let query = supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      if (search) {
+        query = query.or(`username.ilike.%${search}%,first_name.ilike.%${search}%,telegram_id.ilike.%${search}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       // Get order counts per customer
-      const { data: orders } = await supabase.from("orders").select("customer_id, amount, status");
-      const customerStats: Record<string, { total_orders: number; total_spent: number; delivered: number }> = {};
+      const { data: orders } = await supabase.from("orders").select("customer_id, amount, status, quantity");
+      const customerStats: Record<string, { total_orders: number; total_spent: number; delivered: number; total_accounts: number }> = {};
       (orders || []).forEach((o: any) => {
-        if (!customerStats[o.customer_id]) customerStats[o.customer_id] = { total_orders: 0, total_spent: 0, delivered: 0 };
+        if (!customerStats[o.customer_id]) customerStats[o.customer_id] = { total_orders: 0, total_spent: 0, delivered: 0, total_accounts: 0 };
         customerStats[o.customer_id].total_orders++;
+        customerStats[o.customer_id].total_accounts += o.quantity;
         if (o.status === "delivered") {
           customerStats[o.customer_id].delivered++;
           customerStats[o.customer_id].total_spent += o.amount;
