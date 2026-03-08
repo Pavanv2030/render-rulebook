@@ -768,7 +768,7 @@ const Admin = () => {
               </div>
               {showAddCountry && (
                 <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">Code (e.g. PK)</label>
                       <input type="text" maxLength={3} value={newCountry.code} onChange={(e) => setNewCountry(p => ({ ...p, code: e.target.value.toUpperCase() }))}
@@ -792,6 +792,16 @@ const Admin = () => {
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">Aged ₹</label>
                       <input type="number" value={newCountry.aged} onChange={(e) => setNewCountry(p => ({ ...p, aged: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Regular USDT</label>
+                      <input type="number" step="0.01" value={newCountry.regular_usdt} onChange={(e) => setNewCountry(p => ({ ...p, regular_usdt: Number(e.target.value) }))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Aged USDT</label>
+                      <input type="number" step="0.01" value={newCountry.aged_usdt} onChange={(e) => setNewCountry(p => ({ ...p, aged_usdt: Number(e.target.value) }))}
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
                     </div>
                   </div>
