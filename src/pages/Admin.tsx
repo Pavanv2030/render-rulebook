@@ -350,6 +350,7 @@ const Admin = () => {
     { key: "inventory", label: "Inventory", icon: <Database className="w-4 h-4" /> },
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
+    { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
