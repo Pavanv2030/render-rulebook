@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
           photo: bannerUrl,
           caption,
           parse_mode: "Markdown",
-          reply_markup: JSON.stringify({ inline_keyboard: rows }),
+          reply_markup: JSON.stringify({ inline_keyboard: [...rows, [{ text: "📊 My Orders", callback_data: "check_status" }, { text: "🧑‍💻 Support", callback_data: "support" }]] }),
         }),
       });
 
