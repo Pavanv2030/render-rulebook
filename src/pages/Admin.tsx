@@ -188,6 +188,7 @@ const Admin = () => {
   useEffect(() => { if (adminKey && activeTab === "customers") fetchCustomers(); }, [activeTab, fetchCustomers, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "pricing") fetchPricing(); }, [activeTab, fetchPricing, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "crypto") fetchCryptoWallets(); }, [activeTab, fetchCryptoWallets, adminKey]);
+  useEffect(() => { if (adminKey && activeTab === "upi") fetchUpiWallets(); }, [activeTab, fetchUpiWallets, adminKey]);
   useEffect(() => { if (adminKey && activeTab === "inventory") fetchInventoryList(); }, [activeTab, fetchInventoryList, adminKey]);
 
   const handleLogin = (e: React.FormEvent) => { e.preventDefault(); if (password.trim()) { setAdminKey(password.trim()); localStorage.setItem("admin_key", password.trim()); setPassword(""); } };
