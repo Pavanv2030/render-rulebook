@@ -157,10 +157,11 @@ const Admin = () => {
   const fetchCustomers = useCallback(async () => {
     if (!adminKey) return;
     try {
-      const result = await apiFetch(`${baseUrl}/admin-api?action=customers`);
+      const searchParam = customerSearch ? `&search=${encodeURIComponent(customerSearch)}` : "";
+      const result = await apiFetch(`${baseUrl}/admin-api?action=customers${searchParam}`);
       if (!result.error) { setCustomers(result.customers || []); setCustomerStats(result.customerStats || {}); }
     } catch {}
-  }, [adminKey, apiFetch, baseUrl]);
+  }, [adminKey, apiFetch, baseUrl, customerSearch]);
 
   const fetchPricing = useCallback(async () => {
     if (!adminKey) return;
