@@ -853,36 +853,83 @@ const Admin = () => {
               </div>
             ) : (
               <div className="glass rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border">
+                <div className="px-5 py-4 border-b border-border flex flex-wrap items-center gap-3">
                   <h3 className="font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> All Customers ({customers.length})</h3>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") fetchCustomers(); }}
+                        placeholder="Search username, name, ID..."
+                        className="bg-secondary border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground w-48 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                    </div>
+                    <button onClick={fetchCustomers} className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30">
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-border">
-                      {["Username", "Name", "Telegram ID", "Orders", "Delivered", "Total Spent", "Joined", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium text-xs">{h}</th>)}
+                      {["Username", "Name", "Telegram ID", "Orders", "Accounts", "Total Spent", "Status", "Joined", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium text-xs">{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {customers.map(c => {
-                        const stats = customerStats[c.telegram_id] || { total_orders: 0, total_spent: 0, delivered: 0 };
+                        const stats = customerStats[c.telegram_id] || { total_orders: 0, total_spent: 0, delivered: 0, total_accounts: 0 };
                         return (
-                          <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30">
-                            <td className="px-4 py-3 text-primary">@{c.username || "—"}</td>
-                            <td className="px-4 py-3">{c.first_name || "—"}</td>
-                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.telegram_id}</td>
-                            <td className="px-4 py-3">{stats.total_orders}</td>
-                            <td className="px-4 py-3 text-[hsl(var(--success))]">{stats.delivered}</td>
-                            <td className="px-4 py-3 font-medium">₹{stats.total_spent.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
-                            <td className="px-4 py-3">
-                              <button onClick={() => viewCustomerOrders(c.telegram_id)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs">
-                                <Eye className="w-3.5 h-3.5" /> Orders
-                              </button>
-                            </td>
-                          </tr>
+                          <>
+                            <tr key={c.id} className={`border-b border-border/50 hover:bg-secondary/30 ${c.is_blocked ? "opacity-60 bg-destructive/5" : ""}`}>
+                              <td className="px-4 py-3 text-primary">@{c.username || "—"}</td>
+                              <td className="px-4 py-3">{c.first_name || "—"}</td>
+                              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.telegram_id}</td>
+                              <td className="px-4 py-3">{stats.total_orders}</td>
+                              <td className="px-4 py-3">{stats.total_accounts || 0}</td>
+                              <td className="px-4 py-3 font-medium">₹{stats.total_spent.toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                {c.is_blocked
+                                  ? <span className="px-2 py-0.5 rounded-full text-xs bg-destructive/20 text-destructive">Blocked</span>
+                                  : <span className="px-2 py-0.5 rounded-full text-xs bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]">Active</span>}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => viewCustomerOrders(c.telegram_id)}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs" title="View Orders">
+                                    <Eye className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => { setSendingMsgTo(sendingMsgTo === c.telegram_id ? null : c.telegram_id); setCustomerMsg(""); }}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 text-xs" title="Send Message">
+                                    <Send className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => toggleBlockCustomer(c.telegram_id, !c.is_blocked)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${c.is_blocked ? "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30" : "bg-destructive/20 text-destructive hover:bg-destructive/30"}`}
+                                    title={c.is_blocked ? "Unblock" : "Block"}>
+                                    <Ban className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            {sendingMsgTo === c.telegram_id && (
+                              <tr key={`msg-${c.id}`} className="border-b border-border/50 bg-secondary/20">
+                                <td colSpan={9} className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">To @{c.username || c.telegram_id}:</span>
+                                    <input type="text" value={customerMsg} onChange={(e) => setCustomerMsg(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") sendCustomerMessage(c.telegram_id); }}
+                                      placeholder="Type message..."
+                                      className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                                    <button onClick={() => sendCustomerMessage(c.telegram_id)} disabled={!customerMsg.trim()}
+                                      className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">
+                                      <Send className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         );
                       })}
-                      {customers.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No customers found</td></tr>}
+                      {customers.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">No customers found</td></tr>}
                     </tbody>
                   </table>
                 </div>
