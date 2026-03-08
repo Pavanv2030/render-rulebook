@@ -36,6 +36,8 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+  const LOW_STOCK_THRESHOLD = 10;
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
@@ -159,6 +161,27 @@ Deno.serve(async (req) => {
     await supabase.from("conversation_states")
       .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
       .eq("chat_id", order.customer_id);
+
+    // Check low stock and alert admin
+    if (BOT_TOKEN && ADMIN_CHAT_ID) {
+      for (const type of ["regular", "aged"]) {
+        const { data: remaining } = await supabase
+          .from("account_inventory")
+          .select("id", { count: "exact" })
+          .eq("account_type", type)
+          .eq("status", "available");
+
+        const count = remaining?.length || 0;
+        if (count < LOW_STOCK_THRESHOLD) {
+          await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
+            `🚨 *LOW STOCK ALERT*\n\n` +
+            `${type === "aged" ? "👑 Aged" : "📦 Regular"} accounts: *${count}* remaining\n` +
+            `Threshold: ${LOW_STOCK_THRESHOLD}\n\n` +
+            `Please upload more .session files to restock! ⚡`
+          );
+        }
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,
