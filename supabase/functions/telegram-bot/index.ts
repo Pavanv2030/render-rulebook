@@ -147,10 +147,7 @@ Deno.serve(async (req) => {
         `✅ 3,847+ verified orders delivered\n` +
         `🔒 Delivery after payment verification\n` +
         `💯 100% working accounts guaranteed\n\n` +
-        `📦 *Pricing:*\n` +
-        `• Regular: ${SYMBOL}${PER_ACCOUNT_PRICE.regular}/account\n` +
-        `• Aged (6mo+): ${SYMBOL}${PER_ACCOUNT_PRICE.aged}/account\n\n` +
-        `🌍 *Select your country:*`,
+        `🌍 *Select your country to see pricing:*`,
         { inline_keyboard: countryButtons }
       );
 
