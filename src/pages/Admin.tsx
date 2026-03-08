@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle, Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee, CalendarDays } from "lucide-react";
 
 const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
