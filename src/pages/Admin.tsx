@@ -41,7 +41,7 @@ const PIE_COLORS = ["hsl(175, 80%, 50%)", "hsl(270, 60%, 60%)", "hsl(145, 70%, 4
 
 interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; }
 interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; }
-interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; }
+interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; regular_price_usdt: number; aged_price_usdt: number; }
 interface InventoryItem { id: string; file_name: string; file_path: string; account_type: string; country: string; status: string; order_id: string | null; created_at: string; }
 interface DashboardData { totalRevenue: number; todayRevenue: number; weekRevenue: number; monthRevenue: number; totalOrders: number; todayOrders: number; weekOrders: number; monthOrders: number; deliveredCount: number; pendingCount: number; totalCustomers: number; topCountries: { country: string; revenue: number }[]; stockLevels: Record<string, { regular: number; aged: number }>; }
 interface InventoryStats { [country: string]: { [type: string]: { available: number; total: number } } }
