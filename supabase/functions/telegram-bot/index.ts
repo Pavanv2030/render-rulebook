@@ -197,15 +197,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // /status
-    if (input === "/status") {
-      const { data: orders } = await supabase.from("orders").select("*").eq("customer_id", chatId).order("created_at", { ascending: false }).limit(5);
+    // /status or /myorders
+    if (input === "/status" || input === "/myorders") {
+      const limit = input === "/myorders" ? 20 : 5;
+      const { data: orders } = await supabase.from("orders").select("*").eq("customer_id", chatId).order("created_at", { ascending: false }).limit(limit);
       if (orders && orders.length > 0) {
-        let msg = "📊 *Your Recent Orders:*\n\n";
+        let msg = input === "/myorders" ? "📦 *Your Order History:*\n\n" : "📊 *Your Recent Orders:*\n\n";
+        let totalSpent = 0;
+        let delivered = 0;
         for (const o of orders) {
-          const statusEmoji = o.status === "delivered" ? "✅" : o.status === "pending" ? "⏳" : o.status === "payment_received" ? "🔍" : "❌";
+          const statusEmoji = o.status === "delivered" ? "✅" : o.status === "pending" ? "⏳" : o.status === "payment_received" ? "🔍" : o.status === "rejected" ? "❌" : "🚫";
           const ci = COUNTRIES.find(c => c.code === o.country);
-          msg += `${statusEmoji} \`${o.order_id}\` — ${ci?.flag || ""} ${o.quantity}x ${o.account_type} — *${SYMBOL}${o.amount}* — ${o.status.replace("_", " ")}\n`;
+          const date = new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+          msg += `${statusEmoji} \`${o.order_id}\` — ${ci?.flag || ""} ${o.quantity}x ${o.account_type}\n   💰 *${SYMBOL}${o.amount}* — ${o.status.replace("_", " ")} — ${date}\n\n`;
+          if (o.status === "delivered") { totalSpent += o.amount; delivered++; }
+        }
+        if (input === "/myorders") {
+          msg += `━━━━━━━━━━━━━━━\n📊 *Summary:* ${orders.length} orders | ${delivered} delivered | *${SYMBOL}${totalSpent}* spent`;
         }
         await sendTelegramMessage(BOT_TOKEN, chatId, msg);
       } else {
@@ -236,7 +244,7 @@ Deno.serve(async (req) => {
 
     // Fallback
     await sendTelegramMessage(BOT_TOKEN, chatId,
-      `🤖 *AirdropAccounts Pro Bot*\n\nAvailable commands:\n🛒 /start — Browse & order accounts\n📊 /status — Check your order status\n🎁 /refer — Get referral link (earn 5%)\n🧑‍💻 Type "support" — Contact human agent\n\nNeed accounts? Just type /start to begin! 🚀`);
+      `🤖 *AirdropAccounts Pro Bot*\n\nAvailable commands:\n🛒 /start — Browse & order accounts\n📊 /status — Check recent orders\n📦 /myorders — Full order history\n🎁 /refer — Get referral link (earn 5%)\n🧑‍💻 Type "support" — Contact human agent\n\nNeed accounts? Just type /start to begin! 🚀`);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
   } catch (error) {
     console.error("Bot error:", error);
