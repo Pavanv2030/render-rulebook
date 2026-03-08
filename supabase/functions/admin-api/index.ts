@@ -5,6 +5,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
 };
 
+async function sendTelegramDocument(botToken: string, chatId: string, fileUrl: string, caption: string, fileName: string) {
+  const fileRes = await fetch(fileUrl);
+  const fileBlob = await fileRes.blob();
+  
+  const formData = new FormData();
+  formData.append("chat_id", chatId);
+  formData.append("document", fileBlob, fileName);
+  formData.append("caption", caption);
+  formData.append("parse_mode", "Markdown");
+  
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+    method: "POST",
+    body: formData,
+  });
+  return res.json();
+}
+
+async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
+  });
+  return res.json();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,6 +39,7 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD");
+  const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Auth check
@@ -58,8 +85,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Bucket "account-files" is pre-created via migration
-
         const filePath = `orders/${orderId}/${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from("account-files")
@@ -73,6 +98,35 @@ Deno.serve(async (req) => {
           status: "delivered",
           delivered_at: new Date().toISOString(),
         }).eq("order_id", orderId);
+
+        // Send ZIP to customer via Telegram
+        if (BOT_TOKEN) {
+          const { data: order } = await supabase.from("orders")
+            .select("customer_id, order_id, quantity, account_type")
+            .eq("order_id", orderId)
+            .single();
+
+          if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
+            // Get a signed URL for the file
+            const { data: signedData } = await supabase.storage
+              .from("account-files")
+              .createSignedUrl(filePath, 600); // 10 min
+
+            if (signedData?.signedUrl) {
+              try {
+                await sendTelegramDocument(
+                  BOT_TOKEN,
+                  order.customer_id,
+                  signedData.signedUrl,
+                  `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+                  file.name
+                );
+              } catch (e) {
+                console.error("Failed to send Telegram document:", e);
+              }
+            }
+          }
+        }
 
         return new Response(JSON.stringify({ success: true, filePath }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,7 +153,7 @@ Deno.serve(async (req) => {
         const { filePath } = body;
         const { data, error } = await supabase.storage
           .from("account-files")
-          .createSignedUrl(filePath, 3600); // 1 hour
+          .createSignedUrl(filePath, 3600);
         if (error) throw error;
         return new Response(JSON.stringify({ url: data.signedUrl }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
