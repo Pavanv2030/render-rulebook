@@ -609,9 +609,9 @@ const Admin = () => {
         {/* ==================== ORDERS TAB ==================== */}
         {activeTab === "orders" && (
           <>
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-4">
               {STATUS_OPTIONS.map((s) => (
-                <button key={s} onClick={() => setStatusFilter(s)}
+                <button key={s} onClick={() => { setStatusFilter(s); setSelectedOrderIds(new Set()); }}
                   className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
                   {s === "all" ? "All" : s.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}
                   {s !== "all" && ` (${orders.filter(o => o.status === s).length})`}
@@ -619,10 +619,31 @@ const Admin = () => {
               ))}
             </div>
 
+            {/* Bulk Actions Bar */}
+            {selectedOrderIds.size > 0 && (
+              <div className="flex items-center gap-3 mb-4 bg-primary/10 border border-primary/30 rounded-xl px-4 py-3">
+                <span className="text-sm font-medium text-primary">{selectedOrderIds.size} selected</span>
+                <button onClick={bulkApprove} disabled={bulkActioning}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-xs font-medium disabled:opacity-50">
+                  <ShieldCheck className="w-3.5 h-3.5" /> {bulkActioning ? "..." : "Bulk Approve & Deliver"}
+                </button>
+                <button onClick={bulkReject} disabled={bulkActioning}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 text-xs font-medium disabled:opacity-50">
+                  <Ban className="w-3.5 h-3.5" /> Bulk Reject
+                </button>
+                <button onClick={() => setSelectedOrderIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground ml-auto">Clear</button>
+              </div>
+            )}
+
             <div className="glass rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
+                    <th className="px-3 py-3"><input type="checkbox" onChange={(e) => {
+                      const filtered = orders.filter(o => statusFilter === "all" || o.status === statusFilter);
+                      if (e.target.checked) setSelectedOrderIds(new Set(filtered.map(o => o.order_id)));
+                      else setSelectedOrderIds(new Set());
+                    }} checked={selectedOrderIds.size > 0 && selectedOrderIds.size === orders.filter(o => statusFilter === "all" || o.status === statusFilter).length} /></th>
                     {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
@@ -630,7 +651,10 @@ const Admin = () => {
                       const ci = getCountryInfo(order.country);
                       const hist = order.customer_history;
                       return (
-                        <tr key={order.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={order.id} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${selectedOrderIds.has(order.order_id) ? "bg-primary/5" : ""}`}>
+                          <td className="px-3 py-3"><input type="checkbox" checked={selectedOrderIds.has(order.order_id)} onChange={(e) => {
+                            const s = new Set(selectedOrderIds); if (e.target.checked) s.add(order.order_id); else s.delete(order.order_id); setSelectedOrderIds(s);
+                          }} /></td>
                           <td className="px-4 py-3 font-mono text-xs text-primary">{order.order_id}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-0.5">
