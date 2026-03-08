@@ -502,7 +502,8 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     `📱 UPI ID: \`venkat342@fam\`\n\n` +
     `Send exactly *${SYMBOL}${totalPrice.toLocaleString()}* via:\n` +
     `  • Google Pay\n  • PhonePe\n  • Paytm\n  • Any UPI app\n\n` +
-    `After paying, tap *"✅ I Have Paid"*\nbelow to confirm! 👇`,
+    `📸 *Send payment screenshot* here\nfor faster verification!\n\n` +
+    `Or tap *"✅ I Have Paid"* below 👇`,
     { inline_keyboard: [
       [{ text: "✅ I Have Paid", callback_data: "paid" }],
       [{ text: "❌ Cancel Order", callback_data: "cancel" }],
