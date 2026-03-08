@@ -573,14 +573,27 @@ const Admin = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
-                    {["Order ID", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
+                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {orders.filter(o => statusFilter === "all" || o.status === statusFilter).map((order) => {
                       const ci = getCountryInfo(order.country);
+                      const hist = order.customer_history;
                       return (
                         <tr key={order.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs text-primary">{order.order_id}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-primary font-medium text-xs">
+                                {order.customer_username ? `@${order.customer_username}` : order.customer_name || order.customer_id?.slice(0, 12) || "Unknown"}
+                              </span>
+                              {hist && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {hist.total_orders} orders • {hist.total_accounts} accs • ₹{hist.total_spent.toLocaleString()} spent
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3">{ci.flag} {ci.name}</td>
                           <td className="px-4 py-3">{order.account_type}</td>
                           <td className="px-4 py-3">{order.quantity}</td>
