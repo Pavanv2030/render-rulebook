@@ -26,6 +26,21 @@ const COUNTRIES = [
   { code: "UK", flag: "🇬🇧", name: "UK" },
   { code: "ET", flag: "🇪🇹", name: "Ethiopia" },
   { code: "AR", flag: "🇦🇷", name: "Argentina" },
+  { code: "BR", flag: "🇧🇷", name: "Brazil" },
+  { code: "DE", flag: "🇩🇪", name: "Germany" },
+  { code: "FR", flag: "🇫🇷", name: "France" },
+  { code: "NG", flag: "🇳🇬", name: "Nigeria" },
+  { code: "KE", flag: "🇰🇪", name: "Kenya" },
+  { code: "ZA", flag: "🇿🇦", name: "South Africa" },
+  { code: "AE", flag: "🇦🇪", name: "UAE" },
+  { code: "SA", flag: "🇸🇦", name: "Saudi Arabia" },
+  { code: "TR", flag: "🇹🇷", name: "Turkey" },
+  { code: "CA", flag: "🇨🇦", name: "Canada" },
+  { code: "AU", flag: "🇦🇺", name: "Australia" },
+  { code: "JP", flag: "🇯🇵", name: "Japan" },
+  { code: "RU", flag: "🇷🇺", name: "Russia" },
+  { code: "TM", flag: "🇹🇲", name: "Turkmenistan" },
+  { code: "MG", flag: "🇲🇬", name: "Madagascar" },
 ];
 
 interface Order {
