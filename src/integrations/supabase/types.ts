@@ -83,6 +83,36 @@ export type Database = {
         }
         Relationships: []
       }
+      country_pricing: {
+        Row: {
+          aged_price: number
+          country_code: string
+          country_name: string
+          flag: string
+          id: string
+          regular_price: number
+          updated_at: string
+        }
+        Insert: {
+          aged_price?: number
+          country_code: string
+          country_name: string
+          flag?: string
+          id?: string
+          regular_price?: number
+          updated_at?: string
+        }
+        Update: {
+          aged_price?: number
+          country_code?: string
+          country_name?: string
+          flag?: string
+          id?: string
+          regular_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           country: string | null
