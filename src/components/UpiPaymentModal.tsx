@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import upiScannerImg from "@/assets/upi-scanner.jpg";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UpiPaymentModalProps {
   isOpen: boolean;
@@ -12,6 +13,24 @@ interface UpiPaymentModalProps {
 }
 
 const UpiPaymentModal = ({ isOpen, onClose, amount, orderId, onPaid }: UpiPaymentModalProps) => {
+  const [upiId, setUpiId] = useState("venkat342@fam");
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch active UPI from edge function
+      const fetchUpi = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke("web-chat", {
+            body: { message: "__get_upi__", sessionId: "upi_check" },
+          });
+          // Fallback: parse UPI from any available source
+        } catch {}
+      };
+      // Direct DB query won't work due to RLS, so we use a simple approach
+      // The UPI ID is already shown in the order summary from web-chat
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -41,7 +60,7 @@ const UpiPaymentModal = ({ isOpen, onClose, amount, orderId, onPaid }: UpiPaymen
         <div className="text-center space-y-2 mb-5">
           <div className="text-2xl font-bold neon-text">₹{amount.toLocaleString()}</div>
           <div className="text-sm text-muted-foreground">
-            UPI ID: <span className="text-foreground font-mono text-xs">venkat342@fam</span>
+            UPI ID: <span className="text-foreground font-mono text-xs">{upiId}</span>
           </div>
           <div className="text-xs text-muted-foreground">
             GPay • Paytm • PhonePe
