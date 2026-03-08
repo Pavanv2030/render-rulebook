@@ -8,17 +8,12 @@ const corsHeaders = {
 async function sendTelegramDocument(botToken: string, chatId: string, fileUrl: string, caption: string, fileName: string) {
   const fileRes = await fetch(fileUrl);
   const fileBlob = await fileRes.blob();
-
   const formData = new FormData();
   formData.append("chat_id", chatId);
   formData.append("document", fileBlob, fileName);
   formData.append("caption", caption);
   formData.append("parse_mode", "Markdown");
-
-  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
-    method: "POST",
-    body: formData,
-  });
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: "POST", body: formData });
   return res.json();
 }
 
@@ -42,12 +37,10 @@ Deno.serve(async (req) => {
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Auth check
   const adminKey = req.headers.get("x-admin-key");
   if (!ADMIN_PASSWORD || adminKey !== ADMIN_PASSWORD) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -55,13 +48,12 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // GET: List orders
+    // ========== GET ACTIONS ==========
+
     if (req.method === "GET" && action === "orders") {
       const status = url.searchParams.get("status");
-      let query = supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(100);
-      if (status && status !== "all") {
-        query = query.eq("status", status);
-      }
+      let query = supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500);
+      if (status && status !== "all") query = query.eq("status", status);
       const { data, error } = await query;
       if (error) throw error;
       return new Response(JSON.stringify({ orders: data }), {
@@ -69,157 +61,243 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST actions
+    if (req.method === "GET" && action === "customers") {
+      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      if (error) throw error;
+      // Get order counts per customer
+      const { data: orders } = await supabase.from("orders").select("customer_id, amount, status");
+      const customerStats: Record<string, { total_orders: number; total_spent: number; delivered: number }> = {};
+      (orders || []).forEach((o: any) => {
+        if (!customerStats[o.customer_id]) customerStats[o.customer_id] = { total_orders: 0, total_spent: 0, delivered: 0 };
+        customerStats[o.customer_id].total_orders++;
+        if (o.status === "delivered") {
+          customerStats[o.customer_id].delivered++;
+          customerStats[o.customer_id].total_spent += o.amount;
+        }
+      });
+      return new Response(JSON.stringify({ customers: data, customerStats }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (req.method === "GET" && action === "customer_orders") {
+      const customerId = url.searchParams.get("customer_id");
+      const { data, error } = await supabase.from("orders").select("*").eq("customer_id", customerId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return new Response(JSON.stringify({ orders: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (req.method === "GET" && action === "pricing") {
+      const { data, error } = await supabase.from("country_pricing").select("*").order("country_name");
+      if (error) throw error;
+      return new Response(JSON.stringify({ pricing: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (req.method === "GET" && action === "inventory_list") {
+      const country = url.searchParams.get("country");
+      const type = url.searchParams.get("type");
+      const status = url.searchParams.get("inv_status");
+      let query = supabase.from("account_inventory").select("*").order("created_at", { ascending: false }).limit(500);
+      if (country && country !== "all") query = query.eq("country", country);
+      if (type && type !== "all") query = query.eq("account_type", type);
+      if (status && status !== "all") query = query.eq("status", status);
+      const { data, error } = await query;
+      if (error) throw error;
+      return new Response(JSON.stringify({ inventory: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (req.method === "GET" && action === "dashboard") {
+      // Aggregate stats
+      const { data: allOrders } = await supabase.from("orders").select("amount, status, created_at, country");
+      const { data: allInventory } = await supabase.from("account_inventory").select("country, account_type, status");
+      const { data: allCustomers } = await supabase.from("customers").select("id");
+
+      const now = new Date();
+      const todayStr = now.toISOString().split("T")[0];
+      const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+      const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+
+      let totalRevenue = 0, todayRevenue = 0, weekRevenue = 0, monthRevenue = 0;
+      let totalOrders = 0, todayOrders = 0, weekOrders = 0, monthOrders = 0;
+      let deliveredCount = 0, pendingCount = 0;
+      const countryRevenue: Record<string, number> = {};
+
+      (allOrders || []).forEach((o: any) => {
+        totalOrders++;
+        const orderDate = o.created_at.split("T")[0];
+        if (orderDate === todayStr) todayOrders++;
+        if (o.created_at >= weekAgo) weekOrders++;
+        if (o.created_at >= monthAgo) monthOrders++;
+
+        if (o.status === "delivered") {
+          deliveredCount++;
+          totalRevenue += o.amount;
+          if (orderDate === todayStr) todayRevenue += o.amount;
+          if (o.created_at >= weekAgo) weekRevenue += o.amount;
+          if (o.created_at >= monthAgo) monthRevenue += o.amount;
+          countryRevenue[o.country] = (countryRevenue[o.country] || 0) + o.amount;
+        }
+        if (o.status === "pending" || o.status === "payment_received") pendingCount++;
+      });
+
+      // Stock levels
+      const stockLevels: Record<string, { regular: number; aged: number }> = {};
+      (allInventory || []).forEach((i: any) => {
+        if (i.status === "available") {
+          if (!stockLevels[i.country]) stockLevels[i.country] = { regular: 0, aged: 0 };
+          stockLevels[i.country][i.account_type as "regular" | "aged"]++;
+        }
+      });
+
+      const topCountries = Object.entries(countryRevenue)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([country, revenue]) => ({ country, revenue }));
+
+      return new Response(JSON.stringify({
+        totalRevenue, todayRevenue, weekRevenue, monthRevenue,
+        totalOrders, todayOrders, weekOrders, monthOrders,
+        deliveredCount, pendingCount,
+        totalCustomers: allCustomers?.length || 0,
+        topCountries, stockLevels,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ========== POST ACTIONS ==========
     if (req.method === "POST") {
       const contentType = req.headers.get("content-type") || "";
 
-      // Handle file upload (multipart) — manual delivery
       if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
         const orderId = formData.get("orderId") as string;
         const file = formData.get("file") as File;
-
         if (!orderId || !file) {
           return new Response(JSON.stringify({ error: "orderId and file required" }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-
         const filePath = `orders/${orderId}/${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from("account-files")
-          .upload(filePath, file, { upsert: true });
-
+        const { error: uploadError } = await supabase.storage.from("account-files").upload(filePath, file, { upsert: true });
         if (uploadError) throw uploadError;
 
-        await supabase.from("orders").update({
-          delivery_file_path: filePath,
-          status: "delivered",
-          delivered_at: new Date().toISOString(),
-        }).eq("order_id", orderId);
+        await supabase.from("orders").update({ delivery_file_path: filePath, status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
 
-        // Send to customer via Telegram
         if (BOT_TOKEN) {
-          const { data: order } = await supabase.from("orders")
-            .select("customer_id, order_id, quantity, account_type, country")
-            .eq("order_id", orderId)
-            .single();
-
+          const { data: order } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, country").eq("order_id", orderId).single();
           if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
-            const { data: signedData } = await supabase.storage
-              .from("account-files")
-              .createSignedUrl(filePath, 600);
-
+            const { data: signedData } = await supabase.storage.from("account-files").createSignedUrl(filePath, 600);
             if (signedData?.signedUrl) {
               try {
-                await sendTelegramDocument(
-                  BOT_TOKEN,
-                  order.customer_id,
-                  signedData.signedUrl,
-                  `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n🌍 Country: ${order.country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
-                  file.name
-                );
-              } catch (e) {
-                console.error("Failed to send Telegram document:", e);
-              }
+                await sendTelegramDocument(BOT_TOKEN, order.customer_id, signedData.signedUrl,
+                  `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n🌍 Country: ${order.country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you! 🚀\n\nType /start to order more!`,
+                  file.name);
+              } catch (e) { console.error("Failed to send Telegram document:", e); }
             }
           }
         }
-
-        return new Response(JSON.stringify({ success: true, filePath }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ success: true, filePath }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // JSON actions
       const body = await req.json();
 
-      // Approve payment & trigger auto-deliver
       if (body.action === "approve_payment") {
         const { orderId } = body;
-
-        // Update status to approved
         await supabase.from("orders").update({ status: "approved" }).eq("order_id", orderId);
-
-        // Trigger auto-deliver
         const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
         const deliverRes = await fetch(autoDeliverUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
           body: JSON.stringify({ orderId }),
         });
         const deliverResult = await deliverRes.json();
-
-        return new Response(JSON.stringify(deliverResult), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify(deliverResult), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Reject payment
       if (body.action === "reject_payment") {
         const { orderId, reason } = body;
-
         await supabase.from("orders").update({ status: "rejected" }).eq("order_id", orderId);
-
-        // Notify customer via Telegram
         if (BOT_TOKEN) {
-          const { data: order } = await supabase.from("orders")
-            .select("customer_id, order_id, quantity, account_type, amount")
-            .eq("order_id", orderId)
-            .single();
-
+          const { data: order } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount").eq("order_id", orderId).single();
           if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
             await sendTelegramMessage(BOT_TOKEN, order.customer_id,
-              `❌ *Payment Declined*\n\n` +
-              `🆔 Order: \`${order.order_id}\`\n` +
-              `📦 ${order.quantity}x ${order.account_type}\n` +
-              `💰 ₹${order.amount}\n\n` +
-              `${reason ? `📝 Reason: ${reason}\n\n` : ""}` +
-              `Please re-check your payment and try again.\n` +
-              `Type /start to place a new order.`
-            );
+              `❌ *Payment Declined*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type}\n💰 ₹${order.amount}\n\n${reason ? `📝 Reason: ${reason}\n\n` : ""}Please re-check your payment and try again.\nType /start to place a new order.`);
           }
         }
-
-        // Reset conversation state
-        const { data: order } = await supabase.from("orders")
-          .select("customer_id").eq("order_id", orderId).single();
+        const { data: order } = await supabase.from("orders").select("customer_id").eq("order_id", orderId).single();
         if (order) {
-          await supabase.from("conversation_states")
-            .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
-            .eq("chat_id", order.customer_id);
+          await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", order.customer_id);
         }
-
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (body.action === "update_status") {
         const { orderId, status } = body;
         const updateData: any = { status };
-        if (status === "delivered") {
-          updateData.delivered_at = new Date().toISOString();
-        }
+        if (status === "delivered") updateData.delivered_at = new Date().toISOString();
         const { error } = await supabase.from("orders").update(updateData).eq("order_id", orderId);
         if (error) throw error;
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (body.action === "get_download_url") {
         const { filePath } = body;
-        const { data, error } = await supabase.storage
-          .from("account-files")
-          .createSignedUrl(filePath, 3600);
+        const { data, error } = await supabase.storage.from("account-files").createSignedUrl(filePath, 3600);
         if (error) throw error;
-        return new Response(JSON.stringify({ url: data.signedUrl }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ url: data.signedUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Update pricing
+      if (body.action === "update_pricing") {
+        const { pricing } = body; // Array of { country_code, regular_price, aged_price }
+        for (const p of pricing) {
+          await supabase.from("country_pricing").update({
+            regular_price: p.regular_price,
+            aged_price: p.aged_price,
+            updated_at: new Date().toISOString(),
+          }).eq("country_code", p.country_code);
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Delete inventory items
+      if (body.action === "delete_inventory") {
+        const { ids } = body; // Array of inventory IDs
+        // Delete from storage too
+        const { data: items } = await supabase.from("account_inventory").select("file_path").in("id", ids);
+        if (items && items.length > 0) {
+          const paths = items.map((i: any) => i.file_path);
+          await supabase.storage.from("account-files").remove(paths);
+        }
+        const { error } = await supabase.from("account_inventory").delete().in("id", ids);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, deleted: ids.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Broadcast message
+      if (body.action === "broadcast") {
+        const { message } = body;
+        if (!BOT_TOKEN) {
+          return new Response(JSON.stringify({ error: "Bot token not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { data: customers } = await supabase.from("customers").select("telegram_id");
+        let sent = 0, failed = 0;
+        for (const c of (customers || [])) {
+          try {
+            await sendTelegramMessage(BOT_TOKEN, c.telegram_id, message);
+            sent++;
+          } catch {
+            failed++;
+          }
+        }
+        return new Response(JSON.stringify({ success: true, sent, failed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 

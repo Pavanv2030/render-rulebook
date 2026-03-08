@@ -2,76 +2,66 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const COUNTRY_PRICING: Record<string, { regular: number; aged: number }> = {
-  IN: { regular: 50, aged: 100 },
-  US: { regular: 50, aged: 150 },
-  UK: { regular: 80, aged: 150 },
-  ET: { regular: 50, aged: 100 },
-  AR: { regular: 75, aged: 120 },
-  BR: { regular: 200, aged: 400 },
-  DE: { regular: 200, aged: 400 },
-  FR: { regular: 250, aged: 500 },
-  NG: { regular: 50, aged: 100 },
-  KE: { regular: 50, aged: 100 },
-  ZA: { regular: 50, aged: 100 },
-  AE: { regular: 300, aged: 600 },
-  SA: { regular: 300, aged: 600 },
-  TR: { regular: 200, aged: 400 },
-  CA: { regular: 50, aged: 100 },
-  AU: { regular: 200, aged: 400 },
-  JP: { regular: 200, aged: 400 },
-  RU: { regular: 200, aged: 400 },
-  TM: { regular: 100, aged: 200 },
-  MG: { regular: 50, aged: 100 },
+// Fallback pricing if DB query fails
+const FALLBACK_PRICING: Record<string, { regular: number; aged: number }> = {
+  IN: { regular: 50, aged: 100 }, US: { regular: 50, aged: 150 }, UK: { regular: 80, aged: 150 },
+  ET: { regular: 50, aged: 100 }, AR: { regular: 75, aged: 120 }, BR: { regular: 200, aged: 400 },
+  DE: { regular: 200, aged: 400 }, FR: { regular: 250, aged: 500 }, NG: { regular: 50, aged: 100 },
+  KE: { regular: 50, aged: 100 }, ZA: { regular: 50, aged: 100 }, AE: { regular: 300, aged: 600 },
+  SA: { regular: 300, aged: 600 }, TR: { regular: 200, aged: 400 }, CA: { regular: 50, aged: 100 },
+  AU: { regular: 200, aged: 400 }, JP: { regular: 200, aged: 400 }, RU: { regular: 200, aged: 400 },
+  TM: { regular: 100, aged: 200 }, MG: { regular: 50, aged: 100 },
 };
+
 const CURRENCY = "INR";
 const SYMBOL = "₹";
 
 const COUNTRIES = [
-  { code: "IN", flag: "🇮🇳", name: "India" },
-  { code: "US", flag: "🇺🇸", name: "USA" },
-  { code: "UK", flag: "🇬🇧", name: "UK" },
-  { code: "ET", flag: "🇪🇹", name: "Ethiopia" },
-  { code: "AR", flag: "🇦🇷", name: "Argentina" },
-  { code: "BR", flag: "🇧🇷", name: "Brazil" },
-  { code: "DE", flag: "🇩🇪", name: "Germany" },
-  { code: "FR", flag: "🇫🇷", name: "France" },
-  { code: "NG", flag: "🇳🇬", name: "Nigeria" },
-  { code: "KE", flag: "🇰🇪", name: "Kenya" },
-  { code: "ZA", flag: "🇿🇦", name: "South Africa" },
-  { code: "AE", flag: "🇦🇪", name: "UAE" },
-  { code: "SA", flag: "🇸🇦", name: "Saudi Arabia" },
-  { code: "TR", flag: "🇹🇷", name: "Turkey" },
-  { code: "CA", flag: "🇨🇦", name: "Canada" },
-  { code: "AU", flag: "🇦🇺", name: "Australia" },
-  { code: "JP", flag: "🇯🇵", name: "Japan" },
-  { code: "RU", flag: "🇷🇺", name: "Russia" },
-  { code: "TM", flag: "🇹🇲", name: "Turkmenistan" },
-  { code: "MG", flag: "🇲🇬", name: "Madagascar" },
+  { code: "IN", flag: "🇮🇳", name: "India" }, { code: "US", flag: "🇺🇸", name: "USA" },
+  { code: "UK", flag: "🇬🇧", name: "UK" }, { code: "ET", flag: "🇪🇹", name: "Ethiopia" },
+  { code: "AR", flag: "🇦🇷", name: "Argentina" }, { code: "BR", flag: "🇧🇷", name: "Brazil" },
+  { code: "DE", flag: "🇩🇪", name: "Germany" }, { code: "FR", flag: "🇫🇷", name: "France" },
+  { code: "NG", flag: "🇳🇬", name: "Nigeria" }, { code: "KE", flag: "🇰🇪", name: "Kenya" },
+  { code: "ZA", flag: "🇿🇦", name: "South Africa" }, { code: "AE", flag: "🇦🇪", name: "UAE" },
+  { code: "SA", flag: "🇸🇦", name: "Saudi Arabia" }, { code: "TR", flag: "🇹🇷", name: "Turkey" },
+  { code: "CA", flag: "🇨🇦", name: "Canada" }, { code: "AU", flag: "🇦🇺", name: "Australia" },
+  { code: "JP", flag: "🇯🇵", name: "Japan" }, { code: "RU", flag: "🇷🇺", name: "Russia" },
+  { code: "TM", flag: "🇹🇲", name: "Turkmenistan" }, { code: "MG", flag: "🇲🇬", name: "Madagascar" },
 ];
 
 async function sendTelegramMessage(botToken: string, chatId: string, text: string, replyMarkup?: any) {
   const body: any = { chat_id: chatId, text, parse_mode: "Markdown" };
   if (replyMarkup) body.reply_markup = JSON.stringify(replyMarkup);
-
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   return res.json();
 }
 
 async function answerCallbackQuery(botToken: string, callbackQueryId: string) {
   await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: callbackQueryId }),
   });
+}
+
+async function getPricing(supabase: any): Promise<Record<string, { regular: number; aged: number }>> {
+  try {
+    const { data } = await supabase.from("country_pricing").select("country_code, regular_price, aged_price");
+    if (data && data.length > 0) {
+      const pricing: Record<string, { regular: number; aged: number }> = {};
+      for (const row of data) {
+        pricing[row.country_code] = { regular: Number(row.regular_price), aged: Number(row.aged_price) };
+      }
+      return pricing;
+    }
+  } catch (e) {
+    console.error("Failed to fetch pricing from DB:", e);
+  }
+  return FALLBACK_PRICING;
 }
 
 Deno.serve(async (req) => {
@@ -80,9 +70,7 @@ Deno.serve(async (req) => {
   }
 
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  if (!BOT_TOKEN) {
-    return new Response("TELEGRAM_BOT_TOKEN not configured", { status: 500 });
-  }
+  if (!BOT_TOKEN) return new Response("TELEGRAM_BOT_TOKEN not configured", { status: 500 });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -91,7 +79,6 @@ Deno.serve(async (req) => {
 
   try {
     const update = await req.json();
-
     const message = update.message || update.callback_query?.message;
     const callbackQuery = update.callback_query;
     const chatId = String(message?.chat?.id || callbackQuery?.from?.id);
@@ -100,61 +87,30 @@ Deno.serve(async (req) => {
     const username = (message?.from?.username || update.callback_query?.from?.username || "unknown");
     const firstName = (message?.from?.first_name || update.callback_query?.from?.first_name || "User");
 
-    if (!chatId) {
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
-
-    if (callbackQuery) {
-      await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
-    }
+    if (!chatId) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    if (callbackQuery) await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
 
     // Get or create conversation state
-    let { data: state } = await supabase
-      .from("conversation_states")
-      .select("*")
-      .eq("chat_id", chatId)
-      .single();
-
+    let { data: state } = await supabase.from("conversation_states").select("*").eq("chat_id", chatId).single();
     if (!state) {
-      const { data: newState } = await supabase
-        .from("conversation_states")
-        .insert({ chat_id: chatId, state: "idle" })
-        .select()
-        .single();
+      const { data: newState } = await supabase.from("conversation_states").insert({ chat_id: chatId, state: "idle" }).select().single();
       state = newState;
     }
 
-    // Upsert customer
-    await supabase.from("customers").upsert(
-      { telegram_id: chatId, username, first_name: firstName },
-      { onConflict: "telegram_id" }
-    );
+    await supabase.from("customers").upsert({ telegram_id: chatId, username, first_name: firstName }, { onConflict: "telegram_id" });
 
     const input = (callbackData || text).toLowerCase();
 
-    // ========== ROUTING ==========
+    // Fetch dynamic pricing from DB
+    const COUNTRY_PRICING = await getPricing(supabase);
 
-    // /start → Welcome with country selection
+    // /start
     if (input === "/start" || input === "hi" || input === "hello" || input === "start") {
-      const countryButtons = COUNTRIES.map(c => [
-        { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` }
-      ]);
-
+      const countryButtons = COUNTRIES.map(c => [{ text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` }]);
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `👋 *Welcome to AirdropAccounts Pro, ${firstName}!*\n\n` +
-        `🚀 Premium Telegram accounts for airdrop farming.\n\n` +
-        `⭐ *Why trust us?*\n` +
-        `✅ 3,847+ verified orders delivered\n` +
-        `🔒 Delivery after payment verification\n` +
-        `💯 100% working accounts guaranteed\n\n` +
-        `🌍 *Select your country to see pricing:*`,
-        { inline_keyboard: countryButtons }
-      );
-
-      await supabase.from("conversation_states")
-        .update({ state: "awaiting_country", updated_at: new Date().toISOString() })
-        .eq("chat_id", chatId);
-
+        `👋 *Welcome to AirdropAccounts Pro, ${firstName}!*\n\n🚀 Premium Telegram accounts for airdrop farming.\n\n⭐ *Why trust us?*\n✅ 3,847+ verified orders delivered\n🔒 Delivery after payment verification\n💯 100% working accounts guaranteed\n\n🌍 *Select your country to see pricing:*`,
+        { inline_keyboard: countryButtons });
+      await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -162,33 +118,15 @@ Deno.serve(async (req) => {
     if (input.startsWith("country_")) {
       const countryCode = input.replace("country_", "").toUpperCase();
       const country = COUNTRIES.find(c => c.code === countryCode);
-
       if (!country) {
         await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Invalid country. Please try /start again.");
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-
-      await supabase.from("conversation_states")
-        .update({ state: "awaiting_type", selected_country: countryCode, updated_at: new Date().toISOString() })
-        .eq("chat_id", chatId);
-
+      await supabase.from("conversation_states").update({ state: "awaiting_type", selected_country: countryCode, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
       const pricing = COUNTRY_PRICING[countryCode] || { regular: 50, aged: 100 };
-
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `${country.flag} *${country.name}* selected!\n\n` +
-        `📦 *Pricing for ${country.name}:*\n` +
-        `• Regular: ${SYMBOL}${pricing.regular}/account\n` +
-        `• Aged (6mo+): ${SYMBOL}${pricing.aged}/account\n\n` +
-        `*Choose account type:*`,
-        {
-          inline_keyboard: [
-            [
-              { text: `📦 Regular (${SYMBOL}${pricing.regular}/acc)`, callback_data: "type_regular" },
-              { text: `👑 Aged (${SYMBOL}${pricing.aged}/acc)`, callback_data: "type_aged" },
-            ],
-          ],
-        }
-      );
+        `${country.flag} *${country.name}* selected!\n\n📦 *Pricing for ${country.name}:*\n• Regular: ${SYMBOL}${pricing.regular}/account\n• Aged (6mo+): ${SYMBOL}${pricing.aged}/account\n\n*Choose account type:*`,
+        { inline_keyboard: [[{ text: `📦 Regular (${SYMBOL}${pricing.regular}/acc)`, callback_data: "type_regular" }, { text: `👑 Aged (${SYMBOL}${pricing.aged}/acc)`, callback_data: "type_aged" }]] });
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -199,28 +137,18 @@ Deno.serve(async (req) => {
       const pricing = COUNTRY_PRICING[selectedCountry] || { regular: 50, aged: 100 };
       const price = pricing[type];
       const label = type === "aged" ? "👑 Aged" : "📦 Regular";
-
-      await supabase.from("conversation_states")
-        .update({ state: "awaiting_quantity", selected_type: type, updated_at: new Date().toISOString() })
-        .eq("chat_id", chatId);
-
-      await sendTelegramMessage(BOT_TOKEN, chatId,
-        `${label} *Accounts* — ${SYMBOL}${price}/account\n\n` +
-        `Enter the number of accounts you want (1-100):`
-      );
+      await supabase.from("conversation_states").update({ state: "awaiting_quantity", selected_type: type, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+      await sendTelegramMessage(BOT_TOKEN, chatId, `${label} *Accounts* — ${SYMBOL}${price}/account\n\nEnter the number of accounts you want (1-100):`);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Quantity input
+    // Quantity
     if (state?.state === "awaiting_quantity") {
       const qty = parseInt(input);
       if (isNaN(qty) || qty < 1 || qty > 100) {
-        await sendTelegramMessage(BOT_TOKEN, chatId,
-          "❌ Please enter a valid number between 1 and 100."
-        );
+        await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Please enter a valid number between 1 and 100.");
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-
       const type = state.selected_type || "regular";
       const country = state.selected_country || "IN";
       const countryInfo = COUNTRIES.find(c => c.code === country);
@@ -230,86 +158,27 @@ Deno.serve(async (req) => {
       const label = type === "aged" ? "👑 Aged" : "Regular";
       const orderId = "ORD" + Date.now().toString().slice(-6);
 
-      // Save order with country
-      await supabase.from("orders").insert({
-        order_id: orderId,
-        customer_id: chatId,
-        username,
-        country,
-        account_type: label,
-        quantity: qty,
-        currency: CURRENCY,
-        amount: totalPrice,
-        status: "pending",
-      });
+      await supabase.from("orders").insert({ order_id: orderId, customer_id: chatId, username, country, account_type: label, quantity: qty, currency: CURRENCY, amount: totalPrice, status: "pending" });
+      await supabase.from("conversation_states").update({ state: "awaiting_payment", selected_quantity: qty, pending_order_id: orderId, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
-      await supabase.from("conversation_states")
-        .update({
-          state: "awaiting_payment",
-          selected_quantity: qty,
-          pending_order_id: orderId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("chat_id", chatId);
-
-      const paymentMsg =
-        `📋 *Order Summary*\n\n` +
-        `🆔 Order: \`${orderId}\`\n` +
-        `🌍 Country: ${countryInfo?.flag || ""} ${countryInfo?.name || country}\n` +
-        `📦 Type: ${label}\n` +
-        `🔢 Quantity: ${qty} accounts\n` +
-        `💰 Total: *${SYMBOL}${totalPrice} ${CURRENCY}*\n\n` +
-        `💳 *Payment via UPI:*\n` +
-        `UPI ID: \`venkat342@fam\`\n` +
-        `Send ${SYMBOL}${totalPrice} via GPay / Paytm / PhonePe\n` +
-        `After payment, send screenshot or tap "I have paid"`;
-
-      await sendTelegramMessage(BOT_TOKEN, chatId, paymentMsg, {
-        inline_keyboard: [
-          [{ text: "✅ I have paid", callback_data: "paid" }],
-          [{ text: "❌ Cancel order", callback_data: "cancel" }],
-        ],
-      });
+      await sendTelegramMessage(BOT_TOKEN, chatId,
+        `📋 *Order Summary*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${countryInfo?.flag || ""} ${countryInfo?.name || country}\n📦 Type: ${label}\n🔢 Quantity: ${qty} accounts\n💰 Total: *${SYMBOL}${totalPrice} ${CURRENCY}*\n\n💳 *Payment via UPI:*\nUPI ID: \`venkat342@fam\`\nSend ${SYMBOL}${totalPrice} via GPay / Paytm / PhonePe\nAfter payment, send screenshot or tap "I have paid"`,
+        { inline_keyboard: [[{ text: "✅ I have paid", callback_data: "paid" }], [{ text: "❌ Cancel order", callback_data: "cancel" }]] });
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Payment confirmation — notify admin for approval (NO auto-deliver)
+    // Payment confirmation
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done")) {
       if (state?.pending_order_id) {
-        await supabase.from("orders")
-          .update({ status: "payment_received" })
-          .eq("order_id", state.pending_order_id);
-
-        await supabase.from("conversation_states")
-          .update({ state: "payment_review", updated_at: new Date().toISOString() })
-          .eq("chat_id", chatId);
-
-        await sendTelegramMessage(BOT_TOKEN, chatId,
-          `✅ *Payment Noted!*\n\n` +
-          `🆔 Order: \`${state.pending_order_id}\`\n\n` +
-          `⏳ Your payment is being reviewed by our admin.\n` +
-          `📦 Once approved, your accounts will be delivered instantly here!\n\n` +
-          `Use /status to check your order status anytime.`
-        );
-
-        // Notify admin about new payment
+        await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
+        await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+        await sendTelegramMessage(BOT_TOKEN, chatId, `✅ *Payment Noted!*\n\n🆔 Order: \`${state.pending_order_id}\`\n\n⏳ Your payment is being reviewed by our admin.\n📦 Once approved, your accounts will be delivered instantly here!\n\nUse /status to check your order status anytime.`);
         if (ADMIN_CHAT_ID) {
-          const { data: order } = await supabase.from("orders")
-            .select("*")
-            .eq("order_id", state.pending_order_id)
-            .single();
-
+          const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
           if (order) {
             const countryInfo = COUNTRIES.find(c => c.code === order.country);
             await sendTelegramMessage(BOT_TOKEN, ADMIN_CHAT_ID,
-              `💰 *New Payment Received!*\n\n` +
-              `🆔 Order: \`${order.order_id}\`\n` +
-              `👤 @${username} (${firstName})\n` +
-              `🌍 Country: ${countryInfo?.flag || ""} ${order.country}\n` +
-              `📦 ${order.quantity}x ${order.account_type}\n` +
-              `💵 Amount: ${SYMBOL}${order.amount}\n\n` +
-              `Go to Admin Panel to approve & deliver. ✅`
-            );
+              `💰 *New Payment Received!*\n\n🆔 Order: \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 Country: ${countryInfo?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 Amount: ${SYMBOL}${order.amount}\n\nGo to Admin Panel to approve & deliver. ✅`);
           }
         }
       } else {
@@ -318,13 +187,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
-    // Cancel order
+    // Cancel
     if (input === "cancel") {
       if (state?.pending_order_id) {
         await supabase.from("orders").update({ status: "cancelled" }).eq("order_id", state.pending_order_id);
-        await supabase.from("conversation_states")
-          .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
-          .eq("chat_id", chatId);
+        await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
         await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Order cancelled. Type /start to begin a new order.");
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
@@ -332,13 +199,7 @@ Deno.serve(async (req) => {
 
     // /status
     if (input === "/status") {
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("customer_id", chatId)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
+      const { data: orders } = await supabase.from("orders").select("*").eq("customer_id", chatId).order("created_at", { ascending: false }).limit(5);
       if (orders && orders.length > 0) {
         let msg = "📊 *Your Recent Orders:*\n\n";
         for (const o of orders) {
@@ -355,53 +216,27 @@ Deno.serve(async (req) => {
 
     // /refer
     if (input === "/refer") {
-      let { data: customer } = await supabase
-        .from("customers")
-        .select("referral_code")
-        .eq("telegram_id", chatId)
-        .single();
-
+      let { data: customer } = await supabase.from("customers").select("referral_code").eq("telegram_id", chatId).single();
       let refCode = customer?.referral_code;
       if (!refCode) {
         refCode = "REF" + chatId.slice(-6) + Math.random().toString(36).slice(-3).toUpperCase();
         await supabase.from("customers").update({ referral_code: refCode }).eq("telegram_id", chatId);
       }
-
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `🎁 *Referral Program*\n\n` +
-        `Share your code and earn *5% commission* on every sale!\n\n` +
-        `Your referral code: \`${refCode}\`\n` +
-        `Share link: https://t.me/airdro12pbot?start=${refCode}\n\n` +
-        `When someone uses your code, you earn automatically! 💰`
-      );
+        `🎁 *Referral Program*\n\nShare your code and earn *5% commission* on every sale!\n\nYour referral code: \`${refCode}\`\nShare link: https://t.me/airdro12pbot?start=${refCode}\n\nWhen someone uses your code, you earn automatically! 💰`);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
     // Support
     if (input.includes("support") || input.includes("human") || input.includes("help me")) {
       await sendTelegramMessage(BOT_TOKEN, chatId,
-        `🧑‍💻 *Need Human Support?*\n\n` +
-        `Our team typically responds within 30 minutes.\n\n` +
-        `In the meantime, try:\n` +
-        `📊 /status — Check order status\n` +
-        `🛒 /start — Place a new order\n` +
-        `🎁 /refer — Get your referral code\n\n` +
-        `A support agent will reach out to you shortly! 🙏`
-      );
+        `🧑‍💻 *Need Human Support?*\n\nOur team typically responds within 30 minutes.\n\nIn the meantime, try:\n📊 /status — Check order status\n🛒 /start — Place a new order\n🎁 /refer — Get your referral code\n\nA support agent will reach out to you shortly! 🙏`);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
     // Fallback
     await sendTelegramMessage(BOT_TOKEN, chatId,
-      `🤖 *AirdropAccounts Pro Bot*\n\n` +
-      `Available commands:\n` +
-      `🛒 /start — Browse & order accounts\n` +
-      `📊 /status — Check your order status\n` +
-      `🎁 /refer — Get referral link (earn 5%)\n` +
-      `🧑‍💻 Type "support" — Contact human agent\n\n` +
-      `Need accounts? Just type /start to begin! 🚀`
-    );
-
+      `🤖 *AirdropAccounts Pro Bot*\n\nAvailable commands:\n🛒 /start — Browse & order accounts\n📊 /status — Check your order status\n🎁 /refer — Get referral link (earn 5%)\n🧑‍💻 Type "support" — Contact human agent\n\nNeed accounts? Just type /start to begin! 🚀`);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
   } catch (error) {
     console.error("Bot error:", error);
