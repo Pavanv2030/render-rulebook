@@ -363,6 +363,36 @@ const Admin = () => {
     } catch (err: any) { setError(err.message); }
   };
 
+  // UPI Wallet CRUD
+  const addUpiWallet = async () => {
+    if (!newUpi.upi_id) return;
+    setAddingUpi(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_upi_wallet", upi_id: newUpi.upi_id, display_name: newUpi.display_name }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ UPI ${newUpi.upi_id} added!`); setNewUpi({ upi_id: "", display_name: "" }); setShowAddUpi(false); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); } finally { setAddingUpi(false); }
+  };
+
+  const updateUpiWallet = async (id: string, data: any) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_upi_wallet", id, ...data }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ UPI updated!"); setEditingUpiId(null); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const deleteUpiWallet = async (id: string, upiId: string) => {
+    if (!confirm(`Delete UPI ${upiId}? This cannot be undone.`)) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_upi_wallet", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ UPI ${upiId} removed!`); fetchUpiWallets();
+    } catch (err: any) { setError(err.message); }
+  };
+
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
@@ -370,6 +400,7 @@ const Admin = () => {
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
     { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
+    { key: "upi", label: "UPI", icon: <IndianRupee className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
