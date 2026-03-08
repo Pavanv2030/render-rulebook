@@ -543,7 +543,7 @@ const Admin = () => {
                   <label className="text-xs text-muted-foreground block mb-1">Country</label>
                   <select value={selectedUploadCountry} onChange={(e) => setSelectedUploadCountry(e.target.value)}
                     className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-                    {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                    {dynamicCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                   </select>
                 </div>
                 <div>
