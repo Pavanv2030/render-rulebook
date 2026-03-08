@@ -455,7 +455,7 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════
     await sendMsg(BOT_TOKEN, chatId,
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `   🚀 *AIRDROP ACCOUNTS PRO*\n` +
+      `   🚀 *RIOX ACCOUNTS PRO*\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
       `Hey *${firstName}*! What would you\nlike to do today?\n\n` +
       `Choose an option below 👇`,
