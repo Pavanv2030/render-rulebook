@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 const steps = [
-  { num: "01", title: "Open Our Bot", desc: "Search @AirdropAccountsPro_bot on Telegram and tap /start" },
+  { num: "01", title: "Open Our Bot", desc: "Search @airdro12pbot on Telegram and tap /start" },
   { num: "02", title: "Select Country & Quantity", desc: "Choose your country, pick regular or aged, select quantity" },
   { num: "03", title: "Make Payment", desc: "Pay via UPI, USDT, or Telegram Stars — instant confirmation" },
   { num: "04", title: "Get Your Accounts", desc: "ZIP file delivered automatically in seconds. Start farming!" },

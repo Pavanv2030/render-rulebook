@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 const TelegramWidget = () => {
   return (
     <motion.a
-      href="https://t.me/AirdropAccountsPro_bot"
+      href="https://t.me/airdro12pbot"
       target="_blank"
       rel="noopener noreferrer"
       initial={{ scale: 0, opacity: 0 }}
