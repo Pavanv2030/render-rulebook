@@ -61,7 +61,7 @@ const Admin = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [inventory, setInventory] = useState<InventoryStats | null>(null);
   const [uploadingMaster, setUploadingMaster] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "inventory">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "inventory" | "stats">("orders");
   const [selectedUploadCountry, setSelectedUploadCountry] = useState("IN");
   const [selectedUploadType, setSelectedUploadType] = useState("regular");
   const [approvingOrder, setApprovingOrder] = useState<string | null>(null);
