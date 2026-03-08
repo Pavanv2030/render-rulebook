@@ -592,7 +592,7 @@ const Admin = () => {
                 <h3 className="font-semibold flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> Inventory Items</h3>
                 <select value={invFilterCountry} onChange={(e) => setInvFilterCountry(e.target.value)} className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground">
                   <option value="all">All Countries</option>
-                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                  {dynamicCountries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                 </select>
                 <select value={invFilterType} onChange={(e) => setInvFilterType(e.target.value)} className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground">
                   <option value="all">All Types</option>
