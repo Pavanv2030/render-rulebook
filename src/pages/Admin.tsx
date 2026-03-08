@@ -40,7 +40,7 @@ const COUNTRIES = [
 const PIE_COLORS = ["hsl(175, 80%, 50%)", "hsl(270, 60%, 60%)", "hsl(145, 70%, 45%)", "hsl(40, 90%, 55%)", "hsl(0, 72%, 55%)", "hsl(200, 70%, 50%)", "hsl(320, 60%, 50%)", "hsl(60, 80%, 45%)"];
 
 interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; customer_username?: string | null; customer_name?: string | null; customer_history?: { total_orders: number; total_accounts: number; total_spent: number; delivered: number }; }
-interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; }
+interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; is_blocked?: boolean; }
 interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; regular_price_usdt: number; aged_price_usdt: number; }
 interface InventoryItem { id: string; file_name: string; file_path: string; account_type: string; country: string; status: string; order_id: string | null; created_at: string; }
 interface DashboardData { totalRevenue: number; todayRevenue: number; weekRevenue: number; monthRevenue: number; totalOrders: number; todayOrders: number; weekOrders: number; monthOrders: number; deliveredCount: number; pendingCount: number; totalCustomers: number; topCountries: { country: string; revenue: number }[]; stockLevels: Record<string, { regular: number; aged: number }>; }
@@ -73,7 +73,7 @@ const Admin = () => {
   // New states
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerStats, setCustomerStats] = useState<Record<string, { total_orders: number; total_spent: number; delivered: number }>>({});
+  const [customerStats, setCustomerStats] = useState<Record<string, { total_orders: number; total_spent: number; delivered: number; total_accounts: number }>>({});
   const [pricing, setPricing] = useState<PricingRow[]>([]);
   const [editingPricing, setEditingPricing] = useState<Record<string, { regular: number; aged: number; regular_usdt: number; aged_usdt: number }>>({});
   const [savingPricing, setSavingPricing] = useState(false);
@@ -87,6 +87,11 @@ const Admin = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [viewingCustomerOrders, setViewingCustomerOrders] = useState<string | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [sendingMsgTo, setSendingMsgTo] = useState<string | null>(null);
+  const [customerMsg, setCustomerMsg] = useState("");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [bulkActioning, setBulkActioning] = useState(false);
   const [showAddCountry, setShowAddCountry] = useState(false);
   const [newCountry, setNewCountry] = useState({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 });
   const [addingCountry, setAddingCountry] = useState(false);
@@ -152,10 +157,11 @@ const Admin = () => {
   const fetchCustomers = useCallback(async () => {
     if (!adminKey) return;
     try {
-      const result = await apiFetch(`${baseUrl}/admin-api?action=customers`);
+      const searchParam = customerSearch ? `&search=${encodeURIComponent(customerSearch)}` : "";
+      const result = await apiFetch(`${baseUrl}/admin-api?action=customers${searchParam}`);
       if (!result.error) { setCustomers(result.customers || []); setCustomerStats(result.customerStats || {}); }
     } catch {}
-  }, [adminKey, apiFetch, baseUrl]);
+  }, [adminKey, apiFetch, baseUrl, customerSearch]);
 
   const fetchPricing = useCallback(async () => {
     if (!adminKey) return;
@@ -286,6 +292,50 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api?action=customer_orders&customer_id=${customerId}`);
       setCustomerOrders(result.orders || []);
     } catch {}
+  };
+
+  const toggleBlockCustomer = async (telegramId: string, block: boolean) => {
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "block_customer", telegram_id: telegramId, block }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`${block ? "🚫 Customer blocked" : "✅ Customer unblocked"}`); fetchCustomers();
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const sendCustomerMessage = async (telegramId: string) => {
+    if (!customerMsg.trim()) return;
+    setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send_customer_message", telegram_id: telegramId, message: customerMsg }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Message sent!"); setCustomerMsg(""); setSendingMsgTo(null);
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const bulkApprove = async () => {
+    if (selectedOrderIds.size === 0) return;
+    if (!confirm(`Approve & deliver ${selectedOrderIds.size} orders?`)) return;
+    setBulkActioning(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulk_approve", orderIds: Array.from(selectedOrderIds) }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Bulk approve: ${result.delivered} delivered, ${result.failed} failed`);
+      if (result.errors?.length) setError(result.errors.join("; "));
+      setSelectedOrderIds(new Set()); fetchOrders(); fetchInventory(); fetchDashboard();
+    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
+  };
+
+  const bulkReject = async () => {
+    if (selectedOrderIds.size === 0) return;
+    const reason = prompt("Enter rejection reason (optional):"); if (reason === null) return;
+    setBulkActioning(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "bulk_reject", orderIds: Array.from(selectedOrderIds), reason: reason || "" }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`❌ Bulk reject: ${result.rejected} orders rejected`);
+      setSelectedOrderIds(new Set()); fetchOrders();
+    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
   };
 
   const getCountryInfo = (code: string) => {
@@ -559,9 +609,9 @@ const Admin = () => {
         {/* ==================== ORDERS TAB ==================== */}
         {activeTab === "orders" && (
           <>
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-4">
               {STATUS_OPTIONS.map((s) => (
-                <button key={s} onClick={() => setStatusFilter(s)}
+                <button key={s} onClick={() => { setStatusFilter(s); setSelectedOrderIds(new Set()); }}
                   className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
                   {s === "all" ? "All" : s.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}
                   {s !== "all" && ` (${orders.filter(o => o.status === s).length})`}
@@ -569,10 +619,31 @@ const Admin = () => {
               ))}
             </div>
 
+            {/* Bulk Actions Bar */}
+            {selectedOrderIds.size > 0 && (
+              <div className="flex items-center gap-3 mb-4 bg-primary/10 border border-primary/30 rounded-xl px-4 py-3">
+                <span className="text-sm font-medium text-primary">{selectedOrderIds.size} selected</span>
+                <button onClick={bulkApprove} disabled={bulkActioning}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30 text-xs font-medium disabled:opacity-50">
+                  <ShieldCheck className="w-3.5 h-3.5" /> {bulkActioning ? "..." : "Bulk Approve & Deliver"}
+                </button>
+                <button onClick={bulkReject} disabled={bulkActioning}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 text-xs font-medium disabled:opacity-50">
+                  <Ban className="w-3.5 h-3.5" /> Bulk Reject
+                </button>
+                <button onClick={() => setSelectedOrderIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground ml-auto">Clear</button>
+              </div>
+            )}
+
             <div className="glass rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-border">
+                    <th className="px-3 py-3"><input type="checkbox" onChange={(e) => {
+                      const filtered = orders.filter(o => statusFilter === "all" || o.status === statusFilter);
+                      if (e.target.checked) setSelectedOrderIds(new Set(filtered.map(o => o.order_id)));
+                      else setSelectedOrderIds(new Set());
+                    }} checked={selectedOrderIds.size > 0 && selectedOrderIds.size === orders.filter(o => statusFilter === "all" || o.status === statusFilter).length} /></th>
                     {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
@@ -580,7 +651,10 @@ const Admin = () => {
                       const ci = getCountryInfo(order.country);
                       const hist = order.customer_history;
                       return (
-                        <tr key={order.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={order.id} className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${selectedOrderIds.has(order.order_id) ? "bg-primary/5" : ""}`}>
+                          <td className="px-3 py-3"><input type="checkbox" checked={selectedOrderIds.has(order.order_id)} onChange={(e) => {
+                            const s = new Set(selectedOrderIds); if (e.target.checked) s.add(order.order_id); else s.delete(order.order_id); setSelectedOrderIds(s);
+                          }} /></td>
                           <td className="px-4 py-3 font-mono text-xs text-primary">{order.order_id}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-0.5">
@@ -779,36 +853,83 @@ const Admin = () => {
               </div>
             ) : (
               <div className="glass rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border">
+                <div className="px-5 py-4 border-b border-border flex flex-wrap items-center gap-3">
                   <h3 className="font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> All Customers ({customers.length})</h3>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") fetchCustomers(); }}
+                        placeholder="Search username, name, ID..."
+                        className="bg-secondary border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground w-48 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                    </div>
+                    <button onClick={fetchCustomers} className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30">
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-border">
-                      {["Username", "Name", "Telegram ID", "Orders", "Delivered", "Total Spent", "Joined", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium text-xs">{h}</th>)}
+                      {["Username", "Name", "Telegram ID", "Orders", "Accounts", "Total Spent", "Status", "Joined", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium text-xs">{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {customers.map(c => {
-                        const stats = customerStats[c.telegram_id] || { total_orders: 0, total_spent: 0, delivered: 0 };
+                        const stats = customerStats[c.telegram_id] || { total_orders: 0, total_spent: 0, delivered: 0, total_accounts: 0 };
                         return (
-                          <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30">
-                            <td className="px-4 py-3 text-primary">@{c.username || "—"}</td>
-                            <td className="px-4 py-3">{c.first_name || "—"}</td>
-                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.telegram_id}</td>
-                            <td className="px-4 py-3">{stats.total_orders}</td>
-                            <td className="px-4 py-3 text-[hsl(var(--success))]">{stats.delivered}</td>
-                            <td className="px-4 py-3 font-medium">₹{stats.total_spent.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
-                            <td className="px-4 py-3">
-                              <button onClick={() => viewCustomerOrders(c.telegram_id)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs">
-                                <Eye className="w-3.5 h-3.5" /> Orders
-                              </button>
-                            </td>
-                          </tr>
+                          <>
+                            <tr key={c.id} className={`border-b border-border/50 hover:bg-secondary/30 ${c.is_blocked ? "opacity-60 bg-destructive/5" : ""}`}>
+                              <td className="px-4 py-3 text-primary">@{c.username || "—"}</td>
+                              <td className="px-4 py-3">{c.first_name || "—"}</td>
+                              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.telegram_id}</td>
+                              <td className="px-4 py-3">{stats.total_orders}</td>
+                              <td className="px-4 py-3">{stats.total_accounts || 0}</td>
+                              <td className="px-4 py-3 font-medium">₹{stats.total_spent.toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                {c.is_blocked
+                                  ? <span className="px-2 py-0.5 rounded-full text-xs bg-destructive/20 text-destructive">Blocked</span>
+                                  : <span className="px-2 py-0.5 rounded-full text-xs bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]">Active</span>}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => viewCustomerOrders(c.telegram_id)}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs" title="View Orders">
+                                    <Eye className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => { setSendingMsgTo(sendingMsgTo === c.telegram_id ? null : c.telegram_id); setCustomerMsg(""); }}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 text-xs" title="Send Message">
+                                    <Send className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => toggleBlockCustomer(c.telegram_id, !c.is_blocked)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${c.is_blocked ? "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/30" : "bg-destructive/20 text-destructive hover:bg-destructive/30"}`}
+                                    title={c.is_blocked ? "Unblock" : "Block"}>
+                                    <Ban className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            {sendingMsgTo === c.telegram_id && (
+                              <tr key={`msg-${c.id}`} className="border-b border-border/50 bg-secondary/20">
+                                <td colSpan={9} className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">To @{c.username || c.telegram_id}:</span>
+                                    <input type="text" value={customerMsg} onChange={(e) => setCustomerMsg(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") sendCustomerMessage(c.telegram_id); }}
+                                      placeholder="Type message..."
+                                      className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                                    <button onClick={() => sendCustomerMessage(c.telegram_id)} disabled={!customerMsg.trim()}
+                                      className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">
+                                      <Send className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         );
                       })}
-                      {customers.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No customers found</td></tr>}
+                      {customers.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">No customers found</td></tr>}
                     </tbody>
                   </table>
                 </div>

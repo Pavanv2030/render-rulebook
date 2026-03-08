@@ -86,14 +86,20 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === "GET" && action === "customers") {
-      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      const search = url.searchParams.get("search") || "";
+      let query = supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      if (search) {
+        query = query.or(`username.ilike.%${search}%,first_name.ilike.%${search}%,telegram_id.ilike.%${search}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       // Get order counts per customer
-      const { data: orders } = await supabase.from("orders").select("customer_id, amount, status");
-      const customerStats: Record<string, { total_orders: number; total_spent: number; delivered: number }> = {};
+      const { data: orders } = await supabase.from("orders").select("customer_id, amount, status, quantity");
+      const customerStats: Record<string, { total_orders: number; total_spent: number; delivered: number; total_accounts: number }> = {};
       (orders || []).forEach((o: any) => {
-        if (!customerStats[o.customer_id]) customerStats[o.customer_id] = { total_orders: 0, total_spent: 0, delivered: 0 };
+        if (!customerStats[o.customer_id]) customerStats[o.customer_id] = { total_orders: 0, total_spent: 0, delivered: 0, total_accounts: 0 };
         customerStats[o.customer_id].total_orders++;
+        customerStats[o.customer_id].total_accounts += o.quantity;
         if (o.status === "delivered") {
           customerStats[o.customer_id].delivered++;
           customerStats[o.customer_id].total_spent += o.amount;
@@ -461,9 +467,67 @@ Deno.serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-    }
+      if (body.action === "block_customer") {
+        const { telegram_id, block } = body;
+        if (!telegram_id) return new Response(JSON.stringify({ error: "telegram_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await supabase.from("customers").update({ is_blocked: block }).eq("telegram_id", telegram_id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
-    // GET crypto wallets
+      if (body.action === "send_customer_message") {
+        const { telegram_id, message } = body;
+        if (!telegram_id || !message || !BOT_TOKEN) return new Response(JSON.stringify({ error: "telegram_id, message required and bot token must be set" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        try {
+          await sendTelegramMessage(BOT_TOKEN, telegram_id, message);
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Failed to send message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      if (body.action === "bulk_approve") {
+        const { orderIds } = body;
+        if (!orderIds || !Array.isArray(orderIds)) return new Response(JSON.stringify({ error: "orderIds array required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        let delivered = 0, failed = 0, errors: string[] = [];
+        for (const orderId of orderIds) {
+          try {
+            await supabase.from("orders").update({ status: "approved" }).eq("order_id", orderId);
+            if (BOT_TOKEN) {
+              const { data: ord } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount, country").eq("order_id", orderId).single();
+              if (ord && ord.customer_id && !ord.customer_id.startsWith("web_")) {
+                await sendTelegramMessage(BOT_TOKEN, ord.customer_id, `✅ *Payment Approved!*\n\n🆔 Order: \`${ord.order_id}\`\n📦 ${ord.quantity}x ${ord.account_type}\n💰 ₹${ord.amount}\n\n⏳ Preparing your accounts...`);
+              }
+            }
+            const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
+            const deliverRes = await fetch(autoDeliverUrl, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }, body: JSON.stringify({ orderId }) });
+            const deliverResult = await deliverRes.json();
+            if (deliverResult.success) delivered++;
+            else { failed++; errors.push(`${orderId}: ${deliverResult.error || "failed"}`); }
+          } catch (e) { failed++; errors.push(`${orderId}: ${(e as Error).message}`); }
+        }
+        return new Response(JSON.stringify({ success: true, delivered, failed, errors }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "bulk_reject") {
+        const { orderIds, reason } = body;
+        if (!orderIds || !Array.isArray(orderIds)) return new Response(JSON.stringify({ error: "orderIds array required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        let rejected = 0;
+        for (const orderId of orderIds) {
+          await supabase.from("orders").update({ status: "rejected" }).eq("order_id", orderId);
+          if (BOT_TOKEN) {
+            const { data: order } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount").eq("order_id", orderId).single();
+            if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
+              await sendTelegramMessage(BOT_TOKEN, order.customer_id, `❌ *Payment Declined*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type}\n💰 ₹${order.amount}\n\n${reason ? `📝 Reason: ${reason}\n\n` : ""}Type /start to place a new order.`);
+            }
+          }
+          const { data: order } = await supabase.from("orders").select("customer_id").eq("order_id", orderId).single();
+          if (order) await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", order.customer_id);
+          rejected++;
+        }
+        return new Response(JSON.stringify({ success: true, rejected }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     if (req.method === "GET" && action === "crypto_wallets") {
       const { data, error } = await supabase.from("crypto_wallets").select("*").order("coin_symbol");
       if (error) throw error;

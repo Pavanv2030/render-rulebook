@@ -122,6 +122,15 @@ Deno.serve(async (req) => {
     }
     await supabase.from("customers").upsert({ telegram_id: chatId, username, first_name: firstName }, { onConflict: "telegram_id" });
 
+    // Check if customer is blocked
+    const { data: customerData } = await supabase.from("customers").select("is_blocked").eq("telegram_id", chatId).single();
+    if (customerData?.is_blocked) {
+      await sendMsg(BOT_TOKEN, chatId,
+        `🚫 *Account Suspended*\n\nYour account has been suspended.\nPlease contact support for assistance.`,
+        { inline_keyboard: [[{ text: "🧑‍💻 Contact Support", callback_data: "support" }]] });
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // Normalize input — handle both callbacks and keyboard button text
     let input = (callbackData || rawText).toLowerCase();
     if (input === "🛒 buy accounts") input = "start";
