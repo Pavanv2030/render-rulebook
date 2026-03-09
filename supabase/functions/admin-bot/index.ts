@@ -367,30 +367,117 @@ Deno.serve(async (req) => {
     // ==================== /addcountry ====================
     if (input.startsWith("/addcountry ")) {
       const parts = text.split(" ");
-      // /addcountry CODE Name Flag RegularPrice AgedPrice
-      // e.g. /addcountry PK Pakistan 🇵🇰 50 100
+      // /addcountry CODE Name Flag RegPrice AgedPrice RegUSDT AgedUSDT
       const countryCode = parts[1]?.toUpperCase();
       const countryName = parts[2];
       const flag = parts[3] || "🌍";
       const regularPrice = parseFloat(parts[4]) || 50;
       const agedPrice = parseFloat(parts[5]) || 100;
+      const regularPriceUsdt = parseFloat(parts[6]) || 0;
+      const agedPriceUsdt = parseFloat(parts[7]) || 0;
 
       if (!countryCode || !countryName) {
-        await sendMsg(BOT_TOKEN, chatId, "Usage: /addcountry CODE Name Flag RegularPrice AgedPrice\nExample: /addcountry PK Pakistan 🇵🇰 50 100");
+        await sendMsg(BOT_TOKEN, chatId,
+          "Usage: `/addcountry CODE Name Flag RegPrice AgedPrice [RegUSDT] [AgedUSDT]`\n\n" +
+          "Examples:\n" +
+          "`/addcountry PK Pakistan 🇵🇰 50 100`\n" +
+          "`/addcountry PK Pakistan 🇵🇰 50 100 1.5 3`");
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
-      const { error } = await supabase.from("country_pricing").upsert({
+      // Check if already exists
+      const { data: existing } = await supabase.from("country_pricing").select("id").eq("country_code", countryCode).single();
+      if (existing) {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ *${countryCode}* already exists! Use /editcountry to modify it.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { error } = await supabase.from("country_pricing").insert({
         country_code: countryCode, country_name: countryName, flag,
         regular_price: regularPrice, aged_price: agedPrice,
+        regular_price_usdt: regularPriceUsdt, aged_price_usdt: agedPriceUsdt,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "country_code" });
+      });
 
       if (error) {
         await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
       } else {
         await sendMsg(BOT_TOKEN, chatId,
-          `✅ *Country Added!*\n\n${flag} *${countryName}* (${countryCode})\n📦 Regular: ${SYMBOL}${regularPrice}\n👑 Aged: ${SYMBOL}${agedPrice}\n\n_Available immediately in the customer bot._`);
+          `✅ *Country Added!*\n\n${flag} *${countryName}* (${countryCode})\n` +
+          `📦 Regular: ${SYMBOL}${regularPrice}${regularPriceUsdt ? ` / $${regularPriceUsdt}` : ""}\n` +
+          `👑 Aged: ${SYMBOL}${agedPrice}${agedPriceUsdt ? ` / $${agedPriceUsdt}` : ""}\n\n` +
+          `_Available immediately in the customer bot._`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /editcountry ====================
+    if (input.startsWith("/editcountry ")) {
+      const parts = text.split(" ");
+      // /editcountry CODE field value
+      const countryCode = parts[1]?.toUpperCase();
+      const field = parts[2]?.toLowerCase();
+      const value = parts.slice(3).join(" ");
+
+      if (!countryCode || !field || !value) {
+        await sendMsg(BOT_TOKEN, chatId,
+          "Usage: `/editcountry CODE field value`\n\n" +
+          "*Fields:* name, flag, regular, aged, regular\\_usdt, aged\\_usdt\n\n" +
+          "Examples:\n" +
+          "`/editcountry IN name India`\n" +
+          "`/editcountry IN flag 🇮🇳`\n" +
+          "`/editcountry IN regular 60`\n" +
+          "`/editcountry IN aged 120`\n" +
+          "`/editcountry IN regular_usdt 2`\n" +
+          "`/editcountry IN aged_usdt 4`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { data: existing } = await supabase.from("country_pricing").select("*").eq("country_code", countryCode).single();
+      if (!existing) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Country *${countryCode}* not found. Use /addcountry to create it.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+      let fieldLabel = "";
+
+      switch (field) {
+        case "name":
+          updateData.country_name = value;
+          fieldLabel = `Name → *${value}*`;
+          break;
+        case "flag":
+          updateData.flag = value;
+          fieldLabel = `Flag → ${value}`;
+          break;
+        case "regular":
+          updateData.regular_price = parseFloat(value);
+          fieldLabel = `Regular Price → ${SYMBOL}${value}`;
+          break;
+        case "aged":
+          updateData.aged_price = parseFloat(value);
+          fieldLabel = `Aged Price → ${SYMBOL}${value}`;
+          break;
+        case "regular_usdt":
+          updateData.regular_price_usdt = parseFloat(value);
+          fieldLabel = `Regular USDT → $${value}`;
+          break;
+        case "aged_usdt":
+          updateData.aged_price_usdt = parseFloat(value);
+          fieldLabel = `Aged USDT → $${value}`;
+          break;
+        default:
+          await sendMsg(BOT_TOKEN, chatId, `❌ Unknown field: *${field}*\n\nValid fields: name, flag, regular, aged, regular\\_usdt, aged\\_usdt`);
+          return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { error } = await supabase.from("country_pricing").update(updateData).eq("country_code", countryCode);
+      if (error) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
+      } else {
+        await sendMsg(BOT_TOKEN, chatId,
+          `✅ *Country Updated!*\n\n${existing.flag} *${existing.country_name}* (${countryCode})\n${fieldLabel}\n\n_Changes apply immediately._`);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
@@ -399,14 +486,27 @@ Deno.serve(async (req) => {
     if (input.startsWith("/removecountry ")) {
       const countryCode = text.split(" ")[1]?.toUpperCase();
       if (!countryCode) {
-        await sendMsg(BOT_TOKEN, chatId, "Usage: /removecountry CODE\nExample: /removecountry PK");
+        await sendMsg(BOT_TOKEN, chatId, "Usage: `/removecountry CODE`\nExample: `/removecountry PK`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const { data: existing } = await supabase.from("country_pricing").select("country_name, flag").eq("country_code", countryCode).single();
+      if (!existing) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Country *${countryCode}* not found.`);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
       // Check inventory
       const { data: invCheck } = await supabase.from("account_inventory").select("id").eq("country", countryCode).eq("status", "available").limit(1);
       if (invCheck && invCheck.length > 0) {
-        await sendMsg(BOT_TOKEN, chatId, `⚠️ Cannot remove *${countryCode}* — it has available inventory. Delete inventory first.`);
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Cannot remove *${countryCode}* — it has available inventory.\n\nDelete inventory first or wait until stock runs out.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Check pending orders
+      const { data: pendingOrders } = await supabase.from("orders").select("id").eq("country", countryCode).in("status", ["pending", "payment_received", "approved"]).limit(1);
+      if (pendingOrders && pendingOrders.length > 0) {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Cannot remove *${countryCode}* — it has pending/active orders.`);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
@@ -414,7 +514,7 @@ Deno.serve(async (req) => {
       if (error) {
         await sendMsg(BOT_TOKEN, chatId, `❌ Error: ${error.message}`);
       } else {
-        await sendMsg(BOT_TOKEN, chatId, `✅ *Country ${countryCode} removed!*\n\n_It will no longer appear in the customer bot._`);
+        await sendMsg(BOT_TOKEN, chatId, `✅ *Country Removed!*\n\n${existing.flag} *${existing.country_name}* (${countryCode})\n\n_It will no longer appear in the customer bot._`);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
