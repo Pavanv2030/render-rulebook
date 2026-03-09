@@ -91,17 +91,18 @@ Deno.serve(async (req) => {
         `✅ /approve ORDxxxxxx\n` +
         `❌ /reject ORDxxxxxx <reason>\n` +
         `📥 /deliver ORDxxxxxx\n\n` +
-        `*Country & Pricing:*\n` +
-        `💲 /setprice CC regular aged\n` +
-        `🌍 /addcountry CODE Name Flag RegPrice AgedPrice\n` +
-        `🗑️ /removecountry CODE\n\n` +
+        `*Country Management:*\n` +
+        `🌍 /countries — List all countries\n` +
+        `➕ /addcountry CODE Name Flag RegPrice AgedPrice\n` +
+        `✏️ /editcountry CODE field value\n` +
+        `🗑️ /removecountry CODE\n` +
+        `💲 /setprice CC regular aged\n\n` +
         `*Crypto Wallets:*\n` +
         `💰 /crypto — List all wallets\n` +
         `➕ /addwallet SYMBOL Name Network Address\n` +
         `✏️ /editwallet SYMBOL NewAddress\n` +
         `🔄 /togglewallet SYMBOL — Enable/disable\n` +
-        `🗑️ /removewallet SYMBOL — Delete wallet\n\n` +
-        `_(e.g. /addwallet USDT Tether TRC20 TAddress)_`
+        `🗑️ /removewallet SYMBOL — Delete wallet`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
