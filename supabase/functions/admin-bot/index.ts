@@ -349,6 +349,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // ==================== /countries ====================
+    if (input === "/countries") {
+      const { data: countries } = await supabase.from("country_pricing").select("*").order("country_name");
+      if (!countries || countries.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, "🌍 No countries configured.\n\nAdd one with:\n`/addcountry CODE Name Flag RegPrice AgedPrice`");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Get stock counts per country
+      const { data: inv } = await supabase.from("account_inventory").select("country, account_type, status");
+      const stockMap: Record<string, { regular: number; aged: number }> = {};
+      (inv || []).forEach((i: any) => {
+        if (i.status !== "available") return;
+        if (!stockMap[i.country]) stockMap[i.country] = { regular: 0, aged: 0 };
+        stockMap[i.country][i.account_type as "regular" | "aged"]++;
+      });
+
+      let msg = `🌍 *Countries (${countries.length}):*\n\n`;
+      for (const c of countries) {
+        const stock = stockMap[c.country_code] || { regular: 0, aged: 0 };
+        msg += `${c.flag} *${c.country_name}* (${c.country_code})\n`;
+        msg += `   💰 Regular: ${SYMBOL}${c.regular_price}${c.regular_price_usdt ? ` / $${c.regular_price_usdt}` : ""}\n`;
+        msg += `   👑 Aged: ${SYMBOL}${c.aged_price}${c.aged_price_usdt ? ` / $${c.aged_price_usdt}` : ""}\n`;
+        msg += `   📦 Stock: ${stock.regular} regular, ${stock.aged} aged\n\n`;
+      }
+      msg += `_Commands: /addcountry, /editcountry, /removecountry_`;
+      await sendMsg(BOT_TOKEN, chatId, msg);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // ==================== /pricing ====================
     if (input === "/pricing") {
       const { data: pricing } = await supabase.from("country_pricing").select("*").order("country_name");
