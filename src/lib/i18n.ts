@@ -104,6 +104,23 @@ const translations: Record<string, Record<Lang, string>> = {
   "faq.q6": { en: "Do you have a referral program?", hi: "क्या आपका कोई रेफरल प्रोग्राम है?", es: "¿Tienen programa de referidos?", ar: "هل لديكم برنامج إحالة؟" },
   "faq.a6": { en: "Yes! Use the /refer command in our bot to get your unique referral link. Earn 5% commission on every sale from your referrals.", hi: "हाँ! अपना यूनिक रेफरल लिंक पाने के लिए हमारे बॉट में /refer कमांड का उपयोग करें। अपने रेफरल की हर बिक्री पर 5% कमीशन कमाएं।", es: "¡Sí! Usa el comando /refer en nuestro bot para obtener tu link de referido único. Gana 5% de comisión en cada venta de tus referidos.", ar: "نعم! استخدم أمر /refer في البوت للحصول على رابط إحالتك الفريد. اكسب 5% عمولة على كل بيع من إحالاتك." },
 
+  // ── Buy Section ──
+  "buy.title.1": { en: "Buy", hi: "खरीदें", es: "Compra", ar: "اشترِ" },
+  "buy.title.2": { en: "Accounts Now", hi: "अकाउंट अभी", es: "Cuentas Ahora", ar: "الحسابات الآن" },
+  "buy.subtitle": { en: "Select your country, choose account type & quantity, and pay instantly", hi: "अपना देश चुनें, अकाउंट प्रकार और संख्या चुनें, और तुरंत भुगतान करें", es: "Selecciona tu país, elige tipo de cuenta y cantidad, y paga al instante", ar: "اختر بلدك، اختر نوع الحساب والكمية، وادفع فوراً" },
+  "buy.country": { en: "Select Country", hi: "देश चुनें", es: "Selecciona País", ar: "اختر البلد" },
+  "buy.type": { en: "Account Type", hi: "अकाउंट प्रकार", es: "Tipo de Cuenta", ar: "نوع الحساب" },
+  "buy.regular": { en: "Regular", hi: "रेगुलर", es: "Regular", ar: "عادي" },
+  "buy.aged": { en: "Aged (6mo+)", hi: "पुराना (6 महीने+)", es: "Antiguo (6m+)", ar: "قديم (6 أشهر+)" },
+  "buy.each": { en: "/ each", hi: "/ प्रत्येक", es: "/ cada", ar: "/ لكل" },
+  "buy.instock": { en: "in stock", hi: "स्टॉक में", es: "en stock", ar: "متوفر" },
+  "buy.quantity": { en: "Quantity", hi: "संख्या", es: "Cantidad", ar: "الكمية" },
+  "buy.total": { en: "Total", hi: "कुल", es: "Total", ar: "المجموع" },
+  "buy.pay": { en: "Pay", hi: "भुगतान करें", es: "Pagar", ar: "ادفع" },
+  "buy.processing": { en: "Processing...", hi: "प्रोसेसिंग...", es: "Procesando...", ar: "جارٍ المعالجة..." },
+  "buy.outofstock": { en: "Out of Stock", hi: "स्टॉक में नहीं", es: "Agotado", ar: "نفذ من المخزون" },
+  "buy.success": { en: "Order placed! Payment under review.", hi: "ऑर्डर दिया गया! भुगतान समीक्षा में।", es: "¡Pedido realizado! Pago en revisión.", ar: "تم الطلب! الدفع قيد المراجعة." },
+
   // ── Footer ──
   "footer.copy": { en: "Premium Telegram accounts for airdrop farming.", hi: "एयरड्रॉप फार्मिंग के लिए प्रीमियम टेलीग्राम अकाउंट।", es: "Cuentas premium de Telegram para airdrop farming.", ar: "حسابات تيليجرام متميزة لزراعة الإيردروب." },
 

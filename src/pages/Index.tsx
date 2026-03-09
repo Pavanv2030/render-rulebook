@@ -4,6 +4,7 @@ import FeaturesSection from "@/components/FeaturesSection";
 import HowItWorks from "@/components/HowItWorks";
 import VideoGuideSection from "@/components/VideoGuideSection";
 import PricingSection from "@/components/PricingSection";
+import BuySection from "@/components/BuySection";
 import FAQSection from "@/components/FAQSection";
 import FooterSection from "@/components/FooterSection";
 import ChatWidget from "@/components/ChatWidget";
@@ -28,6 +29,7 @@ const Index = () => {
       <HowItWorks t={t} />
       <VideoGuideSection t={t} />
       <PricingSection t={t} />
+      <BuySection t={t} />
       <FAQSection t={t} />
       <FooterSection t={t} />
       <ChatWidget t={t} />
