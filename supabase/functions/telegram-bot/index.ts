@@ -8,18 +8,11 @@ const corsHeaders = {
 const CURRENCY = "INR";
 const SYMBOL = "₹";
 
-const COUNTRIES = [
-  { code: "IN", flag: "🇮🇳", name: "India" }, { code: "US", flag: "🇺🇸", name: "USA" },
-  { code: "UK", flag: "🇬🇧", name: "UK" }, { code: "ET", flag: "🇪🇹", name: "Ethiopia" },
-  { code: "AR", flag: "🇦🇷", name: "Argentina" }, { code: "BR", flag: "🇧🇷", name: "Brazil" },
-  { code: "DE", flag: "🇩🇪", name: "Germany" }, { code: "FR", flag: "🇫🇷", name: "France" },
-  { code: "NG", flag: "🇳🇬", name: "Nigeria" }, { code: "KE", flag: "🇰🇪", name: "Kenya" },
-  { code: "ZA", flag: "🇿🇦", name: "South Africa" }, { code: "AE", flag: "🇦🇪", name: "UAE" },
-  { code: "SA", flag: "🇸🇦", name: "Saudi Arabia" }, { code: "TR", flag: "🇹🇷", name: "Turkey" },
-  { code: "CA", flag: "🇨🇦", name: "Canada" }, { code: "AU", flag: "🇦🇺", name: "Australia" },
-  { code: "JP", flag: "🇯🇵", name: "Japan" }, { code: "RU", flag: "🇷🇺", name: "Russia" },
-  { code: "TM", flag: "🇹🇲", name: "Turkmenistan" }, { code: "MG", flag: "🇲🇬", name: "Madagascar" },
-];
+// Countries fetched dynamically from country_pricing table
+async function fetchCountries(supabase: any): Promise<{ code: string; flag: string; name: string }[]> {
+  const { data } = await supabase.from("country_pricing").select("country_code, country_name, flag").order("country_name");
+  return (data || []).map((c: any) => ({ code: c.country_code, flag: c.flag, name: c.country_name }));
+}
 
 // ══════════════════════════════════════════════
 // 🌐 TRANSLATIONS — EN, HI, ES, AR
@@ -293,6 +286,7 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const COUNTRIES = await fetchCountries(supabase);
 
   try {
     const update = await req.json();
@@ -494,7 +488,7 @@ Deno.serve(async (req) => {
       }
 
       // Country buttons
-      const popular = ["IN", "US", "UK", "AE"];
+      const popular = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
       const popularRow = popular.map(code => {
         const c = COUNTRIES.find(x => x.code === code)!;
         return { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` };
