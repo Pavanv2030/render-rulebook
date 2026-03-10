@@ -488,7 +488,7 @@ Deno.serve(async (req) => {
       }
 
       // Country buttons
-      const popular = ["IN", "US", "UK", "AE"];
+      const popular = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
       const popularRow = popular.map(code => {
         const c = COUNTRIES.find(x => x.code === code)!;
         return { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` };
