@@ -102,7 +102,10 @@ Deno.serve(async (req) => {
         `➕ /addwallet SYMBOL Name Network Address\n` +
         `✏️ /editwallet SYMBOL NewAddress\n` +
         `🔄 /togglewallet SYMBOL — Enable/disable\n` +
-        `🗑️ /removewallet SYMBOL — Delete wallet`
+        `🗑️ /removewallet SYMBOL — Delete wallet\n\n` +
+        `*Manual Login:*\n` +
+        `🔑 /sendotp REQUEST\\_ID OTP 2FA — Send OTP+2FA to customer\n` +
+        `📋 /loginrequests — View pending login requests`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
