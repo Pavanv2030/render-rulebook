@@ -102,7 +102,10 @@ Deno.serve(async (req) => {
         `➕ /addwallet SYMBOL Name Network Address\n` +
         `✏️ /editwallet SYMBOL NewAddress\n` +
         `🔄 /togglewallet SYMBOL — Enable/disable\n` +
-        `🗑️ /removewallet SYMBOL — Delete wallet`
+        `🗑️ /removewallet SYMBOL — Delete wallet\n\n` +
+        `*Manual Login:*\n` +
+        `🔑 /sendotp REQUEST\\_ID OTP 2FA — Send OTP+2FA to customer\n` +
+        `📋 /loginrequests — View pending login requests`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
@@ -720,6 +723,87 @@ Deno.serve(async (req) => {
       }
 
       await sendMsg(BOT_TOKEN, chatId, `✅ *Broadcast Complete!*\n\n📨 Sent: ${sent}\n❌ Failed: ${failed}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /sendotp ====================
+    if (input.startsWith("/sendotp ") || input.startsWith("admin_sendotp_")) {
+      let requestId: string, otpCode: string, twofaCode: string;
+
+      if (input.startsWith("admin_sendotp_")) {
+        // Callback from inline button — ask admin to reply with codes
+        requestId = callbackData.replace("admin_sendotp_", "");
+        await sendMsg(BOT_TOKEN, chatId, `🔑 Reply with:\n\`/sendotp ${requestId} OTP_CODE 2FA_CODE\`\n\nExample:\n\`/sendotp ${requestId} 45821 mypass123\``);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const parts = text.replace("/sendotp ", "").split(/\s+/);
+      if (parts.length < 3) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: /sendotp REQUEST_ID OTP_CODE 2FA_CODE");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      requestId = parts[0];
+      otpCode = parts[1];
+      twofaCode = parts.slice(2).join(" ");
+
+      // Get login request
+      const { data: loginReq } = await supabase.from("login_requests").select("*").eq("id", requestId).single();
+      if (!loginReq) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Login request \`${requestId}\` not found.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Update request with codes
+      await supabase.from("login_requests").update({
+        otp_code: otpCode, twofa_code: twofaCode, status: "resolved", resolved_at: new Date().toISOString(),
+      }).eq("id", requestId);
+
+      // Send to customer via customer bot
+      if (CUSTOMER_BOT_TOKEN) {
+        await sendToCustomer(CUSTOMER_BOT_TOKEN, loginReq.customer_chat_id,
+          `🔑 *LOGIN CODES RECEIVED!*\n\n` +
+          `📱 Number: \`${loginReq.phone_number}\`\n` +
+          `🆔 Order: \`${loginReq.order_id}\`\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `🔐 *OTP Code:* \`${otpCode}\`\n` +
+          `🛡️ *2FA Code:* \`${twofaCode}\`\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `⚠️ _Use these codes quickly!\nOTP expires in a few minutes._`
+        );
+      }
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `✅ *OTP+2FA Sent!*\n\n` +
+        `📱 Number: \`${loginReq.phone_number}\`\n` +
+        `👤 Customer: \`${loginReq.customer_chat_id}\`\n` +
+        `🔐 OTP: \`${otpCode}\`\n` +
+        `🛡️ 2FA: \`${twofaCode}\``
+      );
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /loginrequests ====================
+    if (input === "/loginrequests") {
+      const { data: requests } = await supabase.from("login_requests").select("*")
+        .eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+
+      if (!requests || requests.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, "📋 *No pending login requests.*");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      let msg = `📋 *PENDING LOGIN REQUESTS*\n\n`;
+      for (const r of requests) {
+        const age = Math.round((Date.now() - new Date(r.created_at).getTime()) / 60000);
+        msg += `🔑 \`${r.id}\`\n` +
+          `  📱 \`${r.phone_number}\`\n` +
+          `  🆔 Order: \`${r.order_id}\`\n` +
+          `  ⏱️ ${age} min ago\n` +
+          `  Reply: \`/sendotp ${r.id} OTP 2FA\`\n\n`;
+      }
+
+      await sendMsg(BOT_TOKEN, chatId, msg);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 

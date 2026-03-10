@@ -9,9 +9,10 @@ const CURRENCY = "INR";
 const SYMBOL = "₹";
 
 // Countries fetched dynamically from country_pricing table
-async function fetchCountries(supabase: any): Promise<{ code: string; flag: string; name: string }[]> {
+let COUNTRIES: { code: string; flag: string; name: string }[] = [];
+async function fetchCountries(supabase: any) {
   const { data } = await supabase.from("country_pricing").select("country_code, country_name, flag").order("country_name");
-  return (data || []).map((c: any) => ({ code: c.country_code, flag: c.flag, name: c.country_name }));
+  COUNTRIES = (data || []).map((c: any) => ({ code: c.country_code, flag: c.flag, name: c.country_name }));
 }
 
 // ══════════════════════════════════════════════
@@ -24,7 +25,7 @@ const translations: Record<string, Record<Lang, string>> = {
   kb_orders: { en: "📊 My Orders", hi: "📊 मेरे ऑर्डर", es: "📊 Mis Pedidos", ar: "📊 طلباتي" },
   kb_reorder: { en: "🔄 Reorder", hi: "🔄 फिर से ऑर्डर", es: "🔄 Reordenar", ar: "🔄 إعادة طلب" },
   kb_guide: { en: "📖 Guide", hi: "📖 गाइड", es: "📖 Guía", ar: "📖 دليل" },
-  kb_login: { en: "📲 Login Guide", hi: "📲 लॉगिन गाइड", es: "📲 Guía de Login", ar: "📲 دليل الدخول" },
+  kb_login: { en: "📲 Manual Login", hi: "📲 मैनुअल लॉगिन", es: "📲 Login Manual", ar: "📲 تسجيل يدوي" },
   kb_refer: { en: "🎁 Refer & Earn", hi: "🎁 रेफर करें और कमाएं", es: "🎁 Referir y Ganar", ar: "🎁 إحالة واكسب" },
   kb_support: { en: "🧑‍💻 Support", hi: "🧑‍💻 सहायता", es: "🧑‍💻 Soporte", ar: "🧑‍💻 الدعم" },
   kb_language: { en: "🌐 Language", hi: "🌐 भाषा", es: "🌐 Idioma", ar: "🌐 اللغة" },
@@ -190,6 +191,17 @@ const translations: Record<string, Record<Lang, string>> = {
   prog_paid: { en: "Paid", hi: "भुगतान किया", es: "Pagado", ar: "تم الدفع" },
   prog_verified: { en: "Verified", hi: "सत्यापित", es: "Verificado", ar: "تم التحقق" },
   prog_delivered: { en: "Delivered", hi: "डिलीवर हुआ", es: "Entregado", ar: "تم التسليم" },
+
+  // ── Manual Login ──
+  ml_title: { en: "📲  MANUAL LOGIN", hi: "📲  मैनुअल लॉगिन", es: "📲  LOGIN MANUAL", ar: "📲  تسجيل يدوي" },
+  ml_no_orders: { en: "❌ *No delivered orders found!*\n\nYou need to have delivered orders to use Manual Login.\nBuy accounts first! 👇", hi: "❌ *कोई डिलीवर ऑर्डर नहीं मिला!*\n\nमैनुअल लॉगिन के लिए डिलीवर ऑर्डर होना चाहिए।\nपहले अकाउंट खरीदें! 👇", es: "❌ *¡No hay pedidos entregados!*\n\nNecesitas pedidos entregados para usar Login Manual.\n¡Compra cuentas primero! 👇", ar: "❌ *لا توجد طلبات مسلّمة!*\n\nتحتاج طلبات مسلّمة لاستخدام التسجيل اليدوي.\nاشترِ حسابات أولاً! 👇" },
+  ml_select_order: { en: "👇 *Select an order to login:*", hi: "👇 *लॉगिन के लिए ऑर्डर चुनें:*", es: "👇 *Selecciona un pedido para login:*", ar: "👇 *اختر طلباً لتسجيل الدخول:*" },
+  ml_number: { en: "📱 *Phone Number:*", hi: "📱 *फोन नंबर:*", es: "📱 *Número de Teléfono:*", ar: "📱 *رقم الهاتف:*" },
+  ml_request_otp: { en: "🔑 Request OTP", hi: "🔑 OTP अनुरोध", es: "🔑 Solicitar OTP", ar: "🔑 طلب OTP" },
+  ml_next_number: { en: "➡️ Next Number", hi: "➡️ अगला नंबर", es: "➡️ Siguiente Número", ar: "➡️ الرقم التالي" },
+  ml_otp_requested: { en: "🔑 *OTP Requested!*\n\nAdmin has been notified.\nYou'll receive OTP + 2FA code shortly.\n\n⏱️ *Please wait 1-5 minutes*", hi: "🔑 *OTP अनुरोध किया!*\n\nएडमिन को सूचित किया गया।\nआपको जल्द OTP + 2FA कोड मिलेगा।\n\n⏱️ *कृपया 1-5 मिनट प्रतीक्षा करें*", es: "🔑 *¡OTP Solicitado!*\n\nEl admin ha sido notificado.\nRecibirás OTP + código 2FA pronto.\n\n⏱️ *Espera 1-5 minutos*", ar: "🔑 *تم طلب OTP!*\n\nتم إعلام المشرف.\nستتلقى OTP + رمز 2FA قريباً.\n\n⏱️ *انتظر 1-5 دقائق*" },
+  ml_no_numbers: { en: "❌ No phone numbers found for this order.", hi: "❌ इस ऑर्डर के लिए कोई नंबर नहीं मिला।", es: "❌ No se encontraron números para este pedido.", ar: "❌ لا توجد أرقام لهذا الطلب." },
+  ml_done: { en: "✅ *All numbers shown!*\n\nNo more numbers in this order.", hi: "✅ *सभी नंबर दिखाए गए!*\n\nइस ऑर्डर में और नंबर नहीं।", es: "✅ *¡Todos los números mostrados!*\n\nNo hay más números en este pedido.", ar: "✅ *تم عرض جميع الأرقام!*\n\nلا مزيد من الأرقام في هذا الطلب." },
 };
 
 function t(key: string, lang: Lang): string {
@@ -286,7 +298,7 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const COUNTRIES = await fetchCountries(supabase);
+  await fetchCountries(supabase);
 
   try {
     const update = await req.json();
@@ -337,7 +349,7 @@ Deno.serve(async (req) => {
     if (referVariants.includes(input)) input = "/refer";
     if (supportVariants.includes(input)) input = "support";
     if (guideVariants.includes(input)) input = "/guide";
-    if (loginVariants.includes(input)) input = "/loginguide";
+    if (loginVariants.includes(input)) input = "/manuallogin";
     if (reorderVariants.includes(input)) input = "/reorder";
     if (langVariants.includes(input)) input = "/language";
 
@@ -1110,6 +1122,143 @@ Deno.serve(async (req) => {
           [{ text: t("btn_referral", lang), callback_data: "/refer" }],
           [{ text: t("btn_main_menu", lang), callback_data: "home" }],
         ]}, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 📲 Manual Login — Show delivered orders
+    // ════════════════════════════════════════════
+    if (input === "/manuallogin" || input === "manual_login") {
+      const { data: deliveredOrders } = await supabase.from("orders").select("*")
+        .eq("customer_id", chatId).eq("status", "delivered")
+        .order("created_at", { ascending: false }).limit(10);
+
+      if (!deliveredOrders || deliveredOrders.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, t("ml_no_orders", lang),
+          { inline_keyboard: [[{ text: t("btn_buy", lang), callback_data: "start" }]] }, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      let msg = `╔═══════════════════════╗\n` +
+        `║   ${t("ml_title", lang)}               ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `${t("ml_select_order", lang)}\n\n`;
+
+      const buttons: any[][] = [];
+      for (const o of deliveredOrders) {
+        const ci = COUNTRIES.find(c => c.code === o.country);
+        const date = new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+        msg += `🆔 \`${o.order_id}\` • ${ci?.flag || "🌍"} ${o.quantity}× ${o.account_type} • ${date}\n`;
+        buttons.push([{ text: `📲 ${o.order_id} — ${ci?.flag || "🌍"} ${o.quantity}× ${o.account_type}`, callback_data: `ml_order_${o.order_id}_0` }]);
+      }
+      buttons.push([{ text: t("btn_main_menu", lang), callback_data: "home" }]);
+
+      await sendMsg(BOT_TOKEN, chatId, msg, { inline_keyboard: buttons }, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 📲 Manual Login — Show number from order
+    // ════════════════════════════════════════════
+    if (input.startsWith("ml_order_")) {
+      const parts = input.replace("ml_order_", "").split("_");
+      const orderId = parts[0].toUpperCase();
+      const index = parseInt(parts[1]) || 0;
+
+      // Get allocated inventory for this order
+      const { data: inventory } = await supabase.from("account_inventory").select("*")
+        .eq("order_id", orderId).order("created_at");
+
+      if (!inventory || inventory.length === 0) {
+        await sendMsg(BOT_TOKEN, chatId, t("ml_no_numbers", lang),
+          { inline_keyboard: [[{ text: t("btn_main_menu", lang), callback_data: "home" }]] }, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      if (index >= inventory.length) {
+        await sendMsg(BOT_TOKEN, chatId, t("ml_done", lang),
+          { inline_keyboard: [
+            [{ text: "🔄 Start Over", callback_data: `ml_order_${orderId}_0` }],
+            [{ text: t("btn_main_menu", lang), callback_data: "home" }],
+          ] }, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const item = inventory[index];
+      // Extract phone number from file_name (assuming format: +1234567890.session or number.tdata etc)
+      const phoneNumber = item.file_name.replace(/\.(session|zip|tdata|txt|json)$/i, "").trim();
+
+      const buttons: any[][] = [
+        [{ text: `${t("ml_request_otp", lang)} 🔑`, callback_data: `ml_reqotp_${orderId}_${index}_${item.id}` }],
+      ];
+      if (index + 1 < inventory.length) {
+        buttons.push([{ text: `${t("ml_next_number", lang)} (${index + 2}/${inventory.length})`, callback_data: `ml_order_${orderId}_${index + 1}` }]);
+      }
+      buttons.push([{ text: "📲 Back to Orders", callback_data: "manual_login" }]);
+      buttons.push([{ text: t("btn_main_menu", lang), callback_data: "home" }]);
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `╔═══════════════════════╗\n` +
+        `║   ${t("ml_title", lang)}               ║\n` +
+        `╚═══════════════════════╝\n\n` +
+        `🆔 Order: \`${orderId}\`\n` +
+        `📊 Number *${index + 1}* of *${inventory.length}*\n\n` +
+        `${t("ml_number", lang)}\n\`${phoneNumber}\`\n\n` +
+        `_Enter this number in Telegram app,\nthen tap "Request OTP" below._`,
+        { inline_keyboard: buttons }, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
+    // 🔑 Request OTP — Notify Admin
+    // ════════════════════════════════════════════
+    if (input.startsWith("ml_reqotp_")) {
+      const parts = input.replace("ml_reqotp_", "").split("_");
+      const orderId = parts[0].toUpperCase();
+      const index = parseInt(parts[1]) || 0;
+      const inventoryId = parts[2];
+
+      // Get inventory item
+      const { data: item } = await supabase.from("account_inventory").select("*").eq("id", inventoryId).single();
+      const phoneNumber = item ? item.file_name.replace(/\.(session|zip|tdata|txt|json)$/i, "").trim() : "Unknown";
+
+      // Create login request
+      const { data: loginReq } = await supabase.from("login_requests").insert({
+        customer_chat_id: chatId,
+        order_id: orderId,
+        phone_number: phoneNumber,
+        inventory_id: inventoryId,
+        status: "pending",
+      }).select().single();
+
+      // Notify customer
+      await sendMsg(BOT_TOKEN, chatId, t("ml_otp_requested", lang),
+        { inline_keyboard: [
+          ...(index + 1 < 100 ? [[{ text: t("ml_next_number", lang), callback_data: `ml_order_${orderId}_${index + 1}` }]] : []),
+          [{ text: t("btn_main_menu", lang), callback_data: "home" }],
+        ] }, lang);
+
+      // Notify admin
+      const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+      if (ADMIN_CHAT_ID && ADMIN_BOT_TOKEN) {
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID,
+            text: `🔑 *OTP REQUEST*\n\n` +
+              `👤 @${username} (${firstName})\n` +
+              `🆔 Order: \`${orderId}\`\n` +
+              `📱 Number: \`${phoneNumber}\`\n` +
+              `🔗 Request ID: \`${loginReq?.id || "N/A"}\`\n\n` +
+              `Reply with:\n\`/sendotp ${loginReq?.id} OTP_CODE 2FA_CODE\``,
+            parse_mode: "Markdown",
+            reply_markup: JSON.stringify({ inline_keyboard: [
+              [{ text: "✅ Send OTP", callback_data: `admin_sendotp_${loginReq?.id}` }],
+            ]}),
+          }),
+        });
+      }
+
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 

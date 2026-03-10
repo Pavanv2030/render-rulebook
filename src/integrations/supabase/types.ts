@@ -197,6 +197,45 @@ export type Database = {
         }
         Relationships: []
       }
+      login_requests: {
+        Row: {
+          created_at: string
+          customer_chat_id: string
+          id: string
+          inventory_id: string | null
+          order_id: string
+          otp_code: string | null
+          phone_number: string
+          resolved_at: string | null
+          status: string
+          twofa_code: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_chat_id: string
+          id?: string
+          inventory_id?: string | null
+          order_id: string
+          otp_code?: string | null
+          phone_number: string
+          resolved_at?: string | null
+          status?: string
+          twofa_code?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_chat_id?: string
+          id?: string
+          inventory_id?: string | null
+          order_id?: string
+          otp_code?: string | null
+          phone_number?: string
+          resolved_at?: string | null
+          status?: string
+          twofa_code?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           account_type: string
