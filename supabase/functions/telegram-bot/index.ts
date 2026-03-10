@@ -9,9 +9,10 @@ const CURRENCY = "INR";
 const SYMBOL = "₹";
 
 // Countries fetched dynamically from country_pricing table
-async function fetchCountries(supabase: any): Promise<{ code: string; flag: string; name: string }[]> {
+let COUNTRIES: { code: string; flag: string; name: string }[] = [];
+async function fetchCountries(supabase: any) {
   const { data } = await supabase.from("country_pricing").select("country_code, country_name, flag").order("country_name");
-  return (data || []).map((c: any) => ({ code: c.country_code, flag: c.flag, name: c.country_name }));
+  COUNTRIES = (data || []).map((c: any) => ({ code: c.country_code, flag: c.flag, name: c.country_name }));
 }
 
 // ══════════════════════════════════════════════
