@@ -191,6 +191,17 @@ const translations: Record<string, Record<Lang, string>> = {
   prog_paid: { en: "Paid", hi: "भुगतान किया", es: "Pagado", ar: "تم الدفع" },
   prog_verified: { en: "Verified", hi: "सत्यापित", es: "Verificado", ar: "تم التحقق" },
   prog_delivered: { en: "Delivered", hi: "डिलीवर हुआ", es: "Entregado", ar: "تم التسليم" },
+
+  // ── Manual Login ──
+  ml_title: { en: "📲  MANUAL LOGIN", hi: "📲  मैनुअल लॉगिन", es: "📲  LOGIN MANUAL", ar: "📲  تسجيل يدوي" },
+  ml_no_orders: { en: "❌ *No delivered orders found!*\n\nYou need to have delivered orders to use Manual Login.\nBuy accounts first! 👇", hi: "❌ *कोई डिलीवर ऑर्डर नहीं मिला!*\n\nमैनुअल लॉगिन के लिए डिलीवर ऑर्डर होना चाहिए।\nपहले अकाउंट खरीदें! 👇", es: "❌ *¡No hay pedidos entregados!*\n\nNecesitas pedidos entregados para usar Login Manual.\n¡Compra cuentas primero! 👇", ar: "❌ *لا توجد طلبات مسلّمة!*\n\nتحتاج طلبات مسلّمة لاستخدام التسجيل اليدوي.\nاشترِ حسابات أولاً! 👇" },
+  ml_select_order: { en: "👇 *Select an order to login:*", hi: "👇 *लॉगिन के लिए ऑर्डर चुनें:*", es: "👇 *Selecciona un pedido para login:*", ar: "👇 *اختر طلباً لتسجيل الدخول:*" },
+  ml_number: { en: "📱 *Phone Number:*", hi: "📱 *फोन नंबर:*", es: "📱 *Número de Teléfono:*", ar: "📱 *رقم الهاتف:*" },
+  ml_request_otp: { en: "🔑 Request OTP", hi: "🔑 OTP अनुरोध", es: "🔑 Solicitar OTP", ar: "🔑 طلب OTP" },
+  ml_next_number: { en: "➡️ Next Number", hi: "➡️ अगला नंबर", es: "➡️ Siguiente Número", ar: "➡️ الرقم التالي" },
+  ml_otp_requested: { en: "🔑 *OTP Requested!*\n\nAdmin has been notified.\nYou'll receive OTP + 2FA code shortly.\n\n⏱️ *Please wait 1-5 minutes*", hi: "🔑 *OTP अनुरोध किया!*\n\nएडमिन को सूचित किया गया।\nआपको जल्द OTP + 2FA कोड मिलेगा।\n\n⏱️ *कृपया 1-5 मिनट प्रतीक्षा करें*", es: "🔑 *¡OTP Solicitado!*\n\nEl admin ha sido notificado.\nRecibirás OTP + código 2FA pronto.\n\n⏱️ *Espera 1-5 minutos*", ar: "🔑 *تم طلب OTP!*\n\nتم إعلام المشرف.\nستتلقى OTP + رمز 2FA قريباً.\n\n⏱️ *انتظر 1-5 دقائق*" },
+  ml_no_numbers: { en: "❌ No phone numbers found for this order.", hi: "❌ इस ऑर्डर के लिए कोई नंबर नहीं मिला।", es: "❌ No se encontraron números para este pedido.", ar: "❌ لا توجد أرقام لهذا الطلب." },
+  ml_done: { en: "✅ *All numbers shown!*\n\nNo more numbers in this order.", hi: "✅ *सभी नंबर दिखाए गए!*\n\nइस ऑर्डर में और नंबर नहीं।", es: "✅ *¡Todos los números mostrados!*\n\nNo hay más números en este pedido.", ar: "✅ *تم عرض جميع الأرقام!*\n\nلا مزيد من الأرقام في هذا الطلب." },
 };
 
 function t(key: string, lang: Lang): string {
