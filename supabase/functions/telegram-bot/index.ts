@@ -25,7 +25,7 @@ const translations: Record<string, Record<Lang, string>> = {
   kb_orders: { en: "📊 My Orders", hi: "📊 मेरे ऑर्डर", es: "📊 Mis Pedidos", ar: "📊 طلباتي" },
   kb_reorder: { en: "🔄 Reorder", hi: "🔄 फिर से ऑर्डर", es: "🔄 Reordenar", ar: "🔄 إعادة طلب" },
   kb_guide: { en: "📖 Guide", hi: "📖 गाइड", es: "📖 Guía", ar: "📖 دليل" },
-  kb_login: { en: "📲 Login Guide", hi: "📲 लॉगिन गाइड", es: "📲 Guía de Login", ar: "📲 دليل الدخول" },
+  kb_login: { en: "📲 Manual Login", hi: "📲 मैनुअल लॉगिन", es: "📲 Login Manual", ar: "📲 تسجيل يدوي" },
   kb_refer: { en: "🎁 Refer & Earn", hi: "🎁 रेफर करें और कमाएं", es: "🎁 Referir y Ganar", ar: "🎁 إحالة واكسب" },
   kb_support: { en: "🧑‍💻 Support", hi: "🧑‍💻 सहायता", es: "🧑‍💻 Soporte", ar: "🧑‍💻 الدعم" },
   kb_language: { en: "🌐 Language", hi: "🌐 भाषा", es: "🌐 Idioma", ar: "🌐 اللغة" },
