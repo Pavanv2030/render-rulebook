@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
     if (referVariants.includes(input)) input = "/refer";
     if (supportVariants.includes(input)) input = "support";
     if (guideVariants.includes(input)) input = "/guide";
-    if (loginVariants.includes(input)) input = "/loginguide";
+    if (loginVariants.includes(input)) input = "/manuallogin";
     if (reorderVariants.includes(input)) input = "/reorder";
     if (langVariants.includes(input)) input = "/language";
 
