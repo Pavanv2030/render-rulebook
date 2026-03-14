@@ -807,6 +807,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // ==================== /reply (web support) ====================
+    if (input.startsWith("/reply ")) {
+      const firstSpace = text.indexOf(" ", 7);
+      if (firstSpace === -1) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: /reply SESSION_ID Your reply message");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      const targetSession = text.substring(7, firstSpace).trim();
+      const replyText = text.substring(firstSpace + 1).trim();
+
+      if (!replyText) {
+        await sendMsg(BOT_TOKEN, chatId, "Usage: /reply SESSION_ID Your reply message");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Save admin reply to support_messages
+      const { error: insertErr } = await supabase.from("support_messages").insert({
+        session_id: targetSession,
+        sender: "admin",
+        message: replyText,
+      });
+
+      if (insertErr) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Failed to send reply: ${insertErr.message}`);
+      } else {
+        await sendMsg(BOT_TOKEN, chatId, `✅ Reply sent to web customer!\n\n💬 "${replyText}"`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // ==================== Fallback ====================
     await sendMsg(BOT_TOKEN, chatId, `🤖 Unknown command. Type /help to see available commands.`);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
