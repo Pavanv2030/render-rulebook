@@ -124,11 +124,11 @@ const translations: Record<string, Record<Lang, string>> = {
   // ── Footer ──
   "footer.copy": { en: "Premium Telegram accounts for airdrop farming.", hi: "एयरड्रॉप फार्मिंग के लिए प्रीमियम टेलीग्राम अकाउंट।", es: "Cuentas premium de Telegram para airdrop farming.", ar: "حسابات تيليجرام متميزة لزراعة الإيردروب." },
 
-  // ── Chat Widget ──
-  "chat.welcome": { en: "👋 Welcome to RIOX Accounts Pro!\n\nI can help you order premium Telegram accounts for airdrop farming. Tap below to get started!", hi: "👋 RIOX Accounts Pro में आपका स्वागत है!\n\nमैं आपको एयरड्रॉप फार्मिंग के लिए प्रीमियम टेलीग्राम अकाउंट ऑर्डर करने में मदद कर सकता हूं। शुरू करने के लिए नीचे टैप करें!", es: "👋 ¡Bienvenido a RIOX Accounts Pro!\n\nPuedo ayudarte a ordenar cuentas premium de Telegram para airdrop farming. ¡Toca abajo para comenzar!", ar: "👋 مرحبًا بك في RIOX Accounts Pro!\n\nيمكنني مساعدتك في طلب حسابات تيليجرام المميزة لزراعة الإيردروب. اضغط أدناه للبدء!" },
-  "chat.browse": { en: "🛒 Browse Accounts", hi: "🛒 अकाउंट ब्राउज़ करें", es: "🛒 Explorar Cuentas", ar: "🛒 تصفح الحسابات" },
+  // ── Chat Widget (Support) ──
+  "chat.welcome": { en: "👋 Welcome to RIOX Support!\n\nHow can we help you today? Ask about pricing, delivery, account types, or any other question!", hi: "👋 RIOX सपोर्ट में आपका स्वागत है!\n\nआज हम आपकी कैसे मदद कर सकते हैं? प्राइसिंग, डिलीवरी, अकाउंट प्रकार या कोई भी सवाल पूछें!", es: "👋 ¡Bienvenido al Soporte RIOX!\n\n¿Cómo podemos ayudarte hoy? Pregunta sobre precios, entregas, tipos de cuentas o cualquier otra pregunta.", ar: "👋 مرحبًا بك في دعم RIOX!\n\nكيف يمكننا مساعدتك اليوم؟ اسأل عن الأسعار والتسليم وأنواع الحسابات أو أي سؤال آخر!" },
+  "chat.title": { en: "RIOX Support", hi: "RIOX सपोर्ट", es: "Soporte RIOX", ar: "دعم RIOX" },
   "chat.online": { en: "Online", hi: "ऑनलाइन", es: "En línea", ar: "متصل" },
-  "chat.placeholder": { en: "Type a message...", hi: "संदेश टाइप करें...", es: "Escribe un mensaje...", ar: "اكتب رسالة..." },
+  "chat.placeholder": { en: "Ask a question...", hi: "सवाल पूछें...", es: "Haz una pregunta...", ar: "اطرح سؤالاً..." },
   "chat.error": { en: "⚠️ Connection error. Please try again.", hi: "⚠️ कनेक्शन एरर। कृपया फिर से प्रयास करें।", es: "⚠️ Error de conexión. Inténtalo de nuevo.", ar: "⚠️ خطأ في الاتصال. يرجى المحاولة مرة أخرى." },
 };
 
