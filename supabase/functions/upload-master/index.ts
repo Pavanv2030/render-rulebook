@@ -123,8 +123,39 @@ Deno.serve(async (req) => {
 
       await zipReader.close();
 
-      // 🔔 Send stock alerts to subscribers
+      // 🔔 Send stock update to admin
       if (added > 0) {
+        const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+        const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+        if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+          const countryNames: Record<string, string> = { IN: "🇮🇳 India", US: "🇺🇸 USA", UK: "🇬🇧 UK", AE: "🇦🇪 UAE", ET: "🇪🇹 Ethiopia", AR: "🇦🇷 Argentina", BR: "🇧🇷 Brazil", DE: "🇩🇪 Germany", FR: "🇫🇷 France", NG: "🇳🇬 Nigeria", KE: "🇰🇪 Kenya", ZA: "🇿🇦 South Africa", SA: "🇸🇦 Saudi Arabia", TR: "🇹🇷 Turkey", CA: "🇨🇦 Canada", AU: "🇦🇺 Australia", JP: "🇯🇵 Japan", RU: "🇷🇺 Russia", TM: "🇹🇲 Turkmenistan", MG: "🇲🇬 Madagascar" };
+          const cName = countryNames[country] || country;
+          const label = accountType === "aged" ? "👑 Aged" : "📦 Regular";
+
+          // Get current stock for this country
+          const { data: currentStock } = await supabase
+            .from("account_inventory")
+            .select("id, account_type")
+            .eq("country", country)
+            .eq("status", "available");
+          const regStock = (currentStock || []).filter(s => s.account_type === "regular").length;
+          const agedStock = (currentStock || []).filter(s => s.account_type === "aged").length;
+
+          try {
+            await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: ADMIN_CHAT_ID,
+                text: `📦 *STOCK UPDATE*\n\n${cName} — ${label}\n\n✅ *${added}* accounts added\n⏭️ *${skipped}* duplicates skipped\n\n📊 *Current ${cName} Stock:*\n📦 Regular: ${regStock}\n👑 Aged: ${agedStock}`,
+                parse_mode: "Markdown",
+              }),
+            });
+          } catch (e) {
+            console.error("Failed to notify admin:", e);
+          }
+        }
+
         const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
         if (BOT_TOKEN) {
           const { data: alerts } = await supabase.from("stock_alerts")
