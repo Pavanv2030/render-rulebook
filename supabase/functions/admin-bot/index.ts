@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
         `✅ /approve ORDxxxxxx\n` +
         `❌ /reject ORDxxxxxx <reason>\n` +
         `📥 /deliver ORDxxxxxx\n\n` +
-        `*Country Management:*\n` +
+        `*Stock Management:*\n` +
+        `📦 /restock — Upload .session files via Telegram\n` +
         `🌍 /countries — List all countries\n` +
         `➕ /addcountry CODE Name Flag RegPrice AgedPrice\n` +
         `✏️ /editcountry CODE field value\n` +
