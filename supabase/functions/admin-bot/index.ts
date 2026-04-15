@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
         `✅ /approve ORDxxxxxx\n` +
         `❌ /reject ORDxxxxxx <reason>\n` +
         `📥 /deliver ORDxxxxxx\n\n` +
-        `*Country Management:*\n` +
+        `*Stock Management:*\n` +
+        `📦 /restock — Upload .session files via Telegram\n` +
         `🌍 /countries — List all countries\n` +
         `➕ /addcountry CODE Name Flag RegPrice AgedPrice\n` +
         `✏️ /editcountry CODE field value\n` +
@@ -836,6 +837,142 @@ Deno.serve(async (req) => {
       } else {
         await sendMsg(BOT_TOKEN, chatId, `✅ Reply sent to web customer!\n\n💬 "${replyText}"`);
       }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /restock ====================
+    if (input === "/restock") {
+      const buttons = [];
+      for (let i = 0; i < COUNTRIES.length; i += 2) {
+        const row = [{ text: `${COUNTRIES[i].flag} ${COUNTRIES[i].name}`, callback_data: `restock_country_${COUNTRIES[i].code}` }];
+        if (COUNTRIES[i + 1]) row.push({ text: `${COUNTRIES[i + 1].flag} ${COUNTRIES[i + 1].name}`, callback_data: `restock_country_${COUNTRIES[i + 1].code}` });
+        buttons.push(row);
+      }
+      await sendMsg(BOT_TOKEN, chatId, "📦 *RESTOCK — Select Country:*", { inline_keyboard: buttons });
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Restock country selection
+    if (callbackData.startsWith("restock_country_")) {
+      const country = callbackData.replace("restock_country_", "");
+      const ci = getCountryInfo(country);
+      await sendMsg(BOT_TOKEN, chatId, `${ci.flag} *${ci.name}* — Select account type:`, {
+        inline_keyboard: [
+          [{ text: "📦 Regular", callback_data: `restock_type_${country}_regular` }, { text: "👑 Aged", callback_data: `restock_type_${country}_aged` }],
+        ],
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Restock type selection — store state and ask for files
+    if (callbackData.startsWith("restock_type_")) {
+      const parts = callbackData.replace("restock_type_", "").split("_");
+      const country = parts[0];
+      const accountType = parts[1];
+      const ci = getCountryInfo(country);
+      const label = accountType === "aged" ? "👑 Aged" : "📦 Regular";
+
+      // Store restock state in conversation_states using chat_id
+      await supabase.from("conversation_states").upsert({
+        chat_id: `admin_${chatId}`,
+        state: "restock_awaiting_files",
+        selected_country: country,
+        selected_type: accountType,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "chat_id" });
+
+      await sendMsg(BOT_TOKEN, chatId,
+        `✅ *Ready to receive files!*\n\n` +
+        `${ci.flag} ${ci.name} — ${label}\n\n` +
+        `📎 Now send me \`.session\` files as documents.\n` +
+        `Send as many as you need, one at a time or multiple.\n\n` +
+        `When done, type /done to finish restocking.`
+      );
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== /done (finish restock) ====================
+    if (input === "/done") {
+      const { data: state } = await supabase.from("conversation_states")
+        .select("*").eq("chat_id", `admin_${chatId}`).single();
+      if (state?.state === "restock_awaiting_files") {
+        await supabase.from("conversation_states").update({
+          state: "idle", selected_country: null, selected_type: null, updated_at: new Date().toISOString(),
+        }).eq("chat_id", `admin_${chatId}`);
+        await sendMsg(BOT_TOKEN, chatId, "✅ *Restock session complete!*\n\nUse /stock to check inventory levels.");
+      } else {
+        await sendMsg(BOT_TOKEN, chatId, "ℹ️ No active restock session.");
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== Document upload handler (for restock) ====================
+    if (update.message?.document) {
+      const { data: state } = await supabase.from("conversation_states")
+        .select("*").eq("chat_id", `admin_${chatId}`).single();
+
+      if (state?.state !== "restock_awaiting_files") {
+        await sendMsg(BOT_TOKEN, chatId, "ℹ️ No active restock session. Use /restock first.");
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const doc = update.message.document;
+      const fileName = doc.file_name || "unknown.session";
+
+      if (!fileName.endsWith(".session")) {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Skipped \`${fileName}\` — only .session files accepted.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const country = state.selected_country!;
+      const accountType = state.selected_type!;
+      const filePath = `inventory/${country}/${accountType}/${fileName}`;
+
+      // Check duplicate
+      const { data: existing } = await supabase.from("account_inventory")
+        .select("id").eq("file_path", filePath).single();
+      if (existing) {
+        await sendMsg(BOT_TOKEN, chatId, `⏭️ \`${fileName}\` — duplicate, skipped.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Download file from Telegram
+      const fileInfoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: doc.file_id }),
+      });
+      const fileInfo = await fileInfoRes.json();
+      if (!fileInfo.ok) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Failed to get file info for \`${fileName}\``);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      const telegramFilePath = fileInfo.result.file_path;
+      const fileRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${telegramFilePath}`);
+      const fileBlob = await fileRes.blob();
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("account-files")
+        .upload(filePath, fileBlob, { upsert: true });
+
+      if (uploadError) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Upload failed for \`${fileName}\`: ${uploadError.message}`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+
+      // Add to inventory
+      await supabase.from("account_inventory").insert({
+        account_type: accountType,
+        country,
+        file_path: filePath,
+        file_name: fileName,
+        status: "available",
+      });
+
+      const ci = getCountryInfo(country);
+      const label = accountType === "aged" ? "👑 Aged" : "📦 Regular";
+      await sendMsg(BOT_TOKEN, chatId, `✅ \`${fileName}\` added!\n${ci.flag} ${ci.name} — ${label}\n\n_Send more files or type /done_`);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
