@@ -31,13 +31,13 @@ const translations: Record<string, Record<Lang, string>> = {
   kb_language: { en: "🌐 Language", hi: "🌐 भाषा", es: "🌐 Idioma", ar: "🌐 اللغة" },
 
   // ── Blocked ──
-  blocked: { en: "🚫 *Account Suspended*\n\nYour account has been suspended.\nPlease contact support for assistance.", hi: "🚫 *खाता निलंबित*\n\nआपका खाता निलंबित कर दिया गया है।\nकृपया सहायता के लिए सपोर्ट से संपर्क करें।", es: "🚫 *Cuenta Suspendida*\n\nTu cuenta ha sido suspendida.\nContacta soporte para asistencia.", ar: "🚫 *الحساب معلق*\n\nتم تعليق حسابك.\nيرجى التواصل مع الدعم للمساعدة." },
+  blocked: { en: "🚫 *Account Suspended*\n\nYour account has been suspended.\nPlease contact support for assistance.", hi: "🚫*खाता निलंबित*\n\nआपका खाता निलंबित कर दिया गया है।\nकृपया सहायता के लिए सपोर्ट से संपर्क करें।", es: "🚫*Cuenta Suspendida*\n\nTu cuenta ha sido suspendida.\nContacta soporte para asistencia.", ar: "🚫*الحساب معلق*\n\nتم تعليق حسابك.\nيرجى التواصل مع الدعم للمساعدة." },
   contact_support: { en: "🧑‍💻 Contact Support", hi: "🧑‍💻 सपोर्ट से संपर्क", es: "🧑‍💻 Contactar Soporte", ar: "🧑‍💻 اتصل بالدعم" },
 
   // ── Channel Join ──
   join_channel_title: { en: "📢  JOIN OUR CHANNEL", hi: "📢  हमारे चैनल से जुड़ें", es: "📢  ÚNETE A NUESTRO CANAL", ar: "📢  انضم إلى قناتنا" },
-  join_channel_msg: { en: "Before you start, please join our\nofficial channel for:\n\n🔹 Latest deals & discounts\n🔹 Stock updates\n🔹 Important announcements\n🔹 Tips & tricks\n\n👇 *Tap \"Join Channel\" then come\nback and tap \"✅ Joined\"*", hi: "शुरू करने से पहले, कृपया हमारे\nआधिकारिक चैनल से जुड़ें:\n\n🔹 नवीनतम डील और छूट\n🔹 स्टॉक अपडेट\n🔹 महत्वपूर्ण घोषणाएं\n🔹 टिप्स और ट्रिक्स\n\n👇 *\"Join Channel\" दबाएं फिर\nवापस आकर \"✅ Joined\" दबाएं*", es: "Antes de empezar, únete a nuestro\ncanal oficial para:\n\n🔹 Últimas ofertas y descuentos\n🔹 Actualizaciones de stock\n🔹 Anuncios importantes\n🔹 Tips y trucos\n\n👇 *Toca \"Join Channel\" y luego\nvuelve y toca \"✅ Joined\"*", ar: "قبل البدء، يرجى الانضمام إلى\nقناتنا الرسمية من أجل:\n\n🔹 أحدث العروض والخصومات\n🔹 تحديثات المخزون\n🔹 إعلانات مهمة\n🔹 نصائح وحيل\n\n👇 *اضغط \"Join Channel\" ثم\nعد واضغط \"✅ Joined\"*" },
-  not_joined: { en: "❌ *You haven't joined yet!*\n\nPlease join our channel first, then tap \"✅ Joined\" again.", hi: "❌ *आपने अभी तक जॉइन नहीं किया!*\n\nकृपया पहले हमारे चैनल से जुड़ें, फिर \"✅ Joined\" दबाएं।", es: "❌ *¡Aún no te has unido!*\n\nÚnete a nuestro canal primero, luego toca \"✅ Joined\" de nuevo.", ar: "❌ *لم تنضم بعد!*\n\nيرجى الانضمام إلى قناتنا أولاً، ثم اضغط \"✅ Joined\" مرة أخرى." },
+  join_channel_msg: { en: "Before you start, please join our\nofficial channel for:\n\n🔹 Latest deals & discounts\n🔹 Stock updates\n🔹 Important announcements\n🔹 Tips & tricks\n\n👇 *Tap \"Join Channel\" then come\nback and tap \"✅ Joined\"*", hi: "शुरू करने से पहले, कृपया हमारे\nआधिकारिक चैनल से जुड़ें:\n\n🔹 नवीनतम डील और छूट\n🔹 स्टॉक अपडेट\n🔹 महत्वपूर्ण घोषणाएं\n🔹 टिप्स और ट्रिक्स\n\n👇*\"Join Channel\" दबाएं फिर\nवापस आकर \"✅ Joined\" दबाएं*", es: "Antes de empezar, únete a nuestro\ncanal oficial para:\n\n🔹 Últimas ofertas y descuentos\n🔹 Actualizaciones de stock\n🔹 Anuncios importantes\n🔹 Tips y trucos\n\n👇*Toca \"Join Channel\" y luego\nvuelve y toca \"✅ Joined\"*", ar: "قبل البدء، يرجى الانضمام إلى\nقناتنا الرسمية من أجل:\n\n🔹 أحدث العروض والخصومات\n🔹 تحديثات المخزون\n🔹 إعلانات مهمة\n🔹 نصائح وحيل\n\n👇*اضغط \"Join Channel\" ثم\nعد واضغط \"✅ Joined\"*" },
+  not_joined: { en: "❌ *You haven't joined yet!*\n\nPlease join our channel first, then tap \"✅ Joined\" again.", hi: "❌*आपने अभी तक जॉइन नहीं किया!*\n\nकृपया पहले हमारे चैनल से जुड़ें, फिर \"✅ Joined\" दबाएं।", es: "❌*¡Aún no te has unido!*\n\nÚnete a nuestro canal primero, luego toca \"✅ Joined\" de nuevo.", ar: "❌*لم تنضم بعد!*\n\nيرجى الانضمام إلى قناتنا أولاً، ثم اضغط \"✅ Joined\" مرة أخرى." },
   btn_join: { en: "📢 Join @riox239", hi: "📢 @riox239 जॉइन करें", es: "📢 Unirse a @riox239", ar: "📢 انضم @riox239" },
   btn_joined: { en: "✅ Joined", hi: "✅ जॉइन किया", es: "✅ Unido", ar: "✅ انضممت" },
 
@@ -45,15 +45,15 @@ const translations: Record<string, Record<Lang, string>> = {
   welcome_title: { en: "🚀  RIOX ACCOUNTS PRO", hi: "🚀  RIOX ACCOUNTS PRO", es: "🚀  RIOX ACCOUNTS PRO", ar: "🚀  RIOX ACCOUNTS PRO" },
   welcome_msg: { en: "Premium Telegram accounts for\nairdrop farming — delivered instantly.", hi: "एयरड्रॉप फार्मिंग के लिए प्रीमियम\nटेलीग्राम अकाउंट — तुरंत डिलीवरी।", es: "Cuentas premium de Telegram para\nairdrop farming — entrega instantánea.", ar: "حسابات تيليجرام متميزة\nلزراعة الإيردروب — توصيل فوري." },
   welcome_stats: { en: "✅  3,847+ Happy Customers\n⭐  4.9★ Avg Rating\n⚡  Auto-Delivery in <5 min\n🔒  100% Working Guarantee\n💰  Lowest Market Prices", hi: "✅  3,847+ खुश ग्राहक\n⭐  4.9★ औसत रेटिंग\n⚡  <5 मिनट में ऑटो-डिलीवरी\n🔒  100% वर्किंग गारंटी\n💰  सबसे कम मार्केट प्राइस", es: "✅  3,847+ Clientes Satisfechos\n⭐  4.9★ Calificación Promedio\n⚡  Auto-Entrega en <5 min\n🔒  100% Garantía de Funcionamiento\n💰  Precios más bajos del mercado", ar: "✅  3,847+ عميل سعيد\n⭐  4.9★ متوسط التقييم\n⚡  توصيل تلقائي في <5 دقائق\n🔒  ضمان عمل 100%\n💰  أقل أسعار في السوق" },
-  pick_country: { en: "⬇️ *Pick your country to begin:*\n_(⭐ Popular countries shown first)_\n_(📖 New? Tap \"How to Buy\" for a guide!)_", hi: "⬇️ *शुरू करने के लिए अपना देश चुनें:*\n_(⭐ लोकप्रिय देश पहले दिखाए गए)_\n_(📖 नए हैं? गाइड के लिए \"How to Buy\" दबाएं!)_", es: "⬇️ *Elige tu país para comenzar:*\n_(⭐ Países populares primero)_\n_(📖 ¿Nuevo? Toca \"How to Buy\" para una guía!)_", ar: "⬇️ *اختر بلدك للبدء:*\n_(⭐ الدول الشائعة أولاً)_\n_(📖 جديد؟ اضغط \"How to Buy\" للدليل!)_" },
+  pick_country: { en: "⬇️ *Pick your country to begin:*\n_(⭐ Popular countries shown first)_\n_(📖 New? Tap \"How to Buy\" for a guide!)_", hi: "⬇️*शुरू करने के लिए अपना देश चुनें:*\n_(⭐ लोकप्रिय देश पहले दिखाए गए)_\n_(📖 नए हैं? गाइड के लिए \"How to Buy\" दबाएं!)_", es: "⬇️*Elige tu país para comenzar:*\n_(⭐ Países populares primero)_\n_(📖 ¿Nuevo? Toca \"How to Buy\" para una guía!)_", ar: "⬇️*اختر بلدك للبدء:*\n_(⭐ الدول الشائعة أولاً)_\n_(📖 جديد؟ اضغط \"How to Buy\" للدليل!)_" },
   btn_how_to_buy: { en: "📖 How to Buy (Guide)", hi: "📖 कैसे खरीदें (गाइड)", es: "📖 Cómo Comprar (Guía)", ar: "📖 كيفية الشراء (دليل)" },
   btn_referrals: { en: "🎁 Referrals", hi: "🎁 रेफरल", es: "🎁 Referidos", ar: "🎁 إحالات" },
 
   // ── Promo video ──
-  promo_caption: { en: "🎬 *Welcome to RIOX ACCOUNTS PRO!*\n\nWatch this quick intro to see how easy it is to buy premium Telegram accounts.\n\n_New here? Type /guide for a step-by-step tutorial!_", hi: "🎬 *RIOX ACCOUNTS PRO में आपका स्वागत है!*\n\nयह क्विक इंट्रो देखें और जानें कि प्रीमियम टेलीग्राम अकाउंट खरीदना कितना आसान है।\n\n_नए हैं? स्टेप-बाय-स्टेप ट्यूटोरियल के लिए /guide टाइप करें!_", es: "🎬 *¡Bienvenido a RIOX ACCOUNTS PRO!*\n\nMira esta intro rápida para ver lo fácil que es comprar cuentas premium de Telegram.\n\n_¿Nuevo? Escribe /guide para un tutorial paso a paso!_", ar: "🎬 *مرحبًا بك في RIOX ACCOUNTS PRO!*\n\nشاهد هذا المقدمة السريعة لترى مدى سهولة شراء حسابات تيليجرام المميزة.\n\n_جديد هنا؟ اكتب /guide للحصول على دليل خطوة بخطوة!_" },
+  promo_caption: { en: "🎬 *Welcome to RIOX ACCOUNTS PRO!*\n\nWatch this quick intro to see how easy it is to buy premium Telegram accounts.\n\n_New here? Type /guide for a step-by-step tutorial!_", hi: "🎬*RIOX ACCOUNTS PRO में आपका स्वागत है!*\n\nयह क्विक इंट्रो देखें और जानें कि प्रीमियम टेलीग्राम अकाउंट खरीदना कितना आसान है।\n\n_नए हैं? स्टेप-बाय-स्टेप ट्यूटोरियल के लिए /guide टाइप करें!_", es: "🎬*¡Bienvenido a RIOX ACCOUNTS PRO!*\n\nMira esta intro rápida para ver lo fácil que es comprar cuentas premium de Telegram.\n\n_¿Nuevo? Escribe /guide para un tutorial paso a paso!_", ar: "🎬*مرحبًا بك في RIOX ACCOUNTS PRO!*\n\nشاهد هذا المقدمة السريعة لترى مدى سهولة شراء حسابات تيليجرام المميزة.\n\n_جديد هنا؟ اكتب /guide للحصول على دليل خطوة بخطوة!_" },
 
   // ── Country selection / Type ──
-  select_type: { en: "👇 *Select account type:*", hi: "👇 *अकाउंट प्रकार चुनें:*", es: "👇 *Selecciona tipo de cuenta:*", ar: "👇 *اختر نوع الحساب:*" },
+  select_type: { en: "👇 *Select account type:*", hi: "👇*अकाउंट प्रकार चुनें:*", es: "👇*Selecciona tipo de cuenta:*", ar: "👇*اختر نوع الحساب:*" },
   regular: { en: "📦 REGULAR", hi: "📦 रेगुलर", es: "📦 REGULAR", ar: "📦 عادي" },
   aged: { en: "👑 AGED (6mo+)", hi: "👑 पुराना (6 महीने+)", es: "👑 ANTIGUO (6m+)", ar: "👑 قديم (6 أشهر+)" },
   per_account: { en: "per account", hi: "प्रति अकाउंट", es: "por cuenta", ar: "لكل حساب" },
@@ -73,33 +73,33 @@ const translations: Record<string, Record<Lang, string>> = {
   notify_aged: { en: "🔔 Notify when Aged back", hi: "🔔 पुराना वापस आने पर सूचित करें", es: "🔔 Notificar cuando Antiguo vuelva", ar: "🔔 إعلامي عند توفر القديم" },
 
   // ── Quantity ──
-  price_calc: { en: "🧮 *PRICE CALCULATOR*", hi: "🧮 *प्राइस कैलकुलेटर*", es: "🧮 *CALCULADORA DE PRECIO*", ar: "🧮 *حاسبة الأسعار*" },
+  price_calc: { en: "🧮 *PRICE CALCULATOR*", hi: "🧮*प्राइस कैलकुलेटर*", es: "🧮*CALCULADORA DE PRECIO*", ar: "🧮*حاسبة الأسعار*" },
   how_many: { en: "*How many accounts?*\nTap below or type a number (1-100):", hi: "*कितने अकाउंट?*\nनीचे टैप करें या नंबर टाइप करें (1-100):", es: "*¿Cuántas cuentas?*\nToca abajo o escribe un número (1-100):", ar: "*كم حساب؟*\nاضغط أدناه أو اكتب رقماً (1-100):" },
   change_type: { en: "🔙 Change Type", hi: "🔙 प्रकार बदलें", es: "🔙 Cambiar Tipo", ar: "🔙 تغيير النوع" },
-  invalid_qty: { en: "⚠️ *Invalid number!*\n\nPlease enter between *1* and *100*.\nOr tap a quick option above ☝️", hi: "⚠️ *अमान्य संख्या!*\n\nकृपया *1* और *100* के बीच दर्ज करें।\nया ऊपर क्विक ऑप्शन टैप करें ☝️", es: "⚠️ *¡Número inválido!*\n\nIngresa entre *1* y *100*.\nO toca una opción rápida arriba ☝️", ar: "⚠️ *رقم غير صالح!*\n\nيرجى إدخال رقم بين *1* و *100*.\nأو اضغط على خيار سريع أعلاه ☝️" },
+  invalid_qty: { en: "⚠️ *Invalid number!*\n\nPlease enter between*1* and*100*.\nOr tap a quick option above ☝️", hi: "⚠️*अमान्य संख्या!*\n\nकृपया*1* और*100* के बीच दर्ज करें।\nया ऊपर क्विक ऑप्शन टैप करें ☝️", es: "⚠️*¡Número inválido!*\n\nIngresa entre*1* y*100*.\nO toca una opción rápida arriba ☝️", ar: "⚠️*رقم غير صالح!*\n\nيرجى إدخال رقم بين*1* و*100*.\nأو اضغط على خيار سريع أعلاه ☝️" },
   go_back: { en: "🔙 Go Back", hi: "🔙 वापस जाएं", es: "🔙 Volver", ar: "🔙 رجوع" },
 
   // ── Order Created ──
   order_created: { en: "📋  ORDER CREATED!", hi: "📋  ऑर्डर बन गया!", es: "📋  ¡PEDIDO CREADO!", ar: "📋  تم إنشاء الطلب!" },
   total: { en: "TOTAL", hi: "कुल", es: "TOTAL", ar: "المجموع" },
-  choose_payment: { en: "👇 *Choose payment method:*", hi: "👇 *भुगतान विधि चुनें:*", es: "👇 *Elige método de pago:*", ar: "👇 *اختر طريقة الدفع:*" },
+  choose_payment: { en: "👇 *Choose payment method:*", hi: "👇*भुगतान विधि चुनें:*", es: "👇*Elige método de pago:*", ar: "👇*اختر طريقة الدفع:*" },
   btn_upi: { en: "💳 UPI Payment", hi: "💳 UPI भुगतान", es: "💳 Pago UPI", ar: "💳 دفع UPI" },
   btn_crypto: { en: "₿ Crypto Payment", hi: "₿ क्रिप्टो भुगतान", es: "₿ Pago Crypto", ar: "₿ دفع كريبتو" },
   btn_cancel: { en: "❌ Cancel Order", hi: "❌ ऑर्डर रद्द करें", es: "❌ Cancelar Pedido", ar: "❌ إلغاء الطلب" },
 
   // ── Screenshot received ──
   screenshot_title: { en: "📸  SCREENSHOT RECEIVED", hi: "📸  स्क्रीनशॉट प्राप्त", es: "📸  CAPTURA RECIBIDA", ar: "📸  تم استلام لقطة الشاشة" },
-  screenshot_msg: { en: "✅ Payment proof has been sent to our team!\n\n⏱️ *ETA:* 5–15 minutes\n\nWe'll send your accounts right\nhere once verified! 📥", hi: "✅ भुगतान प्रमाण हमारी टीम को भेज दिया गया!\n\n⏱️ *अनुमानित समय:* 5–15 मिनट\n\nसत्यापन के बाद आपके अकाउंट\nयहीं भेजे जाएंगे! 📥", es: "✅ ¡Prueba de pago enviada a nuestro equipo!\n\n⏱️ *Tiempo est.:* 5–15 minutos\n\n¡Te enviaremos tus cuentas\naquí una vez verificado! 📥", ar: "✅ تم إرسال إثبات الدفع لفريقنا!\n\n⏱️ *الوقت المتوقع:* 5–15 دقيقة\n\nسنرسل حساباتك هنا\nبمجرد التحقق! 📥" },
+  screenshot_msg: { en: "✅ Payment proof has been sent to our team!\n\n⏱️ *ETA:* 5–15 minutes\n\nWe'll send your accounts right\nhere once verified! 📥", hi: "✅ भुगतान प्रमाण हमारी टीम को भेज दिया गया!\n\n⏱️*अनुमानित समय:* 5–15 मिनट\n\nसत्यापन के बाद आपके अकाउंट\nयहीं भेजे जाएंगे! 📥", es: "✅ ¡Prueba de pago enviada a nuestro equipo!\n\n⏱️*Tiempo est.:* 5–15 minutos\n\n¡Te enviaremos tus cuentas\naquí una vez verificado! 📥", ar: "✅ تم إرسال إثبات الدفع لفريقنا!\n\n⏱️*الوقت المتوقع:* 5–15 دقيقة\n\nسنرسل حساباتك هنا\nبمجرد التحقق! 📥" },
   btn_track: { en: "📊 Track Order", hi: "📊 ऑर्डर ट्रैक करें", es: "📊 Rastrear Pedido", ar: "📊 تتبع الطلب" },
   btn_main_menu: { en: "🏠 Main Menu", hi: "🏠 मुख्य मेनू", es: "🏠 Menú Principal", ar: "🏠 القائمة الرئيسية" },
 
   // ── Payment received ──
   payment_received_title: { en: "✅  PAYMENT RECEIVED", hi: "✅  भुगतान प्राप्त", es: "✅  PAGO RECIBIDO", ar: "✅  تم استلام الدفع" },
-  payment_next: { en: "*What happens next:*\n\n  ┌── Step 1 ──┐\n  │ ⏳ Admin verifies payment │\n  ├── Step 2 ──┤\n  │ ✅ Order gets approved │\n  ├── Step 3 ──┤\n  │ 📥 Accounts auto-delivered │\n  └─────────────────────┘\n\n⏱️ *ETA: 5–15 minutes*\n\n📸 _Send payment screenshot for\nfaster verification!_", hi: "*आगे क्या होगा:*\n\n  ┌── चरण 1 ──┐\n  │ ⏳ एडमिन भुगतान सत्यापित करेगा │\n  ├── चरण 2 ──┤\n  │ ✅ ऑर्डर अप्रूव होगा │\n  ├── चरण 3 ──┤\n  │ 📥 अकाउंट ऑटो-डिलीवर होंगे │\n  └─────────────────────┘\n\n⏱️ *अनुमानित समय: 5–15 मिनट*\n\n📸 _तेज सत्यापन के लिए भुगतान\nस्क्रीनशॉट भेजें!_", es: "*¿Qué sigue?*\n\n  ┌── Paso 1 ──┐\n  │ ⏳ Admin verifica pago │\n  ├── Paso 2 ──┤\n  │ ✅ Pedido aprobado │\n  ├── Paso 3 ──┤\n  │ 📥 Cuentas auto-entregadas │\n  └─────────────────────┘\n\n⏱️ *Tiempo est.: 5–15 minutos*\n\n📸 _Envía captura del pago para\nverificación más rápida!_", ar: "*ماذا بعد:*\n\n  ┌── خطوة 1 ──┐\n  │ ⏳ المشرف يتحقق من الدفع │\n  ├── خطوة 2 ──┤\n  │ ✅ الطلب يُوافق عليه │\n  ├── خطوة 3 ──┤\n  │ 📥 الحسابات تُسلم تلقائياً │\n  └─────────────────────┘\n\n⏱️ *الوقت المتوقع: 5–15 دقيقة*\n\n📸 _أرسل لقطة شاشة الدفع\nللتحقق الأسرع!_" },
+  payment_next: { en: "*What happens next:*\n\n  ┌── Step 1 ──┐\n  │ ⏳ Admin verifies payment │\n  ├── Step 2 ──┤\n  │ ✅ Order gets approved │\n  ├── Step 3 ──┤\n  │ 📥 Accounts auto-delivered │\n  └─────────────────────┘\n\n⏱️*ETA: 5–15 minutes*\n\n📸 _Send payment screenshot for\nfaster verification!_", hi: "*आगे क्या होगा:*\n\n  ┌── चरण 1 ──┐\n  │ ⏳ एडमिन भुगतान सत्यापित करेगा │\n  ├── चरण 2 ──┤\n  │ ✅ ऑर्डर अप्रूव होगा │\n  ├── चरण 3 ──┤\n  │ 📥 अकाउंट ऑटो-डिलीवर होंगे │\n  └─────────────────────┘\n\n⏱️*अनुमानित समय: 5–15 मिनट*\n\n📸 _तेज सत्यापन के लिए भुगतान\nस्क्रीनशॉट भेजें!_", es: "*¿Qué sigue?*\n\n  ┌── Paso 1 ──┐\n  │ ⏳ Admin verifica pago │\n  ├── Paso 2 ──┤\n  │ ✅ Pedido aprobado │\n  ├── Paso 3 ──┤\n  │ 📥 Cuentas auto-entregadas │\n  └─────────────────────┘\n\n⏱️*Tiempo est.: 5–15 minutos*\n\n📸 _Envía captura del pago para\nverificación más rápida!_", ar: "*ماذا بعد:*\n\n  ┌── خطوة 1 ──┐\n  │ ⏳ المشرف يتحقق من الدفع │\n  ├── خطوة 2 ──┤\n  │ ✅ الطلب يُوافق عليه │\n  ├── خطوة 3 ──┤\n  │ 📥 الحسابات تُسلم تلقائياً │\n  └─────────────────────┘\n\n⏱️*الوقت المتوقع: 5–15 دقيقة*\n\n📸 _أرسل لقطة شاشة الدفع\nللتحقق الأسرع!_" },
 
   // ── UPI Payment ──
-  upi_title: { en: "💳 *PAY VIA UPI*", hi: "💳 *UPI से भुगतान*", es: "💳 *PAGAR VÍA UPI*", ar: "💳 *الدفع عبر UPI*" },
-  upi_scan: { en: "Scan the QR above or pay via\nGPay • Paytm • PhonePe\n\n📸 *Send payment screenshot* for\nfaster verification!\n\nOr tap *\"✅ I Have Paid\"* below 👇", hi: "ऊपर QR स्कैन करें या\nGPay • Paytm • PhonePe से भुगतान करें\n\n📸 *तेज सत्यापन के लिए भुगतान\nस्क्रीनशॉट भेजें!*\n\nया नीचे *\"✅ मैंने भुगतान किया\"* दबाएं 👇", es: "Escanea el QR arriba o paga vía\nGPay • Paytm • PhonePe\n\n📸 *Envía captura del pago* para\nverificación más rápida!\n\nO toca *\"✅ He Pagado\"* abajo 👇", ar: "امسح QR أعلاه أو ادفع عبر\nGPay • Paytm • PhonePe\n\n📸 *أرسل لقطة شاشة الدفع* للتحقق\nالأسرع!\n\nأو اضغط *\"✅ لقد دفعت\"* أدناه 👇" },
+  upi_title: { en: "💳 *PAY VIA UPI*", hi: "💳*UPI से भुगतान*", es: "💳*PAGAR VÍA UPI*", ar: "💳*الدفع عبر UPI*" },
+  upi_scan: { en: "Scan the QR above or pay via\nGPay • Paytm • PhonePe\n\n📸 *Send payment screenshot* for\nfaster verification!\n\nOr tap*\"✅ I Have Paid\"* below 👇", hi: "ऊपर QR स्कैन करें या\nGPay • Paytm • PhonePe से भुगतान करें\n\n📸*तेज सत्यापन के लिए भुगतान\nस्क्रीनशॉट भेजें!*\n\nया नीचे*\"✅ मैंने भुगतान किया\"* दबाएं 👇", es: "Escanea el QR arriba o paga vía\nGPay • Paytm • PhonePe\n\n📸*Envía captura del pago* para\nverificación más rápida!\n\nO toca*\"✅ He Pagado\"* abajo 👇", ar: "امسح QR أعلاه أو ادفع عبر\nGPay • Paytm • PhonePe\n\n📸*أرسل لقطة شاشة الدفع* للتحقق\nالأسرع!\n\nأو اضغط*\"✅ لقد دفعت\"* أدناه 👇" },
   btn_paid: { en: "✅ I Have Paid", hi: "✅ मैंने भुगतान किया", es: "✅ He Pagado", ar: "✅ لقد دفعت" },
   btn_switch_crypto: { en: "₿ Switch to Crypto", hi: "₿ क्रिप्टो पर स्विच करें", es: "₿ Cambiar a Crypto", ar: "₿ التبديل إلى كريبتو" },
   btn_switch_upi: { en: "💳 Switch to UPI", hi: "💳 UPI पर स्विच करें", es: "💳 Cambiar a UPI", ar: "💳 التبديل إلى UPI" },
@@ -107,9 +107,9 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Crypto Payment ──
   crypto_title: { en: "₿  CRYPTO PAYMENT", hi: "₿  क्रिप्टो भुगतान", es: "₿  PAGO CRYPTO", ar: "₿  دفع كريبتو" },
-  crypto_not_available: { en: "❌ *Crypto payments not available*\n\nNo crypto wallets are currently configured. Please use UPI payment instead.", hi: "❌ *क्रिप्टो भुगतान उपलब्ध नहीं*\n\nवर्तमान में कोई क्रिप्टो वॉलेट कॉन्फ़िगर नहीं है। कृपया UPI भुगतान का उपयोग करें।", es: "❌ *Pagos crypto no disponibles*\n\nNo hay wallets crypto configurados. Usa pago UPI en su lugar.", ar: "❌ *الدفع بالعملات المشفرة غير متاح*\n\nلا توجد محافظ كريبتو مُعدة حالياً. يرجى استخدام الدفع عبر UPI بدلاً من ذلك." },
-  crypto_send_screenshot: { en: "📸 After sending, *send a screenshot*\nor the *transaction hash* here.", hi: "📸 भेजने के बाद, यहाँ *स्क्रीनशॉट*\nया *ट्रांज़ैक्शन हैश* भेजें।", es: "📸 Después de enviar, *envía una captura*\no el *hash de transacción* aquí.", ar: "📸 بعد الإرسال، *أرسل لقطة شاشة*\nأو *هاش المعاملة* هنا." },
-  crypto_verify: { en: "⏱️ Admin will verify & approve\nwithin *15–30 minutes*.", hi: "⏱️ एडमिन *15–30 मिनट* में\nसत्यापित और अप्रूव करेगा।", es: "⏱️ El admin verificará y aprobará\nen *15–30 minutos*.", ar: "⏱️ المشرف سيتحقق ويوافق\nخلال *15–30 دقيقة*." },
+  crypto_not_available: { en: "❌ *Crypto payments not available*\n\nNo crypto wallets are currently configured. Please use UPI payment instead.", hi: "❌*क्रिप्टो भुगतान उपलब्ध नहीं*\n\nवर्तमान में कोई क्रिप्टो वॉलेट कॉन्फ़िगर नहीं है। कृपया UPI भुगतान का उपयोग करें।", es: "❌*Pagos crypto no disponibles*\n\nNo hay wallets crypto configurados. Usa pago UPI en su lugar.", ar: "❌*الدفع بالعملات المشفرة غير متاح*\n\nلا توجد محافظ كريبتو مُعدة حالياً. يرجى استخدام الدفع عبر UPI بدلاً من ذلك." },
+  crypto_send_screenshot: { en: "📸 After sending, *send a screenshot*\nor the*transaction hash* here.", hi: "📸 भेजने के बाद, यहाँ*स्क्रीनशॉट*\nया*ट्रांज़ैक्शन हैश* भेजें।", es: "📸 Después de enviar,*envía una captura*\no el*hash de transacción* aquí.", ar: "📸 بعد الإرسال،*أرسل لقطة شاشة*\nأو*هاش المعاملة* هنا." },
+  crypto_verify: { en: "⏱️ Admin will verify & approve\nwithin *15–30 minutes*.", hi: "⏱️ एडमिन*15–30 मिनट* में\nसत्यापित और अप्रूव करेगा।", es: "⏱️ El admin verificará y aprobará\nen*15–30 minutos*.", ar: "⏱️ المشرف سيتحقق ويوافق\nخلال*15–30 دقيقة*." },
 
   // ── Cancel ──
   cancelled: { en: "❌ Order cancelled. Start a new order anytime!", hi: "❌ ऑर्डर रद्द। कभी भी नया ऑर्डर शुरू करें!", es: "❌ Pedido cancelado. ¡Inicia uno nuevo cuando quieras!", ar: "❌ تم إلغاء الطلب. ابدأ طلباً جديداً في أي وقت!" },
@@ -118,7 +118,7 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Orders ──
   orders_title: { en: "📊  YOUR ORDERS", hi: "📊  आपके ऑर्डर", es: "📊  TUS PEDIDOS", ar: "📊  طلباتك" },
-  no_orders: { en: "📭 *No orders yet!*\n\nYou haven't placed any orders.\nGet started now — it only takes\n30 seconds! ⚡", hi: "📭 *अभी तक कोई ऑर्डर नहीं!*\n\nआपने कोई ऑर्डर नहीं दिया है।\nअभी शुरू करें — केवल 30 सेकंड\nलगते हैं! ⚡", es: "📭 *¡Sin pedidos aún!*\n\nNo has hecho ningún pedido.\n¡Empieza ahora — solo toma\n30 segundos! ⚡", ar: "📭 *لا توجد طلبات بعد!*\n\nلم تقم بأي طلب.\nابدأ الآن — يستغرق 30\nثانية فقط! ⚡" },
+  no_orders: { en: "📭 *No orders yet!*\n\nYou haven't placed any orders.\nGet started now — it only takes\n30 seconds! ⚡", hi: "📭*अभी तक कोई ऑर्डर नहीं!*\n\nआपने कोई ऑर्डर नहीं दिया है।\nअभी शुरू करें — केवल 30 सेकंड\nलगते हैं! ⚡", es: "📭*¡Sin pedidos aún!*\n\nNo has hecho ningún pedido.\n¡Empieza ahora — solo toma\n30 segundos! ⚡", ar: "📭*لا توجد طلبات بعد!*\n\nلم تقم بأي طلب.\nابدأ الآن — يستغرق 30\nثانية فقط! ⚡" },
   btn_buy_first: { en: "🛒 Buy My First Accounts", hi: "🛒 मेरे पहले अकाउंट खरीदें", es: "🛒 Comprar Mis Primeras Cuentas", ar: "🛒 شراء حساباتي الأولى" },
   btn_refresh: { en: "🔄 Refresh", hi: "🔄 रिफ्रेश", es: "🔄 Actualizar", ar: "🔄 تحديث" },
   btn_full_history: { en: "📜 Full History", hi: "📜 पूरा इतिहास", es: "📜 Historial Completo", ar: "📜 السجل الكامل" },
@@ -135,7 +135,7 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Track ──
   track_title: { en: "🔍  ORDER TRACKING", hi: "🔍  ऑर्डर ट्रैकिंग", es: "🔍  RASTREO DE PEDIDO", ar: "🔍  تتبع الطلب" },
-  track_not_found: { en: "❌ *Order not found!*\n\nNo order with that ID was found under your account.\n\n💡 _Check /status for your order list._", hi: "❌ *ऑर्डर नहीं मिला!*\n\nआपके अकाउंट में उस ID का कोई ऑर्डर नहीं मिला।\n\n💡 _अपनी ऑर्डर लिस्ट के लिए /status चेक करें।_", es: "❌ *¡Pedido no encontrado!*\n\nNo se encontró un pedido con ese ID en tu cuenta.\n\n💡 _Revisa /status para tu lista de pedidos._", ar: "❌ *الطلب غير موجود!*\n\nلم يتم العثور على طلب بهذا المعرف في حسابك.\n\n💡 _تحقق من /status لقائمة طلباتك._" },
+  track_not_found: { en: "❌ *Order not found!*\n\nNo order with that ID was found under your account.\n\n💡 _Check /status for your order list._", hi: "❌*ऑर्डर नहीं मिला!*\n\nआपके अकाउंट में उस ID का कोई ऑर्डर नहीं मिला।\n\n💡 _अपनी ऑर्डर लिस्ट के लिए /status चेक करें।_", es: "❌*¡Pedido no encontrado!*\n\nNo se encontró un pedido con ese ID en tu cuenta.\n\n💡 _Revisa /status para tu lista de pedidos._", ar: "❌*الطلب غير موجود!*\n\nلم يتم العثور على طلب بهذا المعرف في حسابك.\n\n💡 _تحقق من /status لقائمة طلباتك._" },
   details: { en: "Details", hi: "विवरण", es: "Detalles", ar: "تفاصيل" },
   progress: { en: "Progress", hi: "प्रगति", es: "Progreso", ar: "التقدم" },
   ordered_on: { en: "Ordered", hi: "ऑर्डर किया", es: "Ordenado", ar: "تم الطلب" },
@@ -148,25 +148,25 @@ const translations: Record<string, Record<Lang, string>> = {
   reorder_confirm: { en: "Want to reorder the same? 👇", hi: "वही फिर से ऑर्डर करना है? 👇", es: "¿Quieres reordenar lo mismo? 👇", ar: "تريد إعادة طلب نفس الشيء؟ 👇" },
   btn_reorder: { en: "✅ Reorder", hi: "✅ रीऑर्डर", es: "✅ Reordenar", ar: "✅ إعادة طلب" },
   btn_modify: { en: "✏️ Modify Order", hi: "✏️ ऑर्डर बदलें", es: "✏️ Modificar Pedido", ar: "✏️ تعديل الطلب" },
-  no_prev_orders: { en: "❌ *No previous orders found!*\n\nYou need to complete at least one order before you can reorder.\n\nStart your first order below! 👇", hi: "❌ *कोई पिछला ऑर्डर नहीं मिला!*\n\nरीऑर्डर करने से पहले कम से कम एक ऑर्डर पूरा करना होगा।\n\nनीचे अपना पहला ऑर्डर शुरू करें! 👇", es: "❌ *¡Sin pedidos previos!*\n\nNecesitas completar al menos un pedido antes de reordenar.\n\n¡Inicia tu primer pedido abajo! 👇", ar: "❌ *لا توجد طلبات سابقة!*\n\nتحتاج إلى إكمال طلب واحد على الأقل قبل إعادة الطلب.\n\nابدأ طلبك الأول أدناه! 👇" },
+  no_prev_orders: { en: "❌ *No previous orders found!*\n\nYou need to complete at least one order before you can reorder.\n\nStart your first order below! 👇", hi: "❌*कोई पिछला ऑर्डर नहीं मिला!*\n\nरीऑर्डर करने से पहले कम से कम एक ऑर्डर पूरा करना होगा।\n\nनीचे अपना पहला ऑर्डर शुरू करें! 👇", es: "❌*¡Sin pedidos previos!*\n\nNecesitas completar al menos un pedido antes de reordenar.\n\n¡Inicia tu primer pedido abajo! 👇", ar: "❌*لا توجد طلبات سابقة!*\n\nتحتاج إلى إكمال طلب واحد على الأقل قبل إعادة الطلب.\n\nابدأ طلبك الأول أدناه! 👇" },
 
   // ── Stock Alert ──
-  stock_alert_set: { en: "🔔 *Stock Alert Set!*\n\nYou'll be notified when stock is back! 📬\n\nWe'll message you as soon as\nnew accounts are available.", hi: "🔔 *स्टॉक अलर्ट सेट!*\n\nस्टॉक वापस आने पर आपको सूचित किया जाएगा! 📬\n\nनए अकाउंट उपलब्ध होते ही\nहम आपको मैसेज करेंगे।", es: "🔔 *¡Alerta de Stock Configurada!*\n\n¡Te notificaremos cuando vuelva el stock! 📬\n\nTe enviaremos un mensaje cuando\nhaya cuentas nuevas disponibles.", ar: "🔔 *تم تعيين تنبيه المخزون!*\n\nسيتم إعلامك عندما يعود المخزون! 📬\n\nسنراسلك بمجرد توفر\nحسابات جديدة." },
+  stock_alert_set: { en: "🔔 *Stock Alert Set!*\n\nYou'll be notified when stock is back! 📬\n\nWe'll message you as soon as\nnew accounts are available.", hi: "🔔*स्टॉक अलर्ट सेट!*\n\nस्टॉक वापस आने पर आपको सूचित किया जाएगा! 📬\n\nनए अकाउंट उपलब्ध होते ही\nहम आपको मैसेज करेंगे।", es: "🔔*¡Alerta de Stock Configurada!*\n\n¡Te notificaremos cuando vuelva el stock! 📬\n\nTe enviaremos un mensaje cuando\nhaya cuentas nuevas disponibles.", ar: "🔔*تم تعيين تنبيه المخزون!*\n\nسيتم إعلامك عندما يعود المخزون! 📬\n\nسنراسلك بمجرد توفر\nحسابات جديدة." },
   btn_browse: { en: "🛒 Browse Other Countries", hi: "🛒 अन्य देश ब्राउज़ करें", es: "🛒 Explorar Otros Países", ar: "🛒 تصفح بلدان أخرى" },
 
   // ── Referral ──
   referral_title: { en: "🎁  REFERRAL PROGRAM", hi: "🎁  रेफरल प्रोग्राम", es: "🎁  PROGRAMA DE REFERIDOS", ar: "🎁  برنامج الإحالة" },
-  referral_earn: { en: "Earn *5% commission* on every\nsale from your referrals! 💰", hi: "अपने रेफरल की हर बिक्री पर\n*5% कमीशन* कमाएं! 💰", es: "Gana *5% de comisión* en cada\nventa de tus referidos! 💰", ar: "اكسب *5% عمولة* على كل\nبيع من إحالاتك! 💰" },
+  referral_earn: { en: "Earn *5% commission* on every\nsale from your referrals! 💰", hi: "अपने रेफरल की हर बिक्री पर\n*5% कमीशन* कमाएं! 💰", es: "Gana*5% de comisión* en cada\nventa de tus referidos! 💰", ar: "اكسب*5% عمولة* على كل\nبيع من إحالاتك! 💰" },
   your_stats: { en: "Your Stats", hi: "आपके आंकड़े", es: "Tus Estadísticas", ar: "إحصائياتك" },
   referrals_count: { en: "Referrals", hi: "रेफरल", es: "Referidos", ar: "الإحالات" },
   earned: { en: "Earned", hi: "कमाया", es: "Ganado", ar: "المكتسب" },
-  your_link: { en: "🔗 *Your Link (tap to copy):*", hi: "🔗 *आपका लिंक (कॉपी करने के लिए टैप करें):*", es: "🔗 *Tu Link (toca para copiar):*", ar: "🔗 *رابطك (انقر للنسخ):*" },
+  your_link: { en: "🔗 *Your Link (tap to copy):*", hi: "🔗*आपका लिंक (कॉपी करने के लिए टैप करें):*", es: "🔗*Tu Link (toca para copiar):*", ar: "🔗*رابطك (انقر للنسخ):*" },
   how_it_works: { en: "*How it works:*\n1️⃣ Share link → 2️⃣ They buy → 3️⃣ You earn 🤑", hi: "*कैसे काम करता है:*\n1️⃣ लिंक शेयर करें → 2️⃣ वे खरीदें → 3️⃣ आप कमाएं 🤑", es: "*Cómo funciona:*\n1️⃣ Comparte link → 2️⃣ Ellos compran → 3️⃣ Tú ganas 🤑", ar: "*كيف يعمل:*\n1️⃣ شارك الرابط → 2️⃣ يشترون → 3️⃣ أنت تكسب 🤑" },
   btn_back_shop: { en: "🛒 Back to Shop", hi: "🛒 शॉप पर वापस", es: "🛒 Volver a Tienda", ar: "🛒 العودة للمتجر" },
 
   // ── Support ──
   support_title: { en: "🧑‍💻  CUSTOMER SUPPORT", hi: "🧑‍💻  ग्राहक सहायता", es: "🧑‍💻  SOPORTE AL CLIENTE", ar: "🧑‍💻  دعم العملاء" },
-  support_msg: { en: "Our support team is here to help!\n\n⏱️ Response time: *15–30 min*\n\nA human agent will reach out\nto you shortly! 🙏\n\n💡 *Quick self-service:*", hi: "हमारी सपोर्ट टीम मदद के लिए यहाँ है!\n\n⏱️ प्रतिक्रिया समय: *15–30 मिनट*\n\nएक मानव एजेंट जल्द ही\nआपसे संपर्क करेगा! 🙏\n\n💡 *त्वरित सेल्फ-सर्विस:*", es: "¡Nuestro equipo de soporte está aquí para ayudar!\n\n⏱️ Tiempo de respuesta: *15–30 min*\n\nUn agente humano se comunicará\ncontigo pronto! 🙏\n\n💡 *Auto-servicio rápido:*", ar: "فريق الدعم لدينا هنا للمساعدة!\n\n⏱️ وقت الاستجابة: *15–30 دقيقة*\n\nسيتواصل معك وكيل بشري\nقريبًا! 🙏\n\n💡 *خدمة ذاتية سريعة:*" },
+  support_msg: { en: "Our support team is here to help!\n\n⏱️ Response time: *15–30 min*\n\nA human agent will reach out\nto you shortly! 🙏\n\n💡*Quick self-service:*", hi: "हमारी सपोर्ट टीम मदद के लिए यहाँ है!\n\n⏱️ प्रतिक्रिया समय:*15–30 मिनट*\n\nएक मानव एजेंट जल्द ही\nआपसे संपर्क करेगा! 🙏\n\n💡*त्वरित सेल्फ-सर्विस:*", es: "¡Nuestro equipo de soporte está aquí para ayudar!\n\n⏱️ Tiempo de respuesta:*15–30 min*\n\nUn agente humano se comunicará\ncontigo pronto! 🙏\n\n💡*Auto-servicio rápido:*", ar: "فريق الدعم لدينا هنا للمساعدة!\n\n⏱️ وقت الاستجابة:*15–30 دقيقة*\n\nسيتواصل معك وكيل بشري\nقريبًا! 🙏\n\n💡*خدمة ذاتية سريعة:*" },
   btn_check_status: { en: "📊 Check Order Status", hi: "📊 ऑर्डर स्टेटस चेक करें", es: "📊 Ver Estado del Pedido", ar: "📊 تحقق من حالة الطلب" },
   btn_place_order: { en: "🛒 Place New Order", hi: "🛒 नया ऑर्डर दें", es: "🛒 Hacer Nuevo Pedido", ar: "🛒 تقديم طلب جديد" },
   btn_referral: { en: "🎁 Referral Program", hi: "🎁 रेफरल प्रोग्राम", es: "🎁 Programa de Referidos", ar: "🎁 برنامج الإحالة" },
@@ -178,7 +178,7 @@ const translations: Record<string, Record<Lang, string>> = {
   // ── Language ──
   lang_title: { en: "🌐  CHOOSE LANGUAGE", hi: "🌐  भाषा चुनें", es: "🌐  ELEGIR IDIOMA", ar: "🌐  اختر اللغة" },
   lang_msg: { en: "Select your preferred language:", hi: "अपनी पसंदीदा भाषा चुनें:", es: "Selecciona tu idioma preferido:", ar: "اختر لغتك المفضلة:" },
-  lang_set: { en: "✅ Language set to *English*!", hi: "✅ भाषा *हिंदी* में सेट की गई!", es: "✅ ¡Idioma configurado en *Español*!", ar: "✅ تم تعيين اللغة إلى *العربية*!" },
+  lang_set: { en: "✅ Language set to *English*!", hi: "✅ भाषा*हिंदी* में सेट की गई!", es: "✅ ¡Idioma configurado en*Español*!", ar: "✅ تم تعيين اللغة إلى*العربية*!" },
 
   // ── Steps indicator ──
   step_country: { en: "🌍 Country", hi: "🌍 देश", es: "🌍 País", ar: "🌍 البلد" },
@@ -194,14 +194,14 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Manual Login ──
   ml_title: { en: "📲  MANUAL LOGIN", hi: "📲  मैनुअल लॉगिन", es: "📲  LOGIN MANUAL", ar: "📲  تسجيل يدوي" },
-  ml_no_orders: { en: "❌ *No delivered orders found!*\n\nYou need to have delivered orders to use Manual Login.\nBuy accounts first! 👇", hi: "❌ *कोई डिलीवर ऑर्डर नहीं मिला!*\n\nमैनुअल लॉगिन के लिए डिलीवर ऑर्डर होना चाहिए।\nपहले अकाउंट खरीदें! 👇", es: "❌ *¡No hay pedidos entregados!*\n\nNecesitas pedidos entregados para usar Login Manual.\n¡Compra cuentas primero! 👇", ar: "❌ *لا توجد طلبات مسلّمة!*\n\nتحتاج طلبات مسلّمة لاستخدام التسجيل اليدوي.\nاشترِ حسابات أولاً! 👇" },
-  ml_select_order: { en: "👇 *Select an order to login:*", hi: "👇 *लॉगिन के लिए ऑर्डर चुनें:*", es: "👇 *Selecciona un pedido para login:*", ar: "👇 *اختر طلباً لتسجيل الدخول:*" },
-  ml_number: { en: "📱 *Phone Number:*", hi: "📱 *फोन नंबर:*", es: "📱 *Número de Teléfono:*", ar: "📱 *رقم الهاتف:*" },
+  ml_no_orders: { en: "❌ *No delivered orders found!*\n\nYou need to have delivered orders to use Manual Login.\nBuy accounts first! 👇", hi: "❌*कोई डिलीवर ऑर्डर नहीं मिला!*\n\nमैनुअल लॉगिन के लिए डिलीवर ऑर्डर होना चाहिए।\nपहले अकाउंट खरीदें! 👇", es: "❌*¡No hay pedidos entregados!*\n\nNecesitas pedidos entregados para usar Login Manual.\n¡Compra cuentas primero! 👇", ar: "❌*لا توجد طلبات مسلّمة!*\n\nتحتاج طلبات مسلّمة لاستخدام التسجيل اليدوي.\nاشترِ حسابات أولاً! 👇" },
+  ml_select_order: { en: "👇 *Select an order to login:*", hi: "👇*लॉगिन के लिए ऑर्डर चुनें:*", es: "👇*Selecciona un pedido para login:*", ar: "👇*اختر طلباً لتسجيل الدخول:*" },
+  ml_number: { en: "📱 *Phone Number:*", hi: "📱*फोन नंबर:*", es: "📱*Número de Teléfono:*", ar: "📱*رقم الهاتف:*" },
   ml_request_otp: { en: "🔑 Request OTP", hi: "🔑 OTP अनुरोध", es: "🔑 Solicitar OTP", ar: "🔑 طلب OTP" },
   ml_next_number: { en: "➡️ Next Number", hi: "➡️ अगला नंबर", es: "➡️ Siguiente Número", ar: "➡️ الرقم التالي" },
-  ml_otp_requested: { en: "🔑 *OTP Requested!*\n\nAdmin has been notified.\nYou'll receive OTP + 2FA code shortly.\n\n⏱️ *Please wait 1-5 minutes*", hi: "🔑 *OTP अनुरोध किया!*\n\nएडमिन को सूचित किया गया।\nआपको जल्द OTP + 2FA कोड मिलेगा।\n\n⏱️ *कृपया 1-5 मिनट प्रतीक्षा करें*", es: "🔑 *¡OTP Solicitado!*\n\nEl admin ha sido notificado.\nRecibirás OTP + código 2FA pronto.\n\n⏱️ *Espera 1-5 minutos*", ar: "🔑 *تم طلب OTP!*\n\nتم إعلام المشرف.\nستتلقى OTP + رمز 2FA قريباً.\n\n⏱️ *انتظر 1-5 دقائق*" },
+  ml_otp_requested: { en: "🔑 *OTP Requested!*\n\nAdmin has been notified.\nYou'll receive OTP + 2FA code shortly.\n\n⏱️*Please wait 1-5 minutes*", hi: "🔑*OTP अनुरोध किया!*\n\nएडमिन को सूचित किया गया।\nआपको जल्द OTP + 2FA कोड मिलेगा।\n\n⏱️*कृपया 1-5 मिनट प्रतीक्षा करें*", es: "🔑*¡OTP Solicitado!*\n\nEl admin ha sido notificado.\nRecibirás OTP + código 2FA pronto.\n\n⏱️*Espera 1-5 minutos*", ar: "🔑*تم طلب OTP!*\n\nتم إعلام المشرف.\nستتلقى OTP + رمز 2FA قريباً.\n\n⏱️*انتظر 1-5 دقائق*" },
   ml_no_numbers: { en: "❌ No phone numbers found for this order.", hi: "❌ इस ऑर्डर के लिए कोई नंबर नहीं मिला।", es: "❌ No se encontraron números para este pedido.", ar: "❌ لا توجد أرقام لهذا الطلب." },
-  ml_done: { en: "✅ *All numbers shown!*\n\nNo more numbers in this order.", hi: "✅ *सभी नंबर दिखाए गए!*\n\nइस ऑर्डर में और नंबर नहीं।", es: "✅ *¡Todos los números mostrados!*\n\nNo hay más números en este pedido.", ar: "✅ *تم عرض جميع الأرقام!*\n\nلا مزيد من الأرقام في هذا الطلب." },
+  ml_done: { en: "✅ *All numbers shown!*\n\nNo more numbers in this order.", hi: "✅*सभी नंबर दिखाए गए!*\n\nइस ऑर्डर में और नंबर नहीं।", es: "✅*¡Todos los números mostrados!*\n\nNo hay más números en este pedido.", ar: "✅*تم عرض جميع الأرقام!*\n\nلا مزيد من الأرقام في هذا الطلب." },
 };
 
 function t(key: string, lang: Lang): string {
@@ -407,7 +407,7 @@ Deno.serve(async (req) => {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: ADMIN_CHAT_ID, photo: fileId,
-              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
+              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵*${SYMBOL}${order.amount}*`,
               parse_mode: "Markdown",
             }),
           });
@@ -677,12 +677,12 @@ Deno.serve(async (req) => {
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `*Step 1:* 🤖 Start the login bot\n` +
         `   👉 Open @NewLonamiBot\n\n` +
-        `*Step 2:* 📖 Click on *"Read OTP"*\n\n` +
-        `*Step 3:* 📁 Send the *ZIP file*\n   you received from us\n\n` +
+        `*Step 2:* 📖 Click on*"Read OTP"*\n\n` +
+        `*Step 3:* 📁 Send the*ZIP file*\n   you received from us\n\n` +
         `*Step 4:* 📱 You'll get a phone number\n` +
         `   → Enter it in your Telegram app\n` +
         `   → Send OTP from your app\n` +
-        `   → *Only after sending*, click\n     *"OTP 💑"* in the bot\n` +
+        `   → *Only after sending*, click\n*"OTP 💑"* in the bot\n` +
         `   → Copy the OTP, paste it\n` +
         `   → Enter the password: \`123\`\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -739,14 +739,14 @@ Deno.serve(async (req) => {
       await sendMsg(BOT_TOKEN, chatId,
         `${country.flag} *${country.name}*\n\n` +
         `${stepIndicator(2, lang)}\n\n` +
-        `╔═══ ${t("regular", lang)} ═══╗\n` +
+        `*${t("regular", lang)}*\n━━━━━━━━━━━━━━━\n` +
         `\n` +
         `💰 *${SYMBOL}${pricing.regular}* ${t("per_account", lang)}\n` +
         `📊 ${stockBadge(stock.regular, lang)}\n` +
         `✓ ${t("fresh_accounts", lang)}\n` +
         `✓ ${t("ready_to_use", lang)}                           ${regNote}\n` +
         `\n` +
-        `╠═══ ${t("aged", lang)} ═══╣\n` +
+        `\n*${t("aged", lang)}*\n━━━━━━━━━━━━━━━\n` +
         `\n` +
         `💰 *${SYMBOL}${pricing.aged}* ${t("per_account", lang)}\n` +
         `📊 ${stockBadge(stock.aged, lang)}\n` +
@@ -754,7 +754,7 @@ Deno.serve(async (req) => {
         `✓ ${t("higher_trust", lang)}\n` +
         `✓ ${t("best_premium", lang)}          ${agedNote}\n` +
         `\n` +
-        `╚══════════════════╝\n\n` +
+        `━━━━━━━━━━━━━━━\n\n` +
         t("select_type", lang),
         { inline_keyboard: [
           ...(stock.regular > 0 ? [[{ text: `📦 Regular — ${SYMBOL}${pricing.regular}/acc`, callback_data: "type_regular" }]] : [[{ text: t("notify_regular", lang), callback_data: `alert_stock_${code}_regular` }]]),
@@ -781,8 +781,8 @@ Deno.serve(async (req) => {
         `${country?.flag || ""} *${country?.name}* → ${label}\n\n` +
         `${stepIndicator(3, lang)}\n\n` +
         `💰 Price: *${SYMBOL}${price}* ${t("per_account", lang)}\n\n` +
-        `*${t("price_calc", lang)}          *\n` +
-        `╠══════════════════╣\n` +
+        `*${t("price_calc", lang)}*\n` +
+        `━━━━━━━━━━━━━━━\n` +
         `1 acc  →  ${SYMBOL}${price}\n` +
         `5 acc  →  ${SYMBOL}${price * 5}\n` +
         `10 acc →  ${SYMBOL}${price * 10}\n` +
@@ -867,7 +867,7 @@ Deno.serve(async (req) => {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: ADMIN_CHAT_ID,
-                text: `🚨 *PAYMENT CLAIMED*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*\n\n⚠️ No screenshot sent — please verify!`,
+                text: `🚨 *PAYMENT CLAIMED*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵*${SYMBOL}${order.amount}*\n\n⚠️ No screenshot sent — please verify!`,
                 parse_mode: "Markdown",
                 reply_markup: JSON.stringify({ inline_keyboard: [
                   [{ text: `✅ Approve`, callback_data: `approve_${order.order_id}` },
@@ -1194,7 +1194,7 @@ Deno.serve(async (req) => {
       await sendMsg(BOT_TOKEN, chatId,
         `*${${t(\"ml_title\", lang)}}*\n━━━━━━━━━━━━━━━\n\n` +
         `🆔 Order: \`${orderId}\`\n` +
-        `📊 Number *${index + 1}* of *${inventory.length}*\n\n` +
+        `📊 Number *${index + 1}* of*${inventory.length}*\n\n` +
         `${t("ml_number", lang)}\n\`${phoneNumber}\`\n\n` +
         `_Enter this number in Telegram app,\nthen tap "Request OTP" below._`,
         { inline_keyboard: buttons }, lang);
