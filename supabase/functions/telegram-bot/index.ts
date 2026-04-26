@@ -501,17 +501,32 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Live stock counts per country (regular + aged)
+      const { data: invRows } = await supabase
+        .from("account_inventory")
+        .select("country")
+        .eq("status", "available");
+      const stockByCountry: Record<string, number> = {};
+      (invRows || []).forEach((r: any) => {
+        stockByCountry[r.country] = (stockByCountry[r.country] || 0) + 1;
+      });
+      const labelFor = (c: { flag: string; name: string; code: string }) => {
+        const n = stockByCountry[c.code] || 0;
+        const badge = n > 0 ? ` (${n > 99 ? "99+" : n})` : " (0)";
+        return `${c.flag} ${c.name}${badge}`;
+      };
+
       // Country buttons
       const popular = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
       const popularRow = popular.map(code => {
         const c = COUNTRIES.find(x => x.code === code)!;
-        return { text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` };
+        return { text: labelFor(c), callback_data: `country_${c.code}` };
       });
 
       const rest = COUNTRIES.filter(c => !popular.includes(c.code));
       const restRows: any[][] = [];
       for (let i = 0; i < rest.length; i += 3) {
-        const row = rest.slice(i, i + 3).map(c => ({ text: `${c.flag} ${c.name}`, callback_data: `country_${c.code}` }));
+        const row = rest.slice(i, i + 3).map(c => ({ text: labelFor(c), callback_data: `country_${c.code}` }));
         restRows.push(row);
       }
 
