@@ -740,20 +740,20 @@ Deno.serve(async (req) => {
         `${country.flag} *${country.name}*\n\n` +
         `${stepIndicator(2, lang)}\n\n` +
         `╔═══ ${t("regular", lang)} ═══╗\n` +
-        `║                                                  ║\n` +
-        `║  💰 *${SYMBOL}${pricing.regular}* ${t("per_account", lang)}           ║\n` +
-        `║  📊 ${stockBadge(stock.regular, lang)}               ║\n` +
-        `║  ✓ ${t("fresh_accounts", lang)}                       ║\n` +
-        `║  ✓ ${t("ready_to_use", lang)}                           ║${regNote}\n` +
-        `║                                                  ║\n` +
+        `\n` +
+        `💰 *${SYMBOL}${pricing.regular}* ${t("per_account", lang)}\n` +
+        `📊 ${stockBadge(stock.regular, lang)}\n` +
+        `✓ ${t("fresh_accounts", lang)}\n` +
+        `✓ ${t("ready_to_use", lang)}                           ${regNote}\n` +
+        `\n` +
         `╠═══ ${t("aged", lang)} ═══╣\n` +
-        `║                                                  ║\n` +
-        `║  💰 *${SYMBOL}${pricing.aged}* ${t("per_account", lang)}             ║\n` +
-        `║  📊 ${stockBadge(stock.aged, lang)}                 ║\n` +
-        `║  ✓ ${t("months_old", lang)}                         ║\n` +
-        `║  ✓ ${t("higher_trust", lang)}                   ║\n` +
-        `║  ✓ ${t("best_premium", lang)}          ║${agedNote}\n` +
-        `║                                                  ║\n` +
+        `\n` +
+        `💰 *${SYMBOL}${pricing.aged}* ${t("per_account", lang)}\n` +
+        `📊 ${stockBadge(stock.aged, lang)}\n` +
+        `✓ ${t("months_old", lang)}\n` +
+        `✓ ${t("higher_trust", lang)}\n` +
+        `✓ ${t("best_premium", lang)}          ${agedNote}\n` +
+        `\n` +
         `╚══════════════════╝\n\n` +
         t("select_type", lang),
         { inline_keyboard: [
@@ -781,14 +781,14 @@ Deno.serve(async (req) => {
         `${country?.flag || ""} *${country?.name}* → ${label}\n\n` +
         `${stepIndicator(3, lang)}\n\n` +
         `💰 Price: *${SYMBOL}${price}* ${t("per_account", lang)}\n\n` +
-        `*${t("price_calc", lang)}          ║\n` +
+        `*${t("price_calc", lang)}          *\n` +
         `╠══════════════════╣\n` +
-        `║  1 acc  →  ${SYMBOL}${price}                         ║\n` +
-        `║  5 acc  →  ${SYMBOL}${price * 5}                     ║\n` +
-        `║  10 acc →  ${SYMBOL}${price * 10}                   ║\n` +
-        `║  25 acc →  ${SYMBOL}${price * 25}                   ║\n` +
-        `║  50 acc →  ${SYMBOL}${price * 50}                   ║\n` +
-        `║  100 acc → ${SYMBOL}${price * 100}*\n━━━━━━━━━━━━━━━\n\n` +
+        `1 acc  →  ${SYMBOL}${price}\n` +
+        `5 acc  →  ${SYMBOL}${price * 5}\n` +
+        `10 acc →  ${SYMBOL}${price * 10}\n` +
+        `25 acc →  ${SYMBOL}${price * 25}\n` +
+        `50 acc →  ${SYMBOL}${price * 50}\n` +
+        `  100 acc → ${SYMBOL}${price * 100}*\n━━━━━━━━━━━━━━━\n\n` +
         t("how_many", lang),
         { inline_keyboard: [
           [{ text: "1️⃣ 1", callback_data: "qty_1" }, { text: "2️⃣ 2", callback_data: "qty_2" }, { text: "3️⃣ 3", callback_data: "qty_3" }, { text: "5️⃣ 5", callback_data: "qty_5" }],
