@@ -156,6 +156,7 @@ export type Database = {
         Row: {
           country: string | null
           created_at: string
+          customer_code: string
           first_name: string | null
           id: string
           is_blocked: boolean
@@ -170,6 +171,7 @@ export type Database = {
         Insert: {
           country?: string | null
           created_at?: string
+          customer_code?: string
           first_name?: string | null
           id?: string
           is_blocked?: boolean
@@ -184,6 +186,7 @@ export type Database = {
         Update: {
           country?: string | null
           created_at?: string
+          customer_code?: string
           first_name?: string | null
           id?: string
           is_blocked?: boolean
@@ -414,7 +417,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_customer_code: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never

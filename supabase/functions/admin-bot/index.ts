@@ -175,11 +175,17 @@ Deno.serve(async (req) => {
         await sendMsg(BOT_TOKEN, chatId, "📭 No orders found.");
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
+      const ids = [...new Set(orders.map((o: any) => o.customer_id))];
+      const { data: custs } = await supabase.from("customers").select("telegram_id, customer_code").in("telegram_id", ids);
+      const codeMap: Record<string, string> = {};
+      (custs || []).forEach((c: any) => { codeMap[c.telegram_id] = c.customer_code; });
+
       let msg = "📦 *Recent Orders:*\n\n";
       for (const o of orders) {
         const ci = getCountryInfo(o.country);
         const emoji = o.status === "delivered" ? "✅" : o.status === "payment_received" ? "💳" : o.status === "pending" ? "⏳" : o.status === "rejected" ? "❌" : "🚫";
-        msg += `${emoji} \`${o.order_id}\` ${ci.flag} ${o.quantity}x ${o.account_type}\n   💰${SYMBOL}${o.amount} — @${o.username || "?"} — ${o.status.replace("_"," ")}\n\n`;
+        const code = codeMap[o.customer_id] || "—";
+        msg += `${emoji} \`${o.order_id}\` ${ci.flag} ${o.quantity}x ${o.account_type}\n   👤 \`${code}\` @${o.username || "?"}\n   💰${SYMBOL}${o.amount} — ${o.status.replace("_"," ")}\n\n`;
       }
       await sendMsg(BOT_TOKEN, chatId, msg);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
@@ -192,11 +198,17 @@ Deno.serve(async (req) => {
         await sendMsg(BOT_TOKEN, chatId, "✅ No pending approvals!");
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
+      const ids = [...new Set(orders.map((o: any) => o.customer_id))];
+      const { data: custs } = await supabase.from("customers").select("telegram_id, customer_code").in("telegram_id", ids);
+      const codeMap: Record<string, string> = {};
+      (custs || []).forEach((c: any) => { codeMap[c.telegram_id] = c.customer_code; });
+
       let msg = `💳 *${orders.length} Orders Awaiting Approval:*\n\n`;
       const buttons: any[][] = [];
       for (const o of orders) {
         const ci = getCountryInfo(o.country);
-        msg += `\`${o.order_id}\` — ${ci.flag} ${o.quantity}x ${o.account_type} — ${SYMBOL}${o.amount}\n@${o.username || "?"}\n\n`;
+        const code = codeMap[o.customer_id] || "—";
+        msg += `\`${o.order_id}\` — ${ci.flag} ${o.quantity}x ${o.account_type} — ${SYMBOL}${o.amount}\n👤 \`${code}\` @${o.username || "?"}\n\n`;
         buttons.push([
           { text: `✅ Approve ${o.order_id}`, callback_data: `approve_${o.order_id}` },
           { text: `❌ Reject ${o.order_id}`, callback_data: `reject_${o.order_id}` },
@@ -344,10 +356,16 @@ Deno.serve(async (req) => {
         if (o.status === "delivered") { stats[o.customer_id].spent += o.amount; stats[o.customer_id].delivered++; }
       });
 
+      const ids = Object.keys(stats);
+      const { data: custs } = await supabase.from("customers").select("telegram_id, customer_code").in("telegram_id", ids);
+      const codeMap: Record<string, string> = {};
+      (custs || []).forEach((c: any) => { codeMap[c.telegram_id] = c.customer_code; });
+
       const sorted = Object.entries(stats).sort(([,a],[,b]) => b.spent - a.spent).slice(0, 15);
       let msg = `👥 *Top ${sorted.length} Customers:*\n\n`;
       sorted.forEach(([id, s], i) => {
-        msg += `${i + 1}. @${s.username} — ${SYMBOL}${s.spent.toLocaleString()} spent\n   📦 ${s.orders} orders | ✅ ${s.delivered} delivered\n\n`;
+        const code = codeMap[id] || "—";
+        msg += `${i + 1}. \`${code}\` @${s.username}\n   💰 ${SYMBOL}${s.spent.toLocaleString()} | 📦 ${s.orders} orders | ✅ ${s.delivered} delivered\n\n`;
       });
       if (sorted.length === 0) msg += "No customers yet.";
 

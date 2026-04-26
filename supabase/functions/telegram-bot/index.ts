@@ -405,11 +405,13 @@ Deno.serve(async (req) => {
         const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
         if (order) {
           const ci = COUNTRIES.find(c => c.code === order.country);
+          const { data: cust } = await supabase.from("customers").select("customer_code").eq("telegram_id", chatId).maybeSingle();
+          const custCode = cust?.customer_code || "—";
           await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendPhoto`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: ADMIN_CHAT_ID, photo: fileId,
-              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
+              caption: `🚨 *PAYMENT SCREENSHOT*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*`,
               parse_mode: "Markdown",
             }),
           });
@@ -523,12 +525,16 @@ Deno.serve(async (req) => {
 
       const bannerUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/welcome-banner.jpg`;
 
+      const { data: meCust } = await supabase.from("customers").select("customer_code").eq("telegram_id", chatId).maybeSingle();
+      const meCode = meCust?.customer_code || "";
+
       await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
         `Hey *${firstName}*! 👋 Welcome to\n\n` +
         `╔═══════════════════════╗\n` +
         `║   ${t("welcome_title", lang)}       ║\n` +
         `╚═══════════════════════╝\n\n` +
         `${t("welcome_msg", lang)}\n\n` +
+        (meCode ? `🪪 *Your Customer ID:* \`${meCode}\`\n\n` : ``) +
         `┌──── ✨ *Why Us?* ────┐\n` +
         `│                                                     │\n` +
         `│  ${t("welcome_stats", lang).split("\n").join("\n│  ")}\n` +
@@ -859,11 +865,13 @@ Deno.serve(async (req) => {
           const { data: order } = await supabase.from("orders").select("*").eq("order_id", state.pending_order_id).single();
           if (order) {
             const ci = COUNTRIES.find(c => c.code === order.country);
+            const { data: cust } = await supabase.from("customers").select("customer_code").eq("telegram_id", chatId).maybeSingle();
+            const custCode = cust?.customer_code || "—";
             await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: ADMIN_CHAT_ID,
-                text: `🚨 *PAYMENT CLAIMED*\n\n🆔 \`${order.order_id}\`\n👤 @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*\n\n⚠️ No screenshot sent — please verify!`,
+                text: `🚨 *PAYMENT CLAIMED*\n\n🆔 \`${order.order_id}\`\n👤 \`${custCode}\` @${username} (${firstName})\n🌍 ${ci?.flag || ""} ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *${SYMBOL}${order.amount}*\n\n⚠️ No screenshot sent — please verify!`,
                 parse_mode: "Markdown",
                 reply_markup: JSON.stringify({ inline_keyboard: [
                   [{ text: `✅ Approve`, callback_data: `approve_${order.order_id}` },
