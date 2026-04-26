@@ -525,12 +525,16 @@ Deno.serve(async (req) => {
 
       const bannerUrl = `${SUPABASE_URL}/storage/v1/object/public/bot-assets/welcome-banner.jpg`;
 
+      const { data: meCust } = await supabase.from("customers").select("customer_code").eq("telegram_id", chatId).maybeSingle();
+      const meCode = meCust?.customer_code || "";
+
       await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
         `Hey *${firstName}*! 👋 Welcome to\n\n` +
         `╔═══════════════════════╗\n` +
         `║   ${t("welcome_title", lang)}       ║\n` +
         `╚═══════════════════════╝\n\n` +
         `${t("welcome_msg", lang)}\n\n` +
+        (meCode ? `🪪 *Your Customer ID:* \`${meCode}\`\n\n` : ``) +
         `┌──── ✨ *Why Us?* ────┐\n` +
         `│                                                     │\n` +
         `│  ${t("welcome_stats", lang).split("\n").join("\n│  ")}\n` +
