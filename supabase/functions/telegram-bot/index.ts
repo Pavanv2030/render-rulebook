@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input === "/language" || input === "language" || input === "set_lang") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("lang_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("lang_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("lang_msg", lang)}`,
         { inline_keyboard: [
           [{ text: "🇬🇧 English", callback_data: "lang_en" }, { text: "🇮🇳 हिंदी", callback_data: "lang_hi" }],
@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
       await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("screenshot_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("screenshot_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("screenshot_msg", lang).replace("has been sent", `for \`${state.pending_order_id}\`\nhas been sent`)}`,
         { inline_keyboard: [
           [{ text: t("btn_track", lang), callback_data: "check_status" }],
@@ -470,7 +470,7 @@ Deno.serve(async (req) => {
       const isMember = await checkChannelMembership(BOT_TOKEN, chatId);
       if (!isMember) {
         await sendMsg(BOT_TOKEN, chatId,
-          `*${t("join_channel_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+          `*t("join_channel_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
           `Hey *${firstName}*! 👋\n\n` +
           t("join_channel_msg", lang),
           { inline_keyboard: [
@@ -544,7 +544,7 @@ Deno.serve(async (req) => {
 
       await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
         `Hey *${firstName}*! 👋 Welcome to\n\n` +
-        `*${t("welcome_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("welcome_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("welcome_msg", lang)}\n\n` +
         (meCode ? `🪪 *Your Customer ID:* \`${meCode}\`\n\n` : ``) +
         `┌──── ✨ *Why Us?* ────┐\n` +
@@ -565,7 +565,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input === "/guide" || input === "guide_1") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📖  HOW TO BUY — GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📖  HOW TO BUY — GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*STEP 1 of 5* — 🌍 Choose Country\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `After pressing /start, you'll see\na list of 20 countries.\n\n` +
@@ -583,7 +583,7 @@ Deno.serve(async (req) => {
 
     if (input === "guide_2") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📖  HOW TO BUY — GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📖  HOW TO BUY — GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*STEP 2 of 5* — 📦 Pick Account Type\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `You'll see two options:\n\n` +
@@ -607,7 +607,7 @@ Deno.serve(async (req) => {
 
     if (input === "guide_3") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📖  HOW TO BUY — GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📖  HOW TO BUY — GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*STEP 3 of 5* — 🔢 Set Quantity\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `Choose how many accounts:\n\n` +
@@ -626,7 +626,7 @@ Deno.serve(async (req) => {
 
     if (input === "guide_4") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📖  HOW TO BUY — GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📖  HOW TO BUY — GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*STEP 4 of 5* — 💳 Make Payment\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `After confirming your order:\n\n` +
@@ -646,7 +646,7 @@ Deno.serve(async (req) => {
 
     if (input === "guide_5") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📖  HOW TO BUY — GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📖  HOW TO BUY — GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*STEP 5 of 5* — 📥 Get Your Accounts!\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `After payment verification:\n\n` +
@@ -672,7 +672,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input === "/loginguide" || input === "login_guide") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${📲  LOGIN GUIDE}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*📲  LOGIN GUIDE*\n━━━━━━━━━━━━━━━\n\n` +
         `*How to Login Accounts Using*\n*the ZIP File You Received:*\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `*Step 1:* 🤖 Start the login bot\n` +
@@ -739,7 +739,7 @@ Deno.serve(async (req) => {
       await sendMsg(BOT_TOKEN, chatId,
         `${country.flag} *${country.name}*\n\n` +
         `${stepIndicator(2, lang)}\n\n` +
-        `*${t("regular", lang)}*\n━━━━━━━━━━━━━━━\n` +
+        `*t("regular", lang)*\n━━━━━━━━━━━━━━━\n` +
         `\n` +
         `💰 *${SYMBOL}${pricing.regular}* ${t("per_account", lang)}\n` +
         `📊 ${stockBadge(stock.regular, lang)}\n` +
@@ -781,7 +781,7 @@ Deno.serve(async (req) => {
         `${country?.flag || ""} *${country?.name}* → ${label}\n\n` +
         `${stepIndicator(3, lang)}\n\n` +
         `💰 Price: *${SYMBOL}${price}* ${t("per_account", lang)}\n\n` +
-        `*${t("price_calc", lang)}*\n` +
+        `*t("price_calc", lang)*\n` +
         `━━━━━━━━━━━━━━━\n` +
         `1 acc  →  ${SYMBOL}${price}\n` +
         `5 acc  →  ${SYMBOL}${price * 5}\n` +
@@ -847,7 +847,7 @@ Deno.serve(async (req) => {
         await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
         await sendMsg(BOT_TOKEN, chatId,
-          `*${t("payment_received_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+          `*t("payment_received_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
           `🆔 Order: \`${state.pending_order_id}\`\n\n` +
           t("payment_next", lang),
           { inline_keyboard: [
@@ -911,7 +911,7 @@ Deno.serve(async (req) => {
           cancelled: t("status_cancelled", lang), pending: t("status_pending", lang),
         };
 
-        let msg = `*${t("orders_title", lang)}*\n━━━━━━━━━━━━━━━\n\n`;
+        let msg = `*t("orders_title", lang)*\n━━━━━━━━━━━━━━━\n\n`;
         let totalSpent = 0, delivered = 0;
 
         for (const o of orders) {
@@ -977,7 +977,7 @@ Deno.serve(async (req) => {
       const progress = steps.map((s, i) => i < currentStep ? `✅ ${s}` : i === currentStep ? `▸ *${s}*` : `○ ${s}`).join(" → ");
 
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("track_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("track_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `🆔 Order: \`${order.order_id}\`\n\n` +
         `┌─── 📦 *${t("details", lang)}* ───┐\n` +
         `│  ${ci?.flag || "🌍"} Country: *${ci?.name || order.country}*\n` +
@@ -1020,7 +1020,7 @@ Deno.serve(async (req) => {
       const label = type === "aged" ? "👑 Aged" : "📦 Regular";
 
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("reorder_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("reorder_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("reorder_last", lang)}\n\n` +
         `┌─── 📦 *${t("details", lang)}* ───┐\n` +
         `│  ${ci?.flag || "🌍"} *${ci?.name || lastOrder.country}*\n` +
@@ -1090,7 +1090,7 @@ Deno.serve(async (req) => {
       const totalRefs = refs?.length || 0;
 
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("referral_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("referral_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("referral_earn", lang)}\n\n` +
         `┌──── 📊 *${t("your_stats", lang)}* ────┐\n` +
         `│  👥 ${t("referrals_count", lang)}: *${totalRefs}*                   │\n` +
@@ -1110,7 +1110,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input.includes("support") || input.includes("human") || input.includes("help me") || input === "/support" || input === "/help") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("support_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("support_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         t("support_msg", lang),
         { inline_keyboard: [
           [{ text: t("btn_check_status", lang), callback_data: "check_status" }],
@@ -1135,7 +1135,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
-      let msg = `*${t("ml_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+      let msg = `*t("ml_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("ml_select_order", lang)}\n\n`;
 
       const buttons: any[][] = [];
@@ -1192,7 +1192,7 @@ Deno.serve(async (req) => {
       buttons.push([{ text: t("btn_main_menu", lang), callback_data: "home" }]);
 
       await sendMsg(BOT_TOKEN, chatId,
-        `*${t("ml_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+        `*t("ml_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
         `🆔 Order: \`${orderId}\`\n` +
         `📊 Number *${index + 1}* of*${inventory.length}*\n\n` +
         `${t("ml_number", lang)}\n\`${phoneNumber}\`\n\n` +
@@ -1258,7 +1258,7 @@ Deno.serve(async (req) => {
     // 🏠 Fallback — Main Menu
     // ════════════════════════════════════════════
     await sendMsg(BOT_TOKEN, chatId,
-      `*${t("welcome_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+      `*t("welcome_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
       `Hey *${firstName}*! 👋\n\n${t("fallback_msg", lang)}`,
       { inline_keyboard: [
         [{ text: t("btn_buy", lang), callback_data: "start" }],
@@ -1297,7 +1297,7 @@ async function processQuantity(qty: number, state: any, chatId: string, username
   }).eq("chat_id", chatId);
 
   await sendMsg(BOT_TOKEN, chatId,
-    `*${t("order_created", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+    `*t("order_created", lang)*\n━━━━━━━━━━━━━━━\n\n` +
     `${stepIndicator(4, lang)}\n\n` +
     `🆔 *Order:* \`${orderId}\`\n\n` +
     `┌─── 🧾 *${t("details", lang)}* ───┐\n` +
@@ -1370,7 +1370,7 @@ async function handleCryptoPayment(orderId: string, chatId: string, BOT_TOKEN: s
     return;
   }
 
-  let msg = `*${t("crypto_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
+  let msg = `*t("crypto_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
     `🆔 Order: \`${orderId}\`\n` +
     `💰 Amount (INR): *${SYMBOL}${order.amount.toLocaleString()}*\n`;
 
