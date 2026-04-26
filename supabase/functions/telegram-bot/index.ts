@@ -788,7 +788,7 @@ Deno.serve(async (req) => {
         `10 acc →  ${SYMBOL}${price * 10}\n` +
         `25 acc →  ${SYMBOL}${price * 25}\n` +
         `50 acc →  ${SYMBOL}${price * 50}\n` +
-        `  100 acc → ${SYMBOL}${price * 100}*\n━━━━━━━━━━━━━━━\n\n` +
+        `100 acc → ${SYMBOL}${price * 100}\n━━━━━━━━━━━━━━━\n\n` +
         t("how_many", lang),
         { inline_keyboard: [
           [{ text: "1️⃣ 1", callback_data: "qty_1" }, { text: "2️⃣ 2", callback_data: "qty_2" }, { text: "3️⃣ 3", callback_data: "qty_3" }, { text: "5️⃣ 5", callback_data: "qty_5" }],
