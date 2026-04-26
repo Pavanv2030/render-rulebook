@@ -510,25 +510,30 @@ Deno.serve(async (req) => {
       (invRows || []).forEach((r: any) => {
         stockByCountry[r.country] = (stockByCountry[r.country] || 0) + 1;
       });
+      // Mobile-friendly: short label + 2-column grid
       const labelFor = (c: { flag: string; name: string; code: string }) => {
         const n = stockByCountry[c.code] || 0;
-        const badge = n > 0 ? ` (${n > 99 ? "99+" : n})` : " (0)";
-        return `${c.flag} ${c.name}${badge}`;
+        const shortName = c.name.length > 10 ? c.name.slice(0, 9) + "…" : c.name;
+        const badge = n > 99 ? "99+" : String(n);
+        return `${c.flag} ${shortName} • ${badge}`;
       };
 
-      // Country buttons
-      const popular = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
-      const popularRow = popular.map(code => {
-        const c = COUNTRIES.find(x => x.code === code)!;
-        return { text: labelFor(c), callback_data: `country_${c.code}` };
-      });
+      // Build a 2-column grid — fits perfectly on phone screens
+      const popularCodes = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
+      const popularList = popularCodes.map(code => COUNTRIES.find(x => x.code === code)!);
+      const restList = COUNTRIES.filter(c => !popularCodes.includes(c.code));
+      const orderedCountries = [...popularList, ...restList];
 
-      const rest = COUNTRIES.filter(c => !popular.includes(c.code));
-      const restRows: any[][] = [];
-      for (let i = 0; i < rest.length; i += 3) {
-        const row = rest.slice(i, i + 3).map(c => ({ text: labelFor(c), callback_data: `country_${c.code}` }));
-        restRows.push(row);
+      const countryRows: any[][] = [];
+      for (let i = 0; i < orderedCountries.length; i += 2) {
+        const row = orderedCountries
+          .slice(i, i + 2)
+          .map(c => ({ text: labelFor(c), callback_data: `country_${c.code}` }));
+        countryRows.push(row);
       }
+      const popularRow: any[] = [];
+      const restRows = countryRows;
+
 
       const allRows = [
         [{ text: t("btn_how_to_buy", lang), callback_data: "guide_1" }],
