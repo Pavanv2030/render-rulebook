@@ -356,10 +356,16 @@ Deno.serve(async (req) => {
         if (o.status === "delivered") { stats[o.customer_id].spent += o.amount; stats[o.customer_id].delivered++; }
       });
 
+      const ids = Object.keys(stats);
+      const { data: custs } = await supabase.from("customers").select("telegram_id, customer_code").in("telegram_id", ids);
+      const codeMap: Record<string, string> = {};
+      (custs || []).forEach((c: any) => { codeMap[c.telegram_id] = c.customer_code; });
+
       const sorted = Object.entries(stats).sort(([,a],[,b]) => b.spent - a.spent).slice(0, 15);
       let msg = `👥 *Top ${sorted.length} Customers:*\n\n`;
       sorted.forEach(([id, s], i) => {
-        msg += `${i + 1}. @${s.username} — ${SYMBOL}${s.spent.toLocaleString()} spent\n   📦 ${s.orders} orders | ✅ ${s.delivered} delivered\n\n`;
+        const code = codeMap[id] || "—";
+        msg += `${i + 1}. \`${code}\` @${s.username}\n   💰 ${SYMBOL}${s.spent.toLocaleString()} | 📦 ${s.orders} orders | ✅ ${s.delivered} delivered\n\n`;
       });
       if (sorted.length === 0) msg += "No customers yet.";
 
