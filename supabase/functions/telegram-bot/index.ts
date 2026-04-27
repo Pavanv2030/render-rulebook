@@ -504,7 +504,6 @@ Deno.serve(async (req) => {
       (invRows || []).forEach((r: any) => {
         stockByCountry[r.country] = (stockByCountry[r.country] || 0) + 1;
       });
-      // Mobile-friendly: short label + 2-column grid
       const labelFor = (c: { flag: string; name: string; code: string }) => {
         const n = stockByCountry[c.code] || 0;
         const shortName = c.name.length > 10 ? c.name.slice(0, 9) + "…" : c.name;
@@ -512,16 +511,16 @@ Deno.serve(async (req) => {
         return `${c.flag} ${shortName} • ${badge}`;
       };
 
-      // Build a 2-column grid — fits perfectly on phone screens
+      // 3-column grid
       const popularCodes = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
       const popularList = popularCodes.map(code => COUNTRIES.find(x => x.code === code)!);
       const restList = COUNTRIES.filter(c => !popularCodes.includes(c.code));
       const orderedCountries = [...popularList, ...restList];
 
       const countryRows: any[][] = [];
-      for (let i = 0; i < orderedCountries.length; i += 2) {
+      for (let i = 0; i < orderedCountries.length; i += 3) {
         const row = orderedCountries
-          .slice(i, i + 2)
+          .slice(i, i + 3)
           .map(c => ({ text: labelFor(c), callback_data: `country_${c.code}` }));
         countryRows.push(row);
       }
