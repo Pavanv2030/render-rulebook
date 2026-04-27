@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input === "/language" || input === "language" || input === "set_lang") {
       await sendMsg(BOT_TOKEN, chatId,
-        `*t("lang_title", lang)*\n━━━━━━━━━━━━━━━\n\n` +
+        `*${t("lang_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
         `${t("lang_msg", lang)}`,
         { inline_keyboard: [
           [{ text: "🇬🇧 English", callback_data: "lang_en" }, { text: "🇮🇳 हिंदी", callback_data: "lang_hi" }],
