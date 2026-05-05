@@ -356,6 +356,16 @@ Deno.serve(async (req) => {
     if (loginVariants.includes(input)) input = "/manuallogin";
     if (reorderVariants.includes(input)) input = "/reorder";
     if (langVariants.includes(input)) input = "/language";
+    if (sellVariants.includes(input)) input = "/sell";
+
+    // ── Sell flow dispatcher (handles /sell, wallet, withdraw, sell_country_*, sell_svc_*, wd_*, sell_cancel and stateful text) ──
+    {
+      const handled = await handleSellInput({
+        supabase, botToken: BOT_TOKEN, chatId, username,
+        input, rawText, isCallback: !!callbackQuery,
+      });
+      if (handled) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
 
     const PRICING = await getPricing(supabase);
 
