@@ -213,10 +213,11 @@ function t(key: string, lang: Lang): string {
 function getMainKeyboard(lang: Lang) {
   return {
     keyboard: [
-      [{ text: t("kb_buy", lang) }, { text: t("kb_orders", lang) }],
-      [{ text: t("kb_reorder", lang) }, { text: t("kb_guide", lang) }],
+      [{ text: t("kb_buy", lang) }, { text: t("kb_sell", lang) }],
+      [{ text: t("kb_orders", lang) }, { text: t("kb_reorder", lang) }],
       [{ text: t("kb_login", lang) }, { text: t("kb_refer", lang) }],
-      [{ text: t("kb_support", lang) }, { text: t("kb_language", lang) }],
+      [{ text: t("kb_guide", lang) }, { text: t("kb_support", lang) }],
+      [{ text: t("kb_language", lang) }],
     ],
     resize_keyboard: true,
     is_persistent: true,
