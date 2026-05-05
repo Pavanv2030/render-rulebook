@@ -1,6 +1,6 @@
 // Sell-account flow using MTKruto for Telegram MTProto auth
 // State machine stored in `sell_sessions` table; submissions in `account_submissions`
-import { Client, StorageMemory } from "jsr:@mtkruto/mtkruto@0.6.46";
+import { Client, StorageMemory } from "jsr:@mtkruto/mtkruto@0.132.0";
 
 const SYMBOL = "₹";
 
