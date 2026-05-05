@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { handleSellInput } from "./sell.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,7 @@ const translations: Record<string, Record<Lang, string>> = {
   kb_login: { en: "📲 Manual Login", hi: "📲 मैनुअल लॉगिन", es: "📲 Login Manual", ar: "📲 تسجيل يدوي" },
   kb_refer: { en: "🎁 Refer & Earn", hi: "🎁 रेफर करें और कमाएं", es: "🎁 Referir y Ganar", ar: "🎁 إحالة واكسب" },
   kb_support: { en: "🧑‍💻 Support", hi: "🧑‍💻 सहायता", es: "🧑‍💻 Soporte", ar: "🧑‍💻 الدعم" },
+  kb_sell: { en: "💰 Sell Account", hi: "💰 अकाउंट बेचें", es: "💰 Vender Cuenta", ar: "💰 بيع حساب" },
   kb_language: { en: "🌐 Language", hi: "🌐 भाषा", es: "🌐 Idioma", ar: "🌐 اللغة" },
 
   // ── Blocked ──
@@ -211,10 +213,11 @@ function t(key: string, lang: Lang): string {
 function getMainKeyboard(lang: Lang) {
   return {
     keyboard: [
-      [{ text: t("kb_buy", lang) }, { text: t("kb_orders", lang) }],
-      [{ text: t("kb_reorder", lang) }, { text: t("kb_guide", lang) }],
+      [{ text: t("kb_buy", lang) }, { text: t("kb_sell", lang) }],
+      [{ text: t("kb_orders", lang) }, { text: t("kb_reorder", lang) }],
       [{ text: t("kb_login", lang) }, { text: t("kb_refer", lang) }],
-      [{ text: t("kb_support", lang) }, { text: t("kb_language", lang) }],
+      [{ text: t("kb_guide", lang) }, { text: t("kb_support", lang) }],
+      [{ text: t("kb_language", lang) }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -343,6 +346,7 @@ Deno.serve(async (req) => {
     const loginVariants = [t("kb_login", "en"), t("kb_login", "hi"), t("kb_login", "es"), t("kb_login", "ar")].map(s => s.toLowerCase());
     const reorderVariants = [t("kb_reorder", "en"), t("kb_reorder", "hi"), t("kb_reorder", "es"), t("kb_reorder", "ar")].map(s => s.toLowerCase());
     const langVariants = [t("kb_language", "en"), t("kb_language", "hi"), t("kb_language", "es"), t("kb_language", "ar")].map(s => s.toLowerCase());
+    const sellVariants = [t("kb_sell", "en"), t("kb_sell", "hi"), t("kb_sell", "es"), t("kb_sell", "ar")].map(s => s.toLowerCase());
 
     if (buyVariants.includes(input)) input = "start";
     if (ordersVariants.includes(input)) input = "check_status";
@@ -352,6 +356,16 @@ Deno.serve(async (req) => {
     if (loginVariants.includes(input)) input = "/manuallogin";
     if (reorderVariants.includes(input)) input = "/reorder";
     if (langVariants.includes(input)) input = "/language";
+    if (sellVariants.includes(input)) input = "/sell";
+
+    // ── Sell flow dispatcher (handles /sell, wallet, withdraw, sell_country_*, sell_svc_*, wd_*, sell_cancel and stateful text) ──
+    {
+      const handled = await handleSellInput({
+        supabase, botToken: BOT_TOKEN, chatId, username,
+        input, rawText, isCallback: !!callbackQuery,
+      });
+      if (handled) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
 
     const PRICING = await getPricing(supabase);
 

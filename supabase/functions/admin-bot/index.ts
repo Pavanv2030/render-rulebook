@@ -108,7 +108,9 @@ Deno.serve(async (req) => {
         `🔑 /sendotp REQUEST\\_ID OTP 2FA — Send OTP+2FA to customer\n` +
         `📋 /loginrequests — View pending login requests\n\n` +
         `*Web Support:*\n` +
-        `💬 /reply SESSION\\_ID message — Reply to web customer`
+        `💬 /reply SESSION\\_ID message — Reply to web customer\n\n` +
+        `*Sell Accounts:*\n` +
+        `💰 /sellhelp — sell-account admin commands`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
@@ -991,6 +993,223 @@ Deno.serve(async (req) => {
       const ci = getCountryInfo(country);
       const label = accountType === "aged" ? "👑 Aged" : "📦 Regular";
       await sendMsg(BOT_TOKEN, chatId, `✅ \`${fileName}\` added!\n${ci.flag} ${ci.name} — ${label}\n\n_Send more files or type /done_`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ==================== SELL ACCOUNTS — admin commands ====================
+
+    // /sellhelp — overview
+    if (input === "/sellhelp") {
+      await sendMsg(BOT_TOKEN, chatId,
+        `💰 *SELL ACCOUNTS — ADMIN*\n\n` +
+        `*Pricing:*\n` +
+        `📋 /sellpricing — list all sell prices\n` +
+        `➕ /addsellprice CC service price_inr price_usdt — e.g. \`/addsellprice IN telegram 30 0.4\`\n` +
+        `🗑️ /delsellprice CC service\n\n` +
+        `*Submissions:*\n` +
+        `📥 /submissions [pending|approved|rejected] — list latest 20\n` +
+        `❌ /rejectsub <subId8> <reason> — reject + refund balance\n` +
+        `📤 /export CC service quantity — get ZIP of N approved+unexported sessions\n\n` +
+        `*Withdrawals:*\n` +
+        `📋 /withdrawals — pending payouts\n` +
+        `(Use the inline buttons on each request to mark Paid / Reject)\n\n` +
+        `*Settings:*\n` +
+        `⚙️ /setminwithdraw <amount> — change minimum withdrawal\n` +
+        `📊 /sellstats — totals`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "/sellpricing") {
+      const { data } = await supabase.from("sell_pricing").select("*").order("country_code");
+      if (!data?.length) { await sendMsg(BOT_TOKEN, chatId, "📭 No sell pricing yet. Add one with /addsellprice"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      let msg = "💰 *Sell Pricing:*\n\n";
+      for (const p of data) {
+        msg += `${p.flag} \`${p.country_code}\` ${p.service} — ${SYMBOL}${p.price_inr} / $${p.price_usdt} ${p.is_active ? "✅" : "🚫"}\n`;
+      }
+      await sendMsg(BOT_TOKEN, chatId, msg);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/addsellprice")) {
+      const parts = text.split(/\s+/);
+      if (parts.length < 5) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/addsellprice CC service price_inr price_usdt`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const [, cc, svc, inr, usdt] = parts;
+      const ci = getCountryInfo(cc.toUpperCase());
+      const { error } = await supabase.from("sell_pricing").upsert({
+        country_code: cc.toUpperCase(), service: svc.toLowerCase(),
+        country_name: ci.name, flag: ci.flag,
+        price_inr: parseFloat(inr), price_usdt: parseFloat(usdt), is_active: true,
+      }, { onConflict: "country_code,service" });
+      await sendMsg(BOT_TOKEN, chatId, error ? `❌ ${error.message}` : `✅ Saved ${ci.flag} ${cc.toUpperCase()} ${svc} — ${SYMBOL}${inr} / $${usdt}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/delsellprice")) {
+      const parts = text.split(/\s+/);
+      if (parts.length < 3) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/delsellprice CC service`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      await supabase.from("sell_pricing").delete().eq("country_code", parts[1].toUpperCase()).eq("service", parts[2].toLowerCase());
+      await sendMsg(BOT_TOKEN, chatId, `🗑️ Removed ${parts[1].toUpperCase()} / ${parts[2]}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/submissions") || input === "/submissions") {
+      const parts = text.split(/\s+/);
+      const filter = parts[1]?.toLowerCase();
+      let q = supabase.from("account_submissions").select("*").order("created_at", { ascending: false }).limit(20);
+      if (filter && ["pending", "approved", "rejected"].includes(filter)) q = q.eq("status", filter);
+      const { data } = await q;
+      if (!data?.length) { await sendMsg(BOT_TOKEN, chatId, "📭 No submissions."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      let msg = `📥 *Submissions${filter ? ` (${filter})` : ""}:*\n\n`;
+      for (const s of data) {
+        const emoji = s.status === "approved" ? "✅" : s.status === "rejected" ? "❌" : "⏳";
+        msg += `${emoji} \`${s.id.slice(0, 8)}\` ${s.country_code}/${s.service} \`${s.phone_number}\` — ${SYMBOL}${s.price_inr} ${s.exported ? "📤" : ""}\n`;
+      }
+      await sendMsg(BOT_TOKEN, chatId, msg);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/rejectsub")) {
+      const parts = text.split(/\s+/);
+      if (parts.length < 2) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/rejectsub <subId8> <reason>`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const idPrefix = parts[1];
+      const reason = parts.slice(2).join(" ") || "Invalid";
+      const { data: subs } = await supabase.from("account_submissions").select("*").like("id", `${idPrefix}%`).limit(1);
+      const sub = subs?.[0];
+      if (!sub) { await sendMsg(BOT_TOKEN, chatId, "❌ Not found."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      if (sub.status === "rejected") { await sendMsg(BOT_TOKEN, chatId, "Already rejected."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      // Refund if previously credited
+      if (sub.status === "approved" && sub.credited_at) {
+        const { data: w } = await supabase.from("customer_wallets").select("*").eq("telegram_id", sub.seller_telegram_id).maybeSingle();
+        if (w) {
+          const newBal = Math.max(0, Number(w.balance_inr) - Number(sub.price_inr));
+          const newEarn = Math.max(0, Number(w.total_earned) - Number(sub.price_inr));
+          await supabase.from("customer_wallets").update({ balance_inr: newBal, total_earned: newEarn, updated_at: new Date().toISOString() }).eq("telegram_id", sub.seller_telegram_id);
+        }
+      }
+      await supabase.from("account_submissions").update({ status: "rejected", notes: reason }).eq("id", sub.id);
+      if (CUSTOMER_BOT_TOKEN) {
+        await sendToCustomer(CUSTOMER_BOT_TOKEN, sub.seller_telegram_id,
+          `❌ *Submission Rejected*\n\n📱 \`${sub.phone_number}\`\nReason: ${reason}\n\n${SYMBOL}${sub.price_inr} has been deducted from your wallet.`);
+      }
+      await sendMsg(BOT_TOKEN, chatId, `✅ Rejected \`${sub.id.slice(0,8)}\` and refunded.`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/export")) {
+      const parts = text.split(/\s+/);
+      if (parts.length < 4) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/export CC service quantity`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const cc = parts[1].toUpperCase(); const svc = parts[2].toLowerCase(); const qty = Math.min(parseInt(parts[3], 10) || 0, 500);
+      if (!qty) { await sendMsg(BOT_TOKEN, chatId, "❌ Invalid quantity."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const { data: rows } = await supabase.from("account_submissions").select("*")
+        .eq("country_code", cc).eq("service", svc).eq("status", "approved").eq("exported", false)
+        .order("created_at", { ascending: true }).limit(qty);
+      if (!rows?.length) { await sendMsg(BOT_TOKEN, chatId, "📭 No matching submissions."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+
+      // Build ZIP using fflate (Deno-friendly)
+      const { zipSync, strToU8 } = await import("https://esm.sh/fflate@0.8.2");
+      const files: Record<string, Uint8Array> = {};
+      const summary: string[] = [`# Export ${cc}/${svc} — ${rows.length} accounts`, ""];
+      for (const r of rows) {
+        const safe = r.phone_number.replace(/\+/g, "").replace(/[^\d]/g, "");
+        files[`${safe}.session`] = strToU8(r.session_string || "");
+        files[`${safe}.txt`] = strToU8(`Phone: ${r.phone_number}\nCountry: ${r.country_code}\nService: ${r.service}\nSeller: ${r.seller_telegram_id} (@${r.seller_username || "?"})\nSubmitted: ${r.created_at}\n`);
+        summary.push(`- ${r.phone_number}`);
+      }
+      files["README.txt"] = strToU8(summary.join("\n"));
+      const zipBytes = zipSync(files, { level: 6 });
+
+      const fileName = `${cc}_${svc}_${rows.length}_${Date.now()}.zip`;
+      const fd = new FormData();
+      fd.append("chat_id", chatId);
+      fd.append("caption", `📤 Export: ${cc}/${svc} — ${rows.length} accounts`);
+      fd.append("document", new Blob([zipBytes], { type: "application/zip" }), fileName);
+      const sendRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: "POST", body: fd });
+      if (sendRes.ok) {
+        await supabase.from("account_submissions").update({ exported: true }).in("id", rows.map((r: any) => r.id));
+      } else {
+        const err = await sendRes.text();
+        await sendMsg(BOT_TOKEN, chatId, `❌ Send failed: ${err.slice(0, 200)}`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "/withdrawals") {
+      const { data } = await supabase.from("withdrawal_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+      if (!data?.length) { await sendMsg(BOT_TOKEN, chatId, "✅ No pending withdrawals!"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      for (const w of data) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `📤 \`${w.id.slice(0,8)}\`\n👤 \`${w.telegram_id}\`\n💰 ${SYMBOL}${w.amount_inr}\n💳 ${w.method.toUpperCase()}\n📍 \`${w.payout_address}\``,
+          { inline_keyboard: [[
+            { text: "✅ Mark Paid", callback_data: `wd_paid_${w.id}` },
+            { text: "❌ Reject", callback_data: `wd_reject_${w.id}` },
+          ]]});
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (callbackData.startsWith("wd_paid_") || callbackData.startsWith("wd_reject_")) {
+      const isPaid = callbackData.startsWith("wd_paid_");
+      const id = callbackData.replace(isPaid ? "wd_paid_" : "wd_reject_", "");
+      const { data: w } = await supabase.from("withdrawal_requests").select("*").eq("id", id).maybeSingle();
+      if (!w) { await sendMsg(BOT_TOKEN, chatId, "❌ Not found."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      if (w.status !== "pending") { await sendMsg(BOT_TOKEN, chatId, `Already ${w.status}.`); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      if (isPaid) {
+        const { data: wallet } = await supabase.from("customer_wallets").select("*").eq("telegram_id", w.telegram_id).maybeSingle();
+        if (wallet) {
+          await supabase.from("customer_wallets").update({
+            total_withdrawn: Number(wallet.total_withdrawn) + Number(w.amount_inr),
+            updated_at: new Date().toISOString(),
+          }).eq("telegram_id", w.telegram_id);
+        }
+        await supabase.from("withdrawal_requests").update({ status: "paid", resolved_at: new Date().toISOString() }).eq("id", id);
+        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `✅ *Withdrawal paid!*\n\n${SYMBOL}${w.amount_inr} sent to your ${w.method.toUpperCase()}: \`${w.payout_address}\``);
+        await sendMsg(BOT_TOKEN, chatId, `✅ Marked paid: \`${id.slice(0,8)}\``);
+      } else {
+        // Refund
+        const { data: wallet } = await supabase.from("customer_wallets").select("*").eq("telegram_id", w.telegram_id).maybeSingle();
+        if (wallet) {
+          await supabase.from("customer_wallets").update({
+            balance_inr: Number(wallet.balance_inr) + Number(w.amount_inr),
+            updated_at: new Date().toISOString(),
+          }).eq("telegram_id", w.telegram_id);
+        }
+        await supabase.from("withdrawal_requests").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", id);
+        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `❌ *Withdrawal rejected.*\n\n${SYMBOL}${w.amount_inr} returned to your wallet.`);
+        await sendMsg(BOT_TOKEN, chatId, `↩️ Refunded: \`${id.slice(0,8)}\``);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/setminwithdraw")) {
+      const v = parseFloat(text.split(/\s+/)[1] || "");
+      if (!isFinite(v) || v < 0) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/setminwithdraw 500`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      await supabase.from("sell_settings").upsert({ id: 1, min_withdrawal_inr: v, updated_at: new Date().toISOString() });
+      await sendMsg(BOT_TOKEN, chatId, `✅ Minimum withdrawal set to ${SYMBOL}${v}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "/sellstats") {
+      const { data: subs } = await supabase.from("account_submissions").select("status, price_inr, exported, country_code, service");
+      const { data: wds } = await supabase.from("withdrawal_requests").select("status, amount_inr");
+      let approved = 0, pending = 0, rejected = 0, exported = 0, totalCredited = 0;
+      const byCc: Record<string, number> = {};
+      (subs || []).forEach((s: any) => {
+        if (s.status === "approved") { approved++; totalCredited += Number(s.price_inr); byCc[`${s.country_code}/${s.service}`] = (byCc[`${s.country_code}/${s.service}`] || 0) + 1; }
+        if (s.status === "pending") pending++;
+        if (s.status === "rejected") rejected++;
+        if (s.exported) exported++;
+      });
+      let pendingPay = 0, paid = 0;
+      (wds || []).forEach((w: any) => { if (w.status === "pending") pendingPay += Number(w.amount_inr); if (w.status === "paid") paid += Number(w.amount_inr); });
+      const top = Object.entries(byCc).sort(([,a], [,b]) => b - a).slice(0, 8).map(([k, v]) => `  ${k}: ${v}`).join("\n");
+      await sendMsg(BOT_TOKEN, chatId,
+        `📊 *Sell Stats*\n\n` +
+        `📥 Submissions: ${subs?.length || 0}\n` +
+        `  ✅ Approved: ${approved}\n  ⏳ Pending: ${pending}\n  ❌ Rejected: ${rejected}\n  📤 Exported: ${exported}\n\n` +
+        `💰 Credited: ${SYMBOL}${totalCredited.toLocaleString()}\n` +
+        `💸 Pending payouts: ${SYMBOL}${pendingPay.toLocaleString()}\n` +
+        `✅ Total paid: ${SYMBOL}${paid.toLocaleString()}\n\n` +
+        (top ? `*Top buckets:*\n${top}` : ""));
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 

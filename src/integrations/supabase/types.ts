@@ -50,6 +50,60 @@ export type Database = {
         }
         Relationships: []
       }
+      account_submissions: {
+        Row: {
+          country_code: string
+          created_at: string
+          credited_at: string | null
+          exported: boolean
+          id: string
+          notes: string | null
+          phone_number: string
+          price_inr: number
+          price_usdt: number
+          seller_telegram_id: string
+          seller_username: string | null
+          service: string
+          session_string: string | null
+          status: string
+          tdata: Json | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          credited_at?: string | null
+          exported?: boolean
+          id?: string
+          notes?: string | null
+          phone_number: string
+          price_inr?: number
+          price_usdt?: number
+          seller_telegram_id: string
+          seller_username?: string | null
+          service?: string
+          session_string?: string | null
+          status?: string
+          tdata?: Json | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          credited_at?: string | null
+          exported?: boolean
+          id?: string
+          notes?: string | null
+          phone_number?: string
+          price_inr?: number
+          price_usdt?: number
+          seller_telegram_id?: string
+          seller_username?: string | null
+          service?: string
+          session_string?: string | null
+          status?: string
+          tdata?: Json | null
+        }
+        Relationships: []
+      }
       conversation_states: {
         Row: {
           chat_id: string
@@ -149,6 +203,33 @@ export type Database = {
           network?: string
           updated_at?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      customer_wallets: {
+        Row: {
+          balance_inr: number
+          id: string
+          telegram_id: string
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          balance_inr?: number
+          id?: string
+          telegram_id: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_inr?: number
+          id?: string
+          telegram_id?: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -331,6 +412,102 @@ export type Database = {
           },
         ]
       }
+      sell_pricing: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          flag: string
+          id: string
+          is_active: boolean
+          price_inr: number
+          price_usdt: number
+          service: string
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          flag?: string
+          id?: string
+          is_active?: boolean
+          price_inr?: number
+          price_usdt?: number
+          service?: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          flag?: string
+          id?: string
+          is_active?: boolean
+          price_inr?: number
+          price_usdt?: number
+          service?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sell_sessions: {
+        Row: {
+          chat_id: string
+          country_code: string | null
+          id: string
+          mtproto_session: string | null
+          phone_code_hash: string | null
+          phone_number: string | null
+          service: string | null
+          state: string
+          updated_at: string
+          withdrawal_method: string | null
+        }
+        Insert: {
+          chat_id: string
+          country_code?: string | null
+          id?: string
+          mtproto_session?: string | null
+          phone_code_hash?: string | null
+          phone_number?: string | null
+          service?: string | null
+          state?: string
+          updated_at?: string
+          withdrawal_method?: string | null
+        }
+        Update: {
+          chat_id?: string
+          country_code?: string | null
+          id?: string
+          mtproto_session?: string | null
+          phone_code_hash?: string | null
+          phone_number?: string | null
+          service?: string | null
+          state?: string
+          updated_at?: string
+          withdrawal_method?: string | null
+        }
+        Relationships: []
+      }
+      sell_settings: {
+        Row: {
+          id: number
+          min_withdrawal_inr: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          min_withdrawal_inr?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          min_withdrawal_inr?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_alerts: {
         Row: {
           account_type: string
@@ -409,6 +586,42 @@ export type Database = {
           qr_image_path?: string | null
           updated_at?: string
           upi_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          admin_notes: string | null
+          amount_inr: number
+          created_at: string
+          id: string
+          method: string
+          payout_address: string
+          resolved_at: string | null
+          status: string
+          telegram_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount_inr: number
+          created_at?: string
+          id?: string
+          method: string
+          payout_address: string
+          resolved_at?: string | null
+          status?: string
+          telegram_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount_inr?: number
+          created_at?: string
+          id?: string
+          method?: string
+          payout_address?: string
+          resolved_at?: string | null
+          status?: string
+          telegram_id?: string
         }
         Relationships: []
       }
