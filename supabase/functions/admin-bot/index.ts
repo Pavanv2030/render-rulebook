@@ -108,7 +108,9 @@ Deno.serve(async (req) => {
         `🔑 /sendotp REQUEST\\_ID OTP 2FA — Send OTP+2FA to customer\n` +
         `📋 /loginrequests — View pending login requests\n\n` +
         `*Web Support:*\n` +
-        `💬 /reply SESSION\\_ID message — Reply to web customer`
+        `💬 /reply SESSION\\_ID message — Reply to web customer\n\n` +
+        `*Sell Accounts:*\n` +
+        `💰 /sellhelp — sell-account admin commands`
       );
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
