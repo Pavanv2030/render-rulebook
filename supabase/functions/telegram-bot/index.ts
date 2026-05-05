@@ -29,6 +29,7 @@ const translations: Record<string, Record<Lang, string>> = {
   kb_login: { en: "📲 Manual Login", hi: "📲 मैनुअल लॉगिन", es: "📲 Login Manual", ar: "📲 تسجيل يدوي" },
   kb_refer: { en: "🎁 Refer & Earn", hi: "🎁 रेफर करें और कमाएं", es: "🎁 Referir y Ganar", ar: "🎁 إحالة واكسب" },
   kb_support: { en: "🧑‍💻 Support", hi: "🧑‍💻 सहायता", es: "🧑‍💻 Soporte", ar: "🧑‍💻 الدعم" },
+  kb_sell: { en: "💰 Sell Account", hi: "💰 अकाउंट बेचें", es: "💰 Vender Cuenta", ar: "💰 بيع حساب" },
   kb_language: { en: "🌐 Language", hi: "🌐 भाषा", es: "🌐 Idioma", ar: "🌐 اللغة" },
 
   // ── Blocked ──
