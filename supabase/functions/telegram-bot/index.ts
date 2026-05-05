@@ -346,6 +346,7 @@ Deno.serve(async (req) => {
     const loginVariants = [t("kb_login", "en"), t("kb_login", "hi"), t("kb_login", "es"), t("kb_login", "ar")].map(s => s.toLowerCase());
     const reorderVariants = [t("kb_reorder", "en"), t("kb_reorder", "hi"), t("kb_reorder", "es"), t("kb_reorder", "ar")].map(s => s.toLowerCase());
     const langVariants = [t("kb_language", "en"), t("kb_language", "hi"), t("kb_language", "es"), t("kb_language", "ar")].map(s => s.toLowerCase());
+    const sellVariants = [t("kb_sell", "en"), t("kb_sell", "hi"), t("kb_sell", "es"), t("kb_sell", "ar")].map(s => s.toLowerCase());
 
     if (buyVariants.includes(input)) input = "start";
     if (ordersVariants.includes(input)) input = "check_status";
