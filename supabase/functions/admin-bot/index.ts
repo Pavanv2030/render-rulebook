@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
   const BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
   const CUSTOMER_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+  const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD");
   if (!BOT_TOKEN) return new Response("ADMIN_BOT_TOKEN not configured", { status: 500 });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -247,7 +248,11 @@ Deno.serve(async (req) => {
       const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
       const deliverRes = await fetch(autoDeliverUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}),
+        },
         body: JSON.stringify({ orderId }),
       });
       const result = await deliverRes.json();
@@ -305,7 +310,11 @@ Deno.serve(async (req) => {
       const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
       const deliverRes = await fetch(autoDeliverUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}),
+        },
         body: JSON.stringify({ orderId }),
       });
       const result = await deliverRes.json();
