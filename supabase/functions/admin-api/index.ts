@@ -259,7 +259,11 @@ Deno.serve(async (req) => {
         const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
         const deliverRes = await fetch(autoDeliverUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}),
+          },
           body: JSON.stringify({ orderId }),
         });
         const deliverResult = await deliverRes.json();
@@ -500,7 +504,7 @@ Deno.serve(async (req) => {
               }
             }
             const autoDeliverUrl = `${SUPABASE_URL}/functions/v1/auto-deliver`;
-            const deliverRes = await fetch(autoDeliverUrl, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }, body: JSON.stringify({ orderId }) });
+            const deliverRes = await fetch(autoDeliverUrl, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}) }, body: JSON.stringify({ orderId }) });
             const deliverResult = await deliverRes.json();
             if (deliverResult.success) delivered++;
             else { failed++; errors.push(`${orderId}: ${deliverResult.error || "failed"}`); }
