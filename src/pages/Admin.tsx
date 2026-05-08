@@ -215,7 +215,7 @@ const Admin = () => {
       if (result.error === "insufficient_stock") setError(`Not enough stock for ${orderId}! Available: ${result.available}, Requested: ${result.requested}`);
       else if (result.error) throw new Error(result.error);
       else { setSuccessMsg(`✅ Order ${orderId} approved & delivered! (${result.delivered} accounts sent)`); fetchOrders(); fetchInventory(); fetchDashboard(); }
-    } catch (err: any) { setError(err.message); } finally { setApprovingOrder(null); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setApprovingOrder(null); }
   };
 
   const rejectPayment = async (orderId: string) => {
@@ -225,7 +225,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_payment", orderId, reason: reason || "" }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`❌ Order ${orderId} rejected. Customer notified.`); fetchOrders();
-    } catch (err: any) { setError(err.message); } finally { setRejectingOrder(null); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setRejectingOrder(null); }
   };
 
   const handleFileUpload = async (orderId: string, file: File) => {
@@ -234,7 +234,7 @@ const Admin = () => {
       const formData = new FormData(); formData.append("orderId", orderId); formData.append("file", file);
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", body: formData });
       if (result.error) throw new Error(result.error); fetchOrders();
-    } catch (err: any) { setError(err.message); } finally { setUploadingOrder(null); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setUploadingOrder(null); }
   };
 
   const handleMasterUpload = async (file: File) => {
@@ -244,14 +244,14 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/upload-master`, { method: "POST", body: formData });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(result.message || `Added ${result.added} accounts`); fetchInventory(); fetchInventoryList(); fetchDashboard();
-    } catch (err: any) { setError(err.message); } finally { setUploadingMaster(null); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setUploadingMaster(null); }
   };
 
   const getDownloadUrl = async (filePath: string) => {
     try {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "get_download_url", filePath }) });
       if (result.url) window.open(result.url, "_blank");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const savePricing = async () => {
@@ -261,7 +261,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_pricing", pricing: updates }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ Pricing updated successfully!"); setEditingPricing({}); fetchPricing();
-    } catch (err: any) { setError(err.message); } finally { setSavingPricing(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setSavingPricing(false); }
   };
 
   const deleteSelectedInventory = async () => {
@@ -272,7 +272,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_inventory", ids: Array.from(selectedInvIds) }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ Deleted ${result.deleted} items`); setSelectedInvIds(new Set()); fetchInventoryList(); fetchInventory(); fetchDashboard();
-    } catch (err: any) { setError(err.message); } finally { setDeletingInv(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setDeletingInv(false); }
   };
 
   const sendBroadcast = async () => {
@@ -283,7 +283,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast", message: broadcastMsg }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ Broadcast sent! ${result.sent} delivered, ${result.failed} failed.`); setBroadcastMsg("");
-    } catch (err: any) { setError(err.message); } finally { setBroadcasting(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setBroadcasting(false); }
   };
 
   const viewCustomerOrders = async (customerId: string) => {
@@ -300,7 +300,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "block_customer", telegram_id: telegramId, block }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`${block ? "🚫 Customer blocked" : "✅ Customer unblocked"}`); fetchCustomers();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const sendCustomerMessage = async (telegramId: string) => {
@@ -310,7 +310,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send_customer_message", telegram_id: telegramId, message: customerMsg }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ Message sent!"); setCustomerMsg(""); setSendingMsgTo(null);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const bulkApprove = async () => {
@@ -323,7 +323,7 @@ const Admin = () => {
       setSuccessMsg(`✅ Bulk approve: ${result.delivered} delivered, ${result.failed} failed`);
       if (result.errors?.length) setError(result.errors.join("; "));
       setSelectedOrderIds(new Set()); fetchOrders(); fetchInventory(); fetchDashboard();
-    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setBulkActioning(false); }
   };
 
   const bulkReject = async () => {
@@ -335,7 +335,7 @@ const Admin = () => {
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`❌ Bulk reject: ${result.rejected} orders rejected`);
       setSelectedOrderIds(new Set()); fetchOrders();
-    } catch (err: any) { setError(err.message); } finally { setBulkActioning(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setBulkActioning(false); }
   };
 
   const getCountryInfo = (code: string) => {
@@ -357,7 +357,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_country", country_code: newCountry.code.toUpperCase(), country_name: newCountry.name, flag: newCountry.flag, regular_price: newCountry.regular, aged_price: newCountry.aged, regular_price_usdt: newCountry.regular_usdt, aged_price_usdt: newCountry.aged_usdt }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ Country ${newCountry.name} added!`); setNewCountry({ code: "", name: "", flag: "🌍", regular: 50, aged: 100, regular_usdt: 0, aged_usdt: 0 }); setShowAddCountry(false); fetchPricing();
-    } catch (err: any) { setError(err.message); } finally { setAddingCountry(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setAddingCountry(false); }
   };
 
   const removeCountry = async (countryCode: string) => {
@@ -368,7 +368,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove_country", country_code: countryCode }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ Country ${countryCode} removed!`); fetchPricing();
-    } catch (err: any) { setError(err.message); } finally { setRemovingCountry(null); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setRemovingCountry(null); }
   };
 
   const dailyStats = useMemo(() => {
@@ -391,7 +391,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_crypto_wallet", ...newWallet, coin_symbol: newWallet.coin_symbol.toUpperCase() }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ ${newWallet.coin_symbol.toUpperCase()} wallet added!`); setNewWallet({ coin_name: "", coin_symbol: "", network: "", wallet_address: "" }); setShowAddWallet(false); fetchCryptoWallets();
-    } catch (err: any) { setError(err.message); } finally { setAddingWallet(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setAddingWallet(false); }
   };
 
   const updateCryptoWallet = async (id: string, data: any) => {
@@ -400,7 +400,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_crypto_wallet", id, ...data }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ Wallet updated!"); setEditingWalletId(null); fetchCryptoWallets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const deleteCryptoWallet = async (id: string, symbol: string) => {
@@ -410,7 +410,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_crypto_wallet", id }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ ${symbol} wallet removed!`); fetchCryptoWallets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   // UPI Wallet CRUD
@@ -421,7 +421,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_upi_wallet", upi_id: newUpi.upi_id, display_name: newUpi.display_name }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ UPI ${newUpi.upi_id} added!`); setNewUpi({ upi_id: "", display_name: "" }); setShowAddUpi(false); fetchUpiWallets();
-    } catch (err: any) { setError(err.message); } finally { setAddingUpi(false); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setAddingUpi(false); }
   };
 
   const updateUpiWallet = async (id: string, data: any) => {
@@ -430,7 +430,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_upi_wallet", id, ...data }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg("✅ UPI updated!"); setEditingUpiId(null); fetchUpiWallets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const deleteUpiWallet = async (id: string, upiId: string) => {
@@ -440,7 +440,7 @@ const Admin = () => {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_upi_wallet", id }) });
       if (result.error) throw new Error(result.error);
       setSuccessMsg(`✅ UPI ${upiId} removed!`); fetchUpiWallets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
