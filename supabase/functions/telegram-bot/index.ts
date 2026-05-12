@@ -525,11 +525,14 @@ Deno.serve(async (req) => {
         return `${c.flag} ${shortName} • ${badge}`;
       };
 
-      // 3-column grid
-      const popularCodes = ["IN", "US", "UK", "AE"].filter(code => COUNTRIES.some(x => x.code === code));
-      const popularList = popularCodes.map(code => COUNTRIES.find(x => x.code === code)!);
-      const restList = COUNTRIES.filter(c => !popularCodes.includes(c.code));
-      const orderedCountries = [...popularList, ...restList];
+      // Sort: countries with stock first (by stock desc), then out-of-stock alphabetically
+      const inStock = COUNTRIES
+        .filter(c => (stockByCountry[c.code] || 0) > 0)
+        .sort((a, b) => (stockByCountry[b.code] || 0) - (stockByCountry[a.code] || 0));
+      const outOfStock = COUNTRIES
+        .filter(c => !(stockByCountry[c.code] > 0))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const orderedCountries = [...inStock, ...outOfStock];
 
       const countryRows: any[][] = [];
       for (let i = 0; i < orderedCountries.length; i += 3) {
