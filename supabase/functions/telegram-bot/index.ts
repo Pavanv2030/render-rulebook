@@ -1363,6 +1363,23 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     state: "awaiting_payment", selected_quantity: qty, pending_order_id: orderId, updated_at: new Date().toISOString(),
   }).eq("chat_id", chatId);
 
+  // Wallet balance for INR (offer pay-from-wallet if sufficient)
+  const { data: w } = await supabase.from("customer_wallets").select("balance_inr").eq("telegram_id", chatId).maybeSingle();
+  const inrBal = Number(w?.balance_inr || 0);
+  const canPayFromWallet = inrBal >= totalPrice;
+
+  const payButtons: any[][] = [];
+  if (canPayFromWallet) {
+    payButtons.push([{ text: `💼 Pay from Wallet (${SYMBOL}${inrBal.toFixed(2)})`, callback_data: `pay_wallet_${orderId}` }]);
+  } else if (inrBal > 0) {
+    payButtons.push([{ text: `💼 Wallet: ${SYMBOL}${inrBal.toFixed(2)} (low) — ➕ Top-up`, callback_data: "addbalance" }]);
+  } else {
+    payButtons.push([{ text: `➕ Add Wallet Balance`, callback_data: "addbalance" }]);
+  }
+  payButtons.push([{ text: t("btn_upi", lang), callback_data: `pay_upi_${orderId}` }]);
+  payButtons.push([{ text: t("btn_crypto", lang), callback_data: `pay_crypto_${orderId}` }]);
+  payButtons.push([{ text: t("btn_cancel", lang), callback_data: "cancel" }]);
+
   await sendMsg(BOT_TOKEN, chatId,
     `*${t("order_created", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
     `${stepIndicator(4, lang)}\n\n` +
@@ -1379,11 +1396,7 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     `│                                                │\n` +
     `└─────────────────────┘\n\n` +
     t("choose_payment", lang),
-    { inline_keyboard: [
-      [{ text: t("btn_upi", lang), callback_data: `pay_upi_${orderId}` }],
-      [{ text: t("btn_crypto", lang), callback_data: `pay_crypto_${orderId}` }],
-      [{ text: t("btn_cancel", lang), callback_data: "cancel" }],
-    ]}, lang);
+    { inline_keyboard: payButtons }, lang);
 
   return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
 }
