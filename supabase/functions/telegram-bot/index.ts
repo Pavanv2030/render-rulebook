@@ -549,7 +549,7 @@ Deno.serve(async (req) => {
         [{ text: t("btn_how_to_buy", lang), callback_data: "guide_1" }],
         popularRow,
         ...restRows,
-        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: t("btn_referrals", lang), callback_data: "/refer" }],
+        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: "➕ Add Balance", callback_data: "addbalance" }],
         [{ text: t("kb_support", lang), callback_data: "support" }],
       ];
 
@@ -1326,7 +1326,7 @@ Deno.serve(async (req) => {
       `Hey *${firstName}*! 👋\n\n${t("fallback_msg", lang)}`,
       { inline_keyboard: [
         [{ text: t("btn_buy", lang), callback_data: "start" }],
-        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: t("btn_referrals", lang), callback_data: "/refer" }],
+        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: "➕ Add Balance", callback_data: "addbalance" }],
         [{ text: t("kb_support", lang), callback_data: "support" }],
       ]}, lang);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
