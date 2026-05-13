@@ -209,26 +209,35 @@ export type Database = {
       customer_wallets: {
         Row: {
           balance_inr: number
+          balance_usdt: number
           id: string
           telegram_id: string
           total_earned: number
+          total_earned_usdt: number
           total_withdrawn: number
+          total_withdrawn_usdt: number
           updated_at: string
         }
         Insert: {
           balance_inr?: number
+          balance_usdt?: number
           id?: string
           telegram_id: string
           total_earned?: number
+          total_earned_usdt?: number
           total_withdrawn?: number
+          total_withdrawn_usdt?: number
           updated_at?: string
         }
         Update: {
           balance_inr?: number
+          balance_usdt?: number
           id?: string
           telegram_id?: string
           total_earned?: number
+          total_earned_usdt?: number
           total_withdrawn?: number
+          total_withdrawn_usdt?: number
           updated_at?: string
         }
         Relationships: []
@@ -493,16 +502,22 @@ export type Database = {
       sell_settings: {
         Row: {
           id: number
+          min_topup_inr: number
+          min_topup_usdt: number
           min_withdrawal_inr: number
           updated_at: string
         }
         Insert: {
           id?: number
+          min_topup_inr?: number
+          min_topup_usdt?: number
           min_withdrawal_inr?: number
           updated_at?: string
         }
         Update: {
           id?: number
+          min_topup_inr?: number
+          min_topup_usdt?: number
           min_withdrawal_inr?: number
           updated_at?: string
         }
@@ -589,6 +604,87 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_topup_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string
+          proof_image_path: string | null
+          proof_text: string | null
+          resolved_at: string | null
+          source: string
+          status: string
+          telegram_id: string
+          username: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          currency: string
+          id?: string
+          payment_method: string
+          proof_image_path?: string | null
+          proof_text?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          telegram_id: string
+          username?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          proof_image_path?: string | null
+          proof_text?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          telegram_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          note: string | null
+          reference_id: string | null
+          telegram_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          telegram_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          telegram_id?: string
+          type?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           admin_notes: string | null
@@ -630,6 +726,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_wallet_balance: {
+        Args: {
+          _currency: string
+          _delta: number
+          _note?: string
+          _reference_id?: string
+          _telegram_id: string
+          _type: string
+        }
+        Returns: Json
+      }
       generate_customer_code: { Args: never; Returns: string }
     }
     Enums: {
