@@ -1,0 +1,13 @@
+# RIOX Accounts Pro
+
+> Premium virtual Telegram accounts for airdrop farming. Instant auto-delivery, multi-currency payments (INR + USDT), and a 100% working guarantee.
+
+RIOX Accounts Pro sells regular and aged virtual Telegram accounts across multiple countries. Customers can buy from the website or via the @airdro12pbot Telegram bot, top up a wallet for one-tap purchases, and pay with UPI or crypto (BTC / ETH / USDT TRC20). Live support is available in EN, HI, ES and AR.
+
+## Pages
+
+- [Home](/): Browse pricing, buy accounts, top up wallet, and view FAQ.
+
+## Optional
+
+- [Admin](/admin): Internal dashboard (not for public use).
