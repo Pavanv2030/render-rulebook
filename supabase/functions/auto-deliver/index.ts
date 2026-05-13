@@ -20,12 +20,33 @@ async function sendTelegramDocument(botToken: string, chatId: string, fileBlob: 
   return res.json();
 }
 
-async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+async function sendTelegramMessage(botToken: string, chatId: string, text: string): Promise<number | null> {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
   });
+  try {
+    const j = await res.json();
+    return j?.result?.message_id ?? null;
+  } catch { return null; }
+}
+
+async function editTelegramMessage(botToken: string, chatId: string, messageId: number, text: string) {
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: "Markdown" }),
+    });
+  } catch (e) { console.error("edit failed", e); }
+}
+
+function buildProgress(orderId: string, country: string, current: number, total: number) {
+  const pct = Math.floor((current / total) * 100);
+  const filled = Math.floor((current / total) * 10);
+  const bar = "■".repeat(filled) + "□".repeat(10 - filled);
+  return `⏳ | *Creating sessions in progress ...*\n\n- Country : ${country}\n- Quantity : ${total}\n\n- Order ID: ${orderId}\n${pct}% [${bar}] - (${current} / ${total})`;
 }
 
 Deno.serve(async (req) => {
