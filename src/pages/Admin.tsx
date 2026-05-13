@@ -50,7 +50,10 @@ interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; net
 
 interface UpiWallet { id: string; upi_id: string; display_name: string; qr_image_path: string; is_active: boolean; created_at: string; updated_at: string; }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "broadcast";
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "wallets" | "broadcast";
+
+interface TopupRow { id: string; telegram_id: string; username: string | null; amount: number; currency: string; payment_method: string; proof_text: string | null; source: string; status: string; created_at: string; admin_notes: string | null; }
+interface WalletTx { id: string; telegram_id: string; currency: string; amount: number; type: string; note: string | null; created_at: string; }
 
 const Admin = () => {
   const [password, setPassword] = useState("");
@@ -110,6 +113,15 @@ const Admin = () => {
   const [addingUpi, setAddingUpi] = useState(false);
   const [editingUpiId, setEditingUpiId] = useState<string | null>(null);
   const [editingUpiAddress, setEditingUpiAddress] = useState("");
+
+  // Wallets tab state
+  const [topups, setTopups] = useState<TopupRow[]>([]);
+  const [topupFilter, setTopupFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [topupBusyId, setTopupBusyId] = useState<string | null>(null);
+  const [adjustForm, setAdjustForm] = useState({ telegram_id: "", currency: "INR", delta: "", note: "" });
+  const [adjusting, setAdjusting] = useState(false);
+  const [walletLookup, setWalletLookup] = useState("");
+  const [walletDetail, setWalletDetail] = useState<{ wallet: any; transactions: WalletTx[] } | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -451,6 +463,7 @@ const Admin = () => {
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
     { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
     { key: "upi", label: "UPI", icon: <IndianRupee className="w-4 h-4" /> },
+    { key: "wallets", label: "Wallets", icon: <Wallet className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
