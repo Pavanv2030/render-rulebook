@@ -100,7 +100,7 @@ const WalletSection = ({ t }: Props) => {
                 <button onClick={() => setShowTopup(s => !s)} className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all">
                   <Plus className="w-4 h-4" /> Add Balance
                 </button>
-                <button onClick={refresh} className="px-4 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors">
+                <button onClick={refresh} aria-label="Refresh wallet" className="px-4 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors">
                   <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 </button>
               </div>
@@ -160,7 +160,7 @@ const WalletSection = ({ t }: Props) => {
               {/* Pending */}
               {data && data.pendingTopups.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-warning" /> Pending Approval</h4>
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-warning" /> Pending Approval</h3>
                   <div className="space-y-2">
                     {data.pendingTopups.map(p => (
                       <div key={p.id} className="flex justify-between items-center bg-warning/10 border border-warning/30 rounded-lg px-3 py-2 text-sm">
@@ -174,7 +174,7 @@ const WalletSection = ({ t }: Props) => {
 
               {/* Transactions */}
               <div>
-                <h4 className="text-sm font-semibold mb-2">Recent Transactions</h4>
+                <h3 className="text-sm font-semibold mb-2">Recent Transactions</h3>
                 {data?.transactions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">No transactions yet.</p>
                 ) : (

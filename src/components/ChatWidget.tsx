@@ -148,7 +148,7 @@ const ChatWidget = ({ t }: Props) => {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition-colors">
+              <button onClick={() => setIsOpen(false)} aria-label="Close support chat" className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
@@ -184,7 +184,7 @@ const ChatWidget = ({ t }: Props) => {
               <div className="flex gap-2">
                 <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("chat.placeholder")} disabled={isLoading}
                   className="flex-1 bg-secondary/50 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 disabled:opacity-50 transition-all" />
-                <button type="submit" disabled={!input.trim() || isLoading}
+                <button type="submit" disabled={!input.trim() || isLoading} aria-label="Send message"
                   className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)] transition-all">
                   <Send className="w-4 h-4" />
                 </button>

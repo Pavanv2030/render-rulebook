@@ -41,6 +41,7 @@ const HeroSection = ({ t }: Props) => {
               <span className="gradient-text">RIOX</span>
               <br />
               <span className="text-foreground">Accounts Pro</span>
+              <span className="sr-only"> — Premium Telegram accounts for airdrop farming</span>
             </h1>
           </div>
 
