@@ -1340,6 +1340,119 @@ const Admin = () => {
           </div>
         )}
 
+        {/* ==================== WALLETS TAB ==================== */}
+        {activeTab === "wallets" && (
+          <div className="space-y-6">
+            {/* Pending top-ups */}
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 className="font-semibold flex items-center gap-2"><Wallet className="w-5 h-5 text-primary" /> Wallet Top-up Requests</h3>
+                <div className="flex gap-1.5">
+                  {(["pending", "approved", "rejected", "all"] as const).map(s => (
+                    <button key={s} onClick={() => setTopupFilter(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium ${topupFilter === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                      {s}
+                    </button>
+                  ))}
+                  <button onClick={fetchTopups} className="p-1.5 rounded-lg bg-secondary"><RefreshCw className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+              {topups.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No top-ups in this view.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs text-muted-foreground border-b border-border">
+                      <tr><th className="py-2">User</th><th>Amount</th><th>Method</th><th>Proof</th><th>Source</th><th>When</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      {topups.map(t => (
+                        <tr key={t.id} className="border-b border-border/50">
+                          <td className="py-2 font-mono text-xs">{t.telegram_id}</td>
+                          <td className="font-semibold">{t.currency === "INR" ? "₹" : "$"}{Number(t.amount).toFixed(2)} {t.currency}</td>
+                          <td className="uppercase text-xs">{t.payment_method}</td>
+                          <td className="font-mono text-xs max-w-[160px] truncate">{t.proof_text || "-"}</td>
+                          <td className="text-xs">{t.source}</td>
+                          <td className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
+                          <td><span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[t.status === "approved" ? "delivered" : t.status === "rejected" ? "rejected" : "pending"]}`}>{t.status}</span></td>
+                          <td>
+                            {t.status === "pending" && (
+                              <div className="flex gap-1">
+                                <button disabled={topupBusyId === t.id} onClick={() => approveTopup(t.id)} className="px-2 py-1 rounded bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] text-xs disabled:opacity-50">Approve</button>
+                                <button disabled={topupBusyId === t.id} onClick={() => rejectTopup(t.id)} className="px-2 py-1 rounded bg-destructive/20 text-destructive text-xs disabled:opacity-50">Reject</button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Manual adjust */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-primary" /> Manual Credit / Debit</h3>
+                <div className="space-y-3">
+                  <input value={adjustForm.telegram_id} onChange={e => setAdjustForm({ ...adjustForm, telegram_id: e.target.value })} placeholder="telegram_id (e.g. 123456789 or web_xxx)"
+                    className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={adjustForm.currency} onChange={e => setAdjustForm({ ...adjustForm, currency: e.target.value })}
+                      className="bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="INR">INR</option><option value="USDT">USDT</option>
+                    </select>
+                    <input value={adjustForm.delta} onChange={e => setAdjustForm({ ...adjustForm, delta: e.target.value })} placeholder="amount (negative to debit)"
+                      className="bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <input value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} placeholder="Note (optional)"
+                    className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <button disabled={adjusting} onClick={adjustBalance} className="w-full bg-primary text-primary-foreground font-semibold py-2 rounded-lg disabled:opacity-50">
+                    {adjusting ? "Saving…" : "Apply Adjustment"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-primary" /> Lookup Wallet</h3>
+                <div className="flex gap-2 mb-4">
+                  <input value={walletLookup} onChange={e => setWalletLookup(e.target.value)} placeholder="telegram_id"
+                    className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <button onClick={lookupWallet} className="px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium">Find</button>
+                </div>
+                {walletDetail && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-card/50 rounded-lg p-3">
+                        <div className="text-[10px] text-muted-foreground">INR</div>
+                        <div className="font-bold">₹{Number(walletDetail.wallet?.balance_inr || 0).toFixed(2)}</div>
+                      </div>
+                      <div className="bg-card/50 rounded-lg p-3">
+                        <div className="text-[10px] text-muted-foreground">USDT</div>
+                        <div className="font-bold">${Number(walletDetail.wallet?.balance_usdt || 0).toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-1">
+                      {walletDetail.transactions.map(tx => (
+                        <div key={tx.id} className="flex justify-between text-xs bg-card/40 rounded px-2 py-1.5">
+                          <div>
+                            <div className="capitalize">{tx.type.replace(/_/g, " ")}</div>
+                            <div className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleString()}</div>
+                          </div>
+                          <span className={`font-mono ${Number(tx.amount) >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                            {Number(tx.amount) >= 0 ? "+" : ""}{tx.currency === "INR" ? "₹" : "$"}{Number(tx.amount).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ==================== BROADCAST TAB ==================== */}
         {activeTab === "broadcast" && (
           <div className="glass rounded-2xl p-6 max-w-2xl">
