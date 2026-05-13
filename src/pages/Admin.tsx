@@ -511,7 +511,7 @@ const Admin = () => {
 
   useEffect(() => { if (adminKey && activeTab === "wallets") fetchTopups(); }, [activeTab, fetchTopups, adminKey]);
 
-    { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
+  const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
     { key: "inventory", label: "Inventory", icon: <Database className="w-4 h-4" /> },
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
