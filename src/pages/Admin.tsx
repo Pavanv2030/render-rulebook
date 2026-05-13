@@ -50,7 +50,10 @@ interface CryptoWallet { id: string; coin_name: string; coin_symbol: string; net
 
 interface UpiWallet { id: string; upi_id: string; display_name: string; qr_image_path: string; is_active: boolean; created_at: string; updated_at: string; }
 
-type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "broadcast";
+type TabType = "dashboard" | "orders" | "inventory" | "customers" | "pricing" | "crypto" | "upi" | "wallets" | "broadcast";
+
+interface TopupRow { id: string; telegram_id: string; username: string | null; amount: number; currency: string; payment_method: string; proof_text: string | null; source: string; status: string; created_at: string; admin_notes: string | null; }
+interface WalletTx { id: string; telegram_id: string; currency: string; amount: number; type: string; note: string | null; created_at: string; }
 
 const Admin = () => {
   const [password, setPassword] = useState("");
@@ -110,6 +113,15 @@ const Admin = () => {
   const [addingUpi, setAddingUpi] = useState(false);
   const [editingUpiId, setEditingUpiId] = useState<string | null>(null);
   const [editingUpiAddress, setEditingUpiAddress] = useState("");
+
+  // Wallets tab state
+  const [topups, setTopups] = useState<TopupRow[]>([]);
+  const [topupFilter, setTopupFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [topupBusyId, setTopupBusyId] = useState<string | null>(null);
+  const [adjustForm, setAdjustForm] = useState({ telegram_id: "", currency: "INR", delta: "", note: "" });
+  const [adjusting, setAdjusting] = useState(false);
+  const [walletLookup, setWalletLookup] = useState("");
+  const [walletDetail, setWalletDetail] = useState<{ wallet: any; transactions: WalletTx[] } | null>(null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -443,14 +455,70 @@ const Admin = () => {
     } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
+  // ===== Wallets =====
+  const fetchTopups = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "list_topups", status: topupFilter }) });
+      if (result.error) throw new Error(result.error);
+      setTopups(result.topups || []);
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+  }, [adminKey, baseUrl, apiFetch, topupFilter]);
+
+  const approveTopup = async (id: string) => {
+    setTopupBusyId(id); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_topup", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Top-up approved"); fetchTopups();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setTopupBusyId(null); }
+  };
+
+  const rejectTopup = async (id: string) => {
+    const reason = prompt("Rejection reason (optional):") || "";
+    setTopupBusyId(id); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_topup", id, reason }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("Top-up rejected"); fetchTopups();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setTopupBusyId(null); }
+  };
+
+  const adjustBalance = async () => {
+    const d = Number(adjustForm.delta);
+    if (!adjustForm.telegram_id.trim() || !d) { setError("telegram_id and non-zero amount required"); return; }
+    setAdjusting(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "adjust_balance", telegram_id: adjustForm.telegram_id.trim(), currency: adjustForm.currency, delta: d, note: adjustForm.note }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Balance ${d > 0 ? "credited" : "debited"}`);
+      setAdjustForm({ telegram_id: "", currency: "INR", delta: "", note: "" });
+      if (walletLookup) lookupWallet();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setAdjusting(false); }
+  };
+
+  const lookupWallet = async () => {
+    if (!walletLookup.trim()) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "get_user_wallet", telegram_id: walletLookup.trim() }) });
+      if (result.error) throw new Error(result.error);
+      setWalletDetail({ wallet: result.wallet, transactions: result.transactions || [] });
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+  };
+
+  useEffect(() => { if (adminKey && activeTab === "wallets") fetchTopups(); }, [activeTab, fetchTopups, adminKey]);
+
   const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
-    { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
     { key: "inventory", label: "Inventory", icon: <Database className="w-4 h-4" /> },
     { key: "customers", label: "Customers", icon: <Users className="w-4 h-4" /> },
     { key: "pricing", label: "Pricing", icon: <DollarSign className="w-4 h-4" /> },
     { key: "crypto", label: "Crypto", icon: <Wallet className="w-4 h-4" /> },
     { key: "upi", label: "UPI", icon: <IndianRupee className="w-4 h-4" /> },
+    { key: "wallets", label: "Wallets", icon: <Wallet className="w-4 h-4" /> },
     { key: "broadcast", label: "Broadcast", icon: <Megaphone className="w-4 h-4" /> },
   ];
 
@@ -1265,6 +1333,119 @@ const Admin = () => {
                     <IndianRupee className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No UPI wallets configured</p>
                     <p className="text-xs mt-1">Add your first UPI ID to enable UPI payments</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== WALLETS TAB ==================== */}
+        {activeTab === "wallets" && (
+          <div className="space-y-6">
+            {/* Pending top-ups */}
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 className="font-semibold flex items-center gap-2"><Wallet className="w-5 h-5 text-primary" /> Wallet Top-up Requests</h3>
+                <div className="flex gap-1.5">
+                  {(["pending", "approved", "rejected", "all"] as const).map(s => (
+                    <button key={s} onClick={() => setTopupFilter(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium ${topupFilter === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                      {s}
+                    </button>
+                  ))}
+                  <button onClick={fetchTopups} className="p-1.5 rounded-lg bg-secondary"><RefreshCw className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+              {topups.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No top-ups in this view.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs text-muted-foreground border-b border-border">
+                      <tr><th className="py-2">User</th><th>Amount</th><th>Method</th><th>Proof</th><th>Source</th><th>When</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      {topups.map(t => (
+                        <tr key={t.id} className="border-b border-border/50">
+                          <td className="py-2 font-mono text-xs">{t.telegram_id}</td>
+                          <td className="font-semibold">{t.currency === "INR" ? "₹" : "$"}{Number(t.amount).toFixed(2)} {t.currency}</td>
+                          <td className="uppercase text-xs">{t.payment_method}</td>
+                          <td className="font-mono text-xs max-w-[160px] truncate">{t.proof_text || "-"}</td>
+                          <td className="text-xs">{t.source}</td>
+                          <td className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
+                          <td><span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[t.status === "approved" ? "delivered" : t.status === "rejected" ? "rejected" : "pending"]}`}>{t.status}</span></td>
+                          <td>
+                            {t.status === "pending" && (
+                              <div className="flex gap-1">
+                                <button disabled={topupBusyId === t.id} onClick={() => approveTopup(t.id)} className="px-2 py-1 rounded bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] text-xs disabled:opacity-50">Approve</button>
+                                <button disabled={topupBusyId === t.id} onClick={() => rejectTopup(t.id)} className="px-2 py-1 rounded bg-destructive/20 text-destructive text-xs disabled:opacity-50">Reject</button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Manual adjust */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-primary" /> Manual Credit / Debit</h3>
+                <div className="space-y-3">
+                  <input value={adjustForm.telegram_id} onChange={e => setAdjustForm({ ...adjustForm, telegram_id: e.target.value })} placeholder="telegram_id (e.g. 123456789 or web_xxx)"
+                    className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={adjustForm.currency} onChange={e => setAdjustForm({ ...adjustForm, currency: e.target.value })}
+                      className="bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="INR">INR</option><option value="USDT">USDT</option>
+                    </select>
+                    <input value={adjustForm.delta} onChange={e => setAdjustForm({ ...adjustForm, delta: e.target.value })} placeholder="amount (negative to debit)"
+                      className="bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <input value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} placeholder="Note (optional)"
+                    className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <button disabled={adjusting} onClick={adjustBalance} className="w-full bg-primary text-primary-foreground font-semibold py-2 rounded-lg disabled:opacity-50">
+                    {adjusting ? "Saving…" : "Apply Adjustment"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Search className="w-4 h-4 text-primary" /> Lookup Wallet</h3>
+                <div className="flex gap-2 mb-4">
+                  <input value={walletLookup} onChange={e => setWalletLookup(e.target.value)} placeholder="telegram_id"
+                    className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm" />
+                  <button onClick={lookupWallet} className="px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium">Find</button>
+                </div>
+                {walletDetail && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-card/50 rounded-lg p-3">
+                        <div className="text-[10px] text-muted-foreground">INR</div>
+                        <div className="font-bold">₹{Number(walletDetail.wallet?.balance_inr || 0).toFixed(2)}</div>
+                      </div>
+                      <div className="bg-card/50 rounded-lg p-3">
+                        <div className="text-[10px] text-muted-foreground">USDT</div>
+                        <div className="font-bold">${Number(walletDetail.wallet?.balance_usdt || 0).toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-1">
+                      {walletDetail.transactions.map(tx => (
+                        <div key={tx.id} className="flex justify-between text-xs bg-card/40 rounded px-2 py-1.5">
+                          <div>
+                            <div className="capitalize">{tx.type.replace(/_/g, " ")}</div>
+                            <div className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleString()}</div>
+                          </div>
+                          <span className={`font-mono ${Number(tx.amount) >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                            {Number(tx.amount) >= 0 ? "+" : ""}{tx.currency === "INR" ? "₹" : "$"}{Number(tx.amount).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
