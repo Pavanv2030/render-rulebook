@@ -1,4 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
+
+const AdminHelmet = () => (
+  <Helmet>
+    <title>Admin Dashboard — RIOX Accounts Pro</title>
+    <meta name="description" content="Internal admin dashboard for managing orders, inventory, pricing, customers, wallets, and broadcasts at RIOX Accounts Pro." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="canonical" href="https://render-rulebook.lovable.app/admin" />
+  </Helmet>
+);
 import {
   Package, Upload, Download, RefreshCw, Shield, LogOut, CheckCircle, Clock, XCircle,
   Search, Database, BarChart3, Globe, ShieldCheck, Ban, TrendingUp, IndianRupee,
@@ -526,6 +536,7 @@ const Admin = () => {
   if (!isAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <AdminHelmet />
         <div className="glass rounded-2xl p-8 w-full max-w-sm neon-border">
           <div className="flex items-center justify-center gap-3 mb-6">
             <Shield className="w-8 h-8 text-primary" />
@@ -544,6 +555,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
+      <AdminHelmet />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
