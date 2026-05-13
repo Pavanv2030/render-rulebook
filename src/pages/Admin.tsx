@@ -455,7 +455,62 @@ const Admin = () => {
     } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
   };
 
-  const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
+  // ===== Wallets =====
+  const fetchTopups = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "list_topups", status: topupFilter }) });
+      if (result.error) throw new Error(result.error);
+      setTopups(result.topups || []);
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+  }, [adminKey, baseUrl, apiFetch, topupFilter]);
+
+  const approveTopup = async (id: string) => {
+    setTopupBusyId(id); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_topup", id }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("✅ Top-up approved"); fetchTopups();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setTopupBusyId(null); }
+  };
+
+  const rejectTopup = async (id: string) => {
+    const reason = prompt("Rejection reason (optional):") || "";
+    setTopupBusyId(id); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_topup", id, reason }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg("Top-up rejected"); fetchTopups();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setTopupBusyId(null); }
+  };
+
+  const adjustBalance = async () => {
+    const d = Number(adjustForm.delta);
+    if (!adjustForm.telegram_id.trim() || !d) { setError("telegram_id and non-zero amount required"); return; }
+    setAdjusting(true); setError(""); setSuccessMsg("");
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "adjust_balance", telegram_id: adjustForm.telegram_id.trim(), currency: adjustForm.currency, delta: d, note: adjustForm.note }) });
+      if (result.error) throw new Error(result.error);
+      setSuccessMsg(`✅ Balance ${d > 0 ? "credited" : "debited"}`);
+      setAdjustForm({ telegram_id: "", currency: "INR", delta: "", note: "" });
+      if (walletLookup) lookupWallet();
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+    finally { setAdjusting(false); }
+  };
+
+  const lookupWallet = async () => {
+    if (!walletLookup.trim()) return;
+    try {
+      const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "get_user_wallet", telegram_id: walletLookup.trim() }) });
+      if (result.error) throw new Error(result.error);
+      setWalletDetail({ wallet: result.wallet, transactions: result.transactions || [] });
+    } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); }
+  };
+
+  useEffect(() => { if (adminKey && activeTab === "wallets") fetchTopups(); }, [activeTab, fetchTopups, adminKey]);
+
     { key: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
     { key: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
     { key: "inventory", label: "Inventory", icon: <Database className="w-4 h-4" /> },
