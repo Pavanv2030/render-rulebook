@@ -751,23 +751,8 @@ Deno.serve(async (req) => {
 
       await sendMsg(BOT_TOKEN, chatId,
         `${country.flag} *${country.name}*\n\n` +
-        `${stepIndicator(2, lang)}\n\n` +
-        `*${t("regular", lang)}*\n━━━━━━━━━━━━━━━\n` +
-        `\n` +
-        `💰 *${SYMBOL}${pricing.regular}* ${t("per_account", lang)}\n` +
-        `📊 ${stockBadge(stock.regular, lang)}\n` +
-        `✓ ${t("fresh_accounts", lang)}\n` +
-        `✓ ${t("ready_to_use", lang)}                           ${regNote}\n` +
-        `\n` +
-        `\n*${t("aged", lang)}*\n━━━━━━━━━━━━━━━\n` +
-        `\n` +
-        `💰 *${SYMBOL}${pricing.aged}* ${t("per_account", lang)}\n` +
-        `📊 ${stockBadge(stock.aged, lang)}\n` +
-        `✓ ${t("months_old", lang)}\n` +
-        `✓ ${t("higher_trust", lang)}\n` +
-        `✓ ${t("best_premium", lang)}          ${agedNote}\n` +
-        `\n` +
-        `━━━━━━━━━━━━━━━\n\n` +
+        `${t("regular", lang)} — *${SYMBOL}${pricing.regular}* · ${stockBadge(stock.regular, lang)}${regNote}\n` +
+        `${t("aged", lang)} — *${SYMBOL}${pricing.aged}* · ${stockBadge(stock.aged, lang)}${agedNote}\n\n` +
         t("select_type", lang),
         { inline_keyboard: [
           ...(stock.regular > 0 ? [[{ text: `📦 Regular — ${SYMBOL}${pricing.regular}/acc`, callback_data: "type_regular" }]] : [[{ text: t("notify_regular", lang), callback_data: `alert_stock_${code}_regular` }]]),
