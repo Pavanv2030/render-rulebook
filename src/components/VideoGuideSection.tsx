@@ -42,7 +42,7 @@ const VideoGuideSection = ({ t }: Props) => {
               <div className="relative aspect-video">
                 <video ref={videoRef} src={promoVideo} className="w-full h-full object-cover" loop muted playsInline onEnded={() => setIsPlaying(false)} />
                 {!isPlaying && (
-                  <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-sm transition-all group-hover:bg-background/30">
+                  <button onClick={handlePlay} aria-label="Play promo video" className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-sm transition-all group-hover:bg-background/30">
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-[0_0_40px_hsl(var(--primary)/0.5)]">
                       <Play className="w-8 h-8 text-primary-foreground ml-1" />
                     </motion.div>

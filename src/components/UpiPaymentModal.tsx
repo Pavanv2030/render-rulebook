@@ -62,7 +62,7 @@ const UpiPaymentModal = ({ isOpen, onClose, amount, orderId, onPaid }: UpiPaymen
         animate={{ opacity: 1, scale: 1 }}
         className="glass neon-border rounded-2xl p-6 max-w-sm w-full relative"
       >
-        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+        <button onClick={onClose} aria-label="Close payment modal" className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
           <X className="w-5 h-5" />
         </button>
 

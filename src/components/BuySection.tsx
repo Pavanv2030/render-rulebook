@@ -258,6 +258,7 @@ const BuySection = ({ t }: Props) => {
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  aria-label="Decrease quantity"
                   className="w-10 h-10 rounded-lg border border-border bg-card/50 flex items-center justify-center hover:bg-card transition-colors text-foreground"
                 >
                   <Minus className="w-4 h-4" />
@@ -267,6 +268,7 @@ const BuySection = ({ t }: Props) => {
                   min={1}
                   max={Math.min(100, availableStock || 100)}
                   value={quantity}
+                  aria-label="Quantity"
                   onChange={e => {
                     const v = parseInt(e.target.value) || 1;
                     setQuantity(Math.min(Math.max(1, v), Math.min(100, availableStock || 100)));
@@ -275,6 +277,7 @@ const BuySection = ({ t }: Props) => {
                 />
                 <button
                   onClick={() => setQuantity(Math.min(Math.min(100, availableStock || 100), quantity + 1))}
+                  aria-label="Increase quantity"
                   className="w-10 h-10 rounded-lg border border-border bg-card/50 flex items-center justify-center hover:bg-card transition-colors text-foreground"
                 >
                   <Plus className="w-4 h-4" />

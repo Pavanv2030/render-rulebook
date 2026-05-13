@@ -13,6 +13,8 @@ const LanguageSwitcher = ({ lang, onChange }: Props) => {
           <button
             key={l.code}
             onClick={() => onChange(l.code)}
+            aria-label={`Switch language to ${l.label}`}
+            aria-pressed={lang === l.code}
             className={`px-3 py-2 text-sm font-medium transition-all ${
               lang === l.code
                 ? "bg-primary text-primary-foreground"
