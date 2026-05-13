@@ -557,18 +557,15 @@ Deno.serve(async (req) => {
 
       const { data: meCust } = await supabase.from("customers").select("customer_code").eq("telegram_id", chatId).maybeSingle();
       const meCode = meCust?.customer_code || "";
+      const { data: meWallet } = await supabase.from("customer_wallets").select("balance_inr,balance_usdt").eq("telegram_id", chatId).maybeSingle();
+      const balInr = Number(meWallet?.balance_inr || 0).toFixed(2);
+      const balUsdt = Number(meWallet?.balance_usdt || 0).toFixed(2);
 
       await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
-        `Hey *${firstName}*! 👋 Welcome to\n\n` +
-        `*${t("welcome_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
-        `${t("welcome_msg", lang)}\n\n` +
-        (meCode ? `🪪 *Your Customer ID:* \`${meCode}\`\n\n` : ``) +
-        `┌──── ✨ *Why Us?* ────┐\n` +
-        `│                                                     │\n` +
-        `│  ${t("welcome_stats", lang).split("\n").join("\n│  ")}\n` +
-        `│                                                     │\n` +
-        `└─────────────────────┘\n\n` +
-        `${stepIndicator(1, lang)}\n\n` +
+        `Hey *${firstName}*! 👋\n` +
+        `_Premium Telegram accounts — instant delivery._\n\n` +
+        (meCode ? `🪪 *ID:* \`${meCode}\`\n` : ``) +
+        `💼 *Balance:* ₹${balInr}  •  $${balUsdt}\n\n` +
         t("pick_country", lang),
         { inline_keyboard: allRows }, lang);
 
