@@ -854,6 +854,57 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // 💼 Pay from wallet balance
+    if (input.startsWith("pay_wallet_")) {
+      const orderId = input.replace("pay_wallet_", "").toUpperCase();
+      const { data: order } = await supabase.from("orders").select("*").eq("order_id", orderId).maybeSingle();
+      if (!order || order.customer_id !== chatId) {
+        await sendMsg(BOT_TOKEN, chatId, "❌ Order not found.", undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      if (order.status !== "pending") {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Order is already *${order.status}*.`, undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      const cur = (order.currency || "INR").toUpperCase();
+      const { data: w } = await supabase.from("customer_wallets").select("balance_inr, balance_usdt").eq("telegram_id", chatId).maybeSingle();
+      const bal = cur === "INR" ? Number(w?.balance_inr || 0) : Number(w?.balance_usdt || 0);
+      const sym = cur === "INR" ? "₹" : "$";
+      if (bal < Number(order.amount)) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `❌ *Insufficient wallet balance*\n\nBalance: *${sym}${bal.toFixed(2)}*\nNeeded: *${sym}${Number(order.amount).toFixed(2)}*\n\nTap ➕ Add Balance or pay another way.`,
+          { inline_keyboard: [
+            [{ text: "➕ Add Balance", callback_data: "addbalance" }],
+            [{ text: "💳 UPI", callback_data: `pay_upi_${orderId}` }, { text: "₿ Crypto", callback_data: `pay_crypto_${orderId}` }],
+            [{ text: "❌ Cancel", callback_data: "cancel" }],
+          ]}, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+        _telegram_id: chatId, _currency: cur, _delta: -Number(order.amount),
+        _type: "order_payment", _reference_id: orderId, _note: `Order ${orderId}`,
+      });
+      if (rpcErr) {
+        await sendMsg(BOT_TOKEN, chatId, `❌ Payment failed: ${rpcErr.message}`, undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      await supabase.from("orders").update({ status: "approved", payment_method: "Wallet" }).eq("order_id", orderId);
+      await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+      await sendMsg(BOT_TOKEN, chatId,
+        `✅ *Paid from Wallet!*\n━━━━━━━━━━━━━━━\n\n🆔 \`${orderId}\`\n💼 -${sym}${Number(order.amount).toFixed(2)}\n\n⏳ Preparing your accounts for delivery...`,
+        { inline_keyboard: [[{ text: "📊 Track Order", callback_data: "check_status" }, { text: "💵 Wallet", callback_data: "wallet" }]] }, lang);
+      // Trigger auto-deliver
+      const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}) },
+          body: JSON.stringify({ orderId }),
+        });
+      } catch (e) { console.error("auto-deliver failed:", e); }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // ════════════════════════════════════════════
     // ✅ Payment Confirmation
     // ════════════════════════════════════════════
