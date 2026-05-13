@@ -72,6 +72,30 @@ export async function handleSellInput(opts: {
     return true;
   }
 
+  // ---- Top-up flow ----
+  if (input === "addbalance" || input === "/addbalance" || input === "topup" || input === "/topup") {
+    await sendMsg(botToken, chatId,
+      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nSelect currency to top up:`,
+      { inline_keyboard: [
+        [{ text: "💳 INR (UPI)", callback_data: "topup_inr" }, { text: "₿ USDT (Crypto)", callback_data: "topup_usdt" }],
+        [{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🏠 Menu", callback_data: "home" }],
+      ]});
+    return true;
+  }
+
+  if (input === "topup_inr" || input === "topup_usdt") {
+    const currency = input === "topup_inr" ? "INR" : "USDT";
+    const method = input === "topup_inr" ? "upi" : "crypto";
+    const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr, min_topup_usdt").eq("id", 1).maybeSingle();
+    const min = currency === "INR" ? Number(settings?.min_topup_inr ?? 50) : Number(settings?.min_topup_usdt ?? 2);
+    const sym = currency === "INR" ? "₹" : "$";
+    await setSellState(supabase, chatId, { state: `awaiting_topup_amount_${currency}_${method}`, phone_number: null, withdrawal_method: null });
+    await sendMsg(botToken, chatId,
+      `➕ *Add ${currency} Balance*\n━━━━━━━━━━━━━━━\n\n*How much do you want to add?*\nMin: *${sym}${min}*\n\nType the amount (e.g. \`${currency === "INR" ? "500" : "10"}\`):`,
+      { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] });
+    return true;
+  }
+
   // ---- Country pick: sell_country_<CODE> ----
   if (input.startsWith("sell_country_")) {
     const code = input.replace("sell_country_", "").toUpperCase();
@@ -129,6 +153,12 @@ export async function handleSellInput(opts: {
     }
     if (st.state === "awaiting_withdrawal_amount") {
       return await handleWithdrawalAmount(supabase, botToken, chatId, rawText.trim(), st);
+    }
+    if (typeof st.state === "string" && st.state.startsWith("awaiting_topup_amount_")) {
+      return await handleTopupAmount(supabase, botToken, chatId, username, rawText.trim(), st);
+    }
+    if (typeof st.state === "string" && st.state.startsWith("awaiting_topup_proof_")) {
+      return await handleTopupProof(supabase, botToken, chatId, username, rawText.trim(), st);
     }
   }
 
@@ -387,31 +417,125 @@ async function finalizeSubmission(supabase: any, botToken: string, chatId: strin
 async function showWallet(supabase: any, botToken: string, chatId: string) {
   const wallet = await getOrCreateWallet(supabase, chatId);
   const settings = await getSettings(supabase);
-  const { data: subs } = await supabase.from("account_submissions")
-    .select("phone_number, country_code, service, price_inr, status, created_at")
-    .eq("seller_telegram_id", chatId).order("created_at", { ascending: false }).limit(5);
+  const { data: tx } = await supabase.from("wallet_transactions")
+    .select("*").eq("telegram_id", chatId).order("created_at", { ascending: false }).limit(8);
+  const { data: pending } = await supabase.from("wallet_topup_requests")
+    .select("amount, currency, payment_method, created_at").eq("telegram_id", chatId).eq("status", "pending");
 
   let msg = `💵 *MY WALLET*\n━━━━━━━━━━━━━━━\n\n` +
-    `💰 Balance:        *${SYMBOL}${Number(wallet.balance_inr).toFixed(2)}*\n` +
-    `📈 Total Earned:   ${SYMBOL}${Number(wallet.total_earned).toFixed(2)}\n` +
+    `💰 INR Balance:  *${SYMBOL}${Number(wallet.balance_inr).toFixed(2)}*\n` +
+    `💲 USDT Balance: *$${Number(wallet.balance_usdt || 0).toFixed(2)}*\n\n` +
+    `📈 Total Earned: ${SYMBOL}${Number(wallet.total_earned).toFixed(2)}\n` +
     `📤 Total Withdrawn: ${SYMBOL}${Number(wallet.total_withdrawn).toFixed(2)}\n\n` +
-    `_Min withdrawal: ${SYMBOL}${Number(settings.min_withdrawal_inr).toFixed(0)}_\n\n`;
+    `_Min withdrawal: ${SYMBOL}${Number(settings.min_withdrawal_inr).toFixed(0)}_\n` +
+    `_Min top-up: ${SYMBOL}${Number(settings.min_topup_inr ?? 50)} / $${Number(settings.min_topup_usdt ?? 2)}_\n\n`;
 
-  if (subs && subs.length) {
-    msg += `*Recent submissions:*\n`;
-    for (const s of subs) {
-      msg += `• \`${s.phone_number}\` ${s.country_code}/${s.service} — ${SYMBOL}${Number(s.price_inr)} _(${s.status})_\n`;
+  if (pending && pending.length) {
+    msg += `⏳ *Pending top-ups:*\n`;
+    for (const p of pending) msg += `• ${p.currency === "INR" ? SYMBOL : "$"}${Number(p.amount).toFixed(2)} ${p.currency} (${p.payment_method})\n`;
+    msg += `\n`;
+  }
+
+  if (tx && tx.length) {
+    msg += `*Recent transactions:*\n`;
+    for (const r of tx) {
+      const sym = r.currency === "INR" ? SYMBOL : "$";
+      const sign = Number(r.amount) >= 0 ? "+" : "";
+      msg += `• ${sign}${sym}${Number(r.amount).toFixed(2)} _(${r.type})_\n`;
     }
   } else {
-    msg += `_No submissions yet._\n`;
+    msg += `_No transactions yet._\n`;
   }
 
   await sendMsg(botToken, chatId, msg, {
     inline_keyboard: [
-      [{ text: "💰 Sell Account", callback_data: "sell_menu" }, { text: "📤 Withdraw", callback_data: "withdraw" }],
-      [{ text: "🏠 Menu", callback_data: "home" }],
+      [{ text: "➕ Add Balance", callback_data: "addbalance" }, { text: "📤 Withdraw", callback_data: "withdraw" }],
+      [{ text: "💰 Sell Account", callback_data: "sell_menu" }, { text: "🏠 Menu", callback_data: "home" }],
     ],
   });
+}
+
+// ─── Top-up handlers ───
+async function handleTopupAmount(supabase: any, botToken: string, chatId: string, username: string, raw: string, st: any): Promise<boolean> {
+  const parts = String(st.state).split("_"); // awaiting_topup_amount_<CUR>_<METHOD>
+  const currency = parts[3];
+  const method = parts[4];
+  const amount = parseFloat(raw);
+  const settings = await getSettings(supabase);
+  const min = currency === "INR" ? Number(settings.min_topup_inr ?? 50) : Number(settings.min_topup_usdt ?? 2);
+  const sym = currency === "INR" ? SYMBOL : "$";
+  if (!isFinite(amount) || amount <= 0) {
+    await sendMsg(botToken, chatId, `⚠️ Invalid amount. Type a number like \`${currency === "INR" ? "500" : "10"}\`:`);
+    return true;
+  }
+  if (amount < min) {
+    await sendMsg(botToken, chatId, `⚠️ Minimum top-up is *${sym}${min}*. Try again:`);
+    return true;
+  }
+
+  // Show payment instructions
+  let payInfo = "";
+  if (method === "upi") {
+    const { data: upi } = await supabase.from("upi_wallets").select("upi_id, display_name").eq("is_active", true).limit(1);
+    const id = upi?.[0]?.upi_id || "venkat342@fam";
+    payInfo = `📱 *UPI ID:* \`${id}\`\n${upi?.[0]?.display_name ? `👤 ${upi[0].display_name}\n` : ""}`;
+  } else {
+    const { data: ws } = await supabase.from("crypto_wallets").select("coin_symbol, network, wallet_address").eq("is_active", true);
+    if (ws && ws.length) {
+      payInfo = ws.map((w: any) => `*${w.coin_symbol}*${w.network ? ` (${w.network})` : ""}\n\`${w.wallet_address}\``).join("\n\n") + "\n";
+    } else {
+      payInfo = `_No crypto wallets configured. Contact support._\n`;
+    }
+  }
+
+  await setSellState(supabase, chatId, { state: `awaiting_topup_proof_${currency}_${method}_${amount}` });
+  await sendMsg(botToken, chatId,
+    `💳 *Pay ${sym}${amount.toFixed(2)} ${currency}*\n━━━━━━━━━━━━━━━\n\n${payInfo}\n` +
+    `After paying, *reply with the UTR / TxID* (transaction reference) here so admin can verify and credit your wallet.`,
+    { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] });
+  return true;
+}
+
+async function handleTopupProof(supabase: any, botToken: string, chatId: string, username: string, raw: string, st: any): Promise<boolean> {
+  const parts = String(st.state).split("_"); // awaiting_topup_proof_<CUR>_<METHOD>_<AMOUNT>
+  const currency = parts[3];
+  const method = parts[4];
+  const amount = parseFloat(parts[5] || "0");
+  if (!amount) {
+    await sendMsg(botToken, chatId, "❌ Session expired. Please start again.", { inline_keyboard: [[{ text: "💵 Wallet", callback_data: "wallet" }]] });
+    return true;
+  }
+  const proof = raw.slice(0, 200);
+  const { data: rq } = await supabase.from("wallet_topup_requests").insert({
+    telegram_id: chatId, username, amount, currency, payment_method: method,
+    proof_text: proof, source: "bot",
+  }).select().single();
+  await setSellState(supabase, chatId, { state: "idle" });
+
+  const sym = currency === "INR" ? SYMBOL : "$";
+  await sendMsg(botToken, chatId,
+    `✅ *Top-up Submitted!*\n━━━━━━━━━━━━━━━\n\n` +
+    `🆔 \`${rq.id.slice(0, 8)}\`\n💰 *${sym}${amount.toFixed(2)} ${currency}*\n💳 ${method.toUpperCase()}\n🔖 \`${proof}\`\n\n` +
+    `⏱️ Admin will verify within 24h.\nYou'll be notified once approved.`,
+    { inline_keyboard: [[{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🏠 Menu", callback_data: "home" }]] });
+
+  const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+  const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+  if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+    await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: ADMIN_CHAT_ID,
+        text: `💰 *NEW WALLET TOP-UP*\n\n🆔 \`${rq.id}\`\n👤 @${username || "—"} (\`${chatId}\`)\n💵 ${sym}${amount.toFixed(2)} ${currency}\n💳 ${method.toUpperCase()}\n🔖 \`${proof}\``,
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({ inline_keyboard: [[
+          { text: "✅ Approve", callback_data: `topup_approve_${rq.id}` },
+          { text: "❌ Reject", callback_data: `topup_reject_${rq.id}` },
+        ]]}),
+      }),
+    });
+  }
+  return true;
 }
 
 // ─── Withdrawal ───

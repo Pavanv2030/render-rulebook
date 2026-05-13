@@ -513,6 +513,86 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true, delivered, failed, errors }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // ========== WALLET / TOP-UPS ==========
+      if (body.action === "list_topups") {
+        const status = (body.status as string) || "pending";
+        let q = supabase.from("wallet_topup_requests").select("*").order("created_at", { ascending: false }).limit(500);
+        if (status !== "all") q = q.eq("status", status);
+        const { data, error } = await q;
+        if (error) throw error;
+        return new Response(JSON.stringify({ topups: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "approve_topup") {
+        const { id, note } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { data: tu, error: tuErr } = await supabase.from("wallet_topup_requests").select("*").eq("id", id).single();
+        if (tuErr || !tu) throw tuErr || new Error("Top-up not found");
+        if (tu.status !== "pending") {
+          return new Response(JSON.stringify({ error: `Already ${tu.status}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+          _telegram_id: tu.telegram_id, _currency: tu.currency, _delta: Number(tu.amount),
+          _type: "topup", _reference_id: tu.id, _note: note || `Top-up ${tu.payment_method}`,
+        });
+        if (rpcErr) throw rpcErr;
+        await supabase.from("wallet_topup_requests").update({ status: "approved", admin_notes: note || null, resolved_at: new Date().toISOString() }).eq("id", id);
+        if (BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
+          await sendTelegramMessage(BOT_TOKEN, tu.telegram_id,
+            `✅ *Top-up Approved!*\n\n💰 +${tu.currency === "INR" ? "₹" : "$"}${Number(tu.amount).toFixed(2)} ${tu.currency} added to your wallet.\n\nUse /wallet to view balance.`);
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "reject_topup") {
+        const { id, reason } = body;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { data: tu } = await supabase.from("wallet_topup_requests").select("*").eq("id", id).single();
+        await supabase.from("wallet_topup_requests").update({ status: "rejected", admin_notes: reason || null, resolved_at: new Date().toISOString() }).eq("id", id);
+        if (tu && BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
+          await sendTelegramMessage(BOT_TOKEN, tu.telegram_id,
+            `❌ *Top-up Rejected*\n\n${tu.currency === "INR" ? "₹" : "$"}${Number(tu.amount).toFixed(2)} ${tu.currency}${reason ? `\n\n📝 ${reason}` : ""}\n\nContact support if you believe this is a mistake.`);
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "adjust_balance") {
+        const { telegram_id, currency, delta, note } = body;
+        if (!telegram_id || !currency || delta === undefined) {
+          return new Response(JSON.stringify({ error: "telegram_id, currency, delta required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const d = Number(delta);
+        if (!isFinite(d) || d === 0) {
+          return new Response(JSON.stringify({ error: "Invalid delta" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+          _telegram_id: telegram_id, _currency: currency, _delta: d,
+          _type: d > 0 ? "admin_credit" : "admin_debit", _reference_id: null, _note: note || "Manual adjustment by admin",
+        });
+        if (rpcErr) throw rpcErr;
+        if (BOT_TOKEN && !telegram_id.startsWith("web_")) {
+          const sym = currency === "INR" ? "₹" : "$";
+          await sendTelegramMessage(BOT_TOKEN, telegram_id,
+            `${d > 0 ? "💰 *Wallet Credited*" : "💸 *Wallet Debited*"}\n\n${d > 0 ? "+" : ""}${sym}${Math.abs(d).toFixed(2)} ${currency}\n${note ? `📝 ${note}\n\n` : ""}Use /wallet to view balance.`);
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "get_user_wallet") {
+        const { telegram_id } = body;
+        if (!telegram_id) return new Response(JSON.stringify({ error: "telegram_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { data: w } = await supabase.from("customer_wallets").select("*").eq("telegram_id", telegram_id).maybeSingle();
+        const { data: tx } = await supabase.from("wallet_transactions").select("*").eq("telegram_id", telegram_id).order("created_at", { ascending: false }).limit(50);
+        return new Response(JSON.stringify({ wallet: w || { balance_inr: 0, balance_usdt: 0 }, transactions: tx || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (body.action === "search_user") {
+        const { q } = body;
+        if (!q) return new Response(JSON.stringify({ users: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { data } = await supabase.from("customers").select("telegram_id, customer_code, username, first_name").or(`telegram_id.ilike.%${q}%,customer_code.ilike.%${q}%,username.ilike.%${q}%`).limit(20);
+        return new Response(JSON.stringify({ users: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       if (body.action === "bulk_reject") {
         const { orderIds, reason } = body;
         if (!orderIds || !Array.isArray(orderIds)) return new Response(JSON.stringify({ error: "orderIds array required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

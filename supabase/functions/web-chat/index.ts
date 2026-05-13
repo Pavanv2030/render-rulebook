@@ -20,13 +20,94 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { message, sessionId } = await req.json();
+    const body = await req.json();
+    const { message, sessionId } = body;
     if (!message || !sessionId) {
       return new Response(JSON.stringify({ error: "message and sessionId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const chatId = `web_${sessionId}`;
-    const input = message.toLowerCase().trim();
+    const input = String(message).toLowerCase().trim();
+
+    // ========== WALLET ACTIONS (web) ==========
+    if (input === "__get_wallet__") {
+      const { data: w } = await supabase.from("customer_wallets").select("balance_inr, balance_usdt").eq("telegram_id", chatId).maybeSingle();
+      const { data: tx } = await supabase.from("wallet_transactions").select("*").eq("telegram_id", chatId).order("created_at", { ascending: false }).limit(10);
+      const { data: pending } = await supabase.from("wallet_topup_requests").select("*").eq("telegram_id", chatId).eq("status", "pending").order("created_at", { ascending: false });
+      const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr, min_topup_usdt").eq("id", 1).maybeSingle();
+      const { data: upi } = await supabase.from("upi_wallets").select("upi_id, display_name").eq("is_active", true).limit(1);
+      const { data: crypto } = await supabase.from("crypto_wallets").select("coin_symbol, coin_name, network, wallet_address").eq("is_active", true);
+      return new Response(JSON.stringify({
+        wallet: w || { balance_inr: 0, balance_usdt: 0 },
+        transactions: tx || [],
+        pendingTopups: pending || [],
+        minTopupInr: Number(settings?.min_topup_inr ?? 50),
+        minTopupUsdt: Number(settings?.min_topup_usdt ?? 2),
+        upi: upi?.[0] || null,
+        crypto: crypto || [],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (input === "__create_topup__") {
+      const { amount, currency, payment_method, proof_text } = body;
+      const amt = Number(amount);
+      if (!isFinite(amt) || amt <= 0 || !["INR", "USDT"].includes(currency) || !["upi", "crypto"].includes(payment_method)) {
+        return new Response(JSON.stringify({ error: "Invalid input" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr, min_topup_usdt").eq("id", 1).maybeSingle();
+      const min = currency === "INR" ? Number(settings?.min_topup_inr ?? 50) : Number(settings?.min_topup_usdt ?? 2);
+      if (amt < min) {
+        return new Response(JSON.stringify({ error: `Minimum ${currency === "INR" ? "₹" : "$"}${min}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await supabase.from("customers").upsert({ telegram_id: chatId, username: "web_user", first_name: "Web Visitor" }, { onConflict: "telegram_id" });
+      const { data: rq } = await supabase.from("wallet_topup_requests").insert({
+        telegram_id: chatId, username: "web_user", amount: amt, currency, payment_method,
+        proof_text: proof_text || null, source: "web",
+      }).select().single();
+
+      const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+      const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID && rq) {
+        const sym = currency === "INR" ? "₹" : "$";
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID,
+            text: `💰 *NEW WALLET TOP-UP (Web)*\n\n👤 \`${chatId}\`\n💵 ${sym}${amt.toFixed(2)} ${currency}\n💳 ${payment_method.toUpperCase()}\n${proof_text ? `🔖 \`${proof_text}\`\n` : ""}\nReview in admin panel.`,
+            parse_mode: "Markdown",
+            reply_markup: JSON.stringify({ inline_keyboard: [[
+              { text: "✅ Approve", callback_data: `topup_approve_${rq.id}` },
+              { text: "❌ Reject", callback_data: `topup_reject_${rq.id}` },
+            ]]}),
+          }),
+        });
+      }
+      return new Response(JSON.stringify({ success: true, id: rq?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (input === "__pay_with_balance__") {
+      const { orderId } = body;
+      if (!orderId) return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: order } = await supabase.from("orders").select("*").eq("order_id", orderId).eq("customer_id", chatId).maybeSingle();
+      if (!order) return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (order.status !== "pending") return new Response(JSON.stringify({ error: `Order is ${order.status}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const currency = (order.currency || "INR").toUpperCase();
+      const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+        _telegram_id: chatId, _currency: currency, _delta: -Number(order.amount),
+        _type: "order_payment", _reference_id: orderId, _note: `Order ${orderId}`,
+      });
+      if (rpcErr) return new Response(JSON.stringify({ error: rpcErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("orders").update({ status: "approved", payment_method: "wallet" }).eq("order_id", orderId);
+      const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}) },
+          body: JSON.stringify({ orderId }),
+        });
+      } catch (e) { console.error("auto-deliver failed:", e); }
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Get or create conversation state
     let { data: state } = await supabase

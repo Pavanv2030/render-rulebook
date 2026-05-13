@@ -1222,6 +1222,70 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // ==================== Wallet Top-up handlers ====================
+    if (callbackData.startsWith("topup_approve_") || callbackData.startsWith("topup_reject_")) {
+      const isApprove = callbackData.startsWith("topup_approve_");
+      const id = callbackData.replace(isApprove ? "topup_approve_" : "topup_reject_", "");
+      const { data: tu } = await supabase.from("wallet_topup_requests").select("*").eq("id", id).maybeSingle();
+      if (!tu) { await sendMsg(BOT_TOKEN, chatId, "❌ Top-up not found."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      if (tu.status !== "pending") { await sendMsg(BOT_TOKEN, chatId, `Already ${tu.status}.`); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const sym = tu.currency === "INR" ? SYMBOL : "$";
+      if (isApprove) {
+        const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+          _telegram_id: tu.telegram_id, _currency: tu.currency, _delta: Number(tu.amount),
+          _type: "topup", _reference_id: tu.id, _note: `Top-up ${tu.payment_method}`,
+        });
+        if (rpcErr) { await sendMsg(BOT_TOKEN, chatId, `❌ ${rpcErr.message}`); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+        await supabase.from("wallet_topup_requests").update({ status: "approved", resolved_at: new Date().toISOString() }).eq("id", id);
+        if (CUSTOMER_BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `✅ *Top-up Approved!*\n\n+${sym}${Number(tu.amount).toFixed(2)} ${tu.currency} added to your wallet.\n\nUse /wallet to view balance.`);
+        }
+        await sendMsg(BOT_TOKEN, chatId, `✅ Approved top-up: ${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}`);
+      } else {
+        await supabase.from("wallet_topup_requests").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", id);
+        if (CUSTOMER_BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `❌ *Top-up Rejected*\n\n${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}\n\nContact support if needed.`);
+        }
+        await sendMsg(BOT_TOKEN, chatId, `❌ Rejected top-up: \`${id.slice(0,8)}\``);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (input === "/topups" || input === "/wallets") {
+      const { data: list } = await supabase.from("wallet_topup_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+      if (!list || !list.length) { await sendMsg(BOT_TOKEN, chatId, "✅ No pending top-ups."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      for (const tu of list) {
+        const sym = tu.currency === "INR" ? SYMBOL : "$";
+        await sendMsg(BOT_TOKEN, chatId,
+          `💰 *Top-up* \`${tu.id.slice(0,8)}\`\n👤 \`${tu.telegram_id}\`\n💵 ${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}\n💳 ${tu.payment_method.toUpperCase()}\n${tu.proof_text ? `🔖 \`${tu.proof_text}\`\n` : ""}`,
+          { inline_keyboard: [[
+            { text: "✅ Approve", callback_data: `topup_approve_${tu.id}` },
+            { text: "❌ Reject", callback_data: `topup_reject_${tu.id}` },
+          ]]});
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    if (text.toLowerCase().startsWith("/credit") || text.toLowerCase().startsWith("/debit")) {
+      // Usage: /credit <telegram_id> <INR|USDT> <amount> [note...]
+      const isCredit = text.toLowerCase().startsWith("/credit");
+      const parts = text.trim().split(/\s+/);
+      if (parts.length < 4) { await sendMsg(BOT_TOKEN, chatId, "Usage: `/credit <telegram_id> <INR|USDT> <amount> [note]`"); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const tid = parts[1]; const cur = parts[2].toUpperCase(); const amt = parseFloat(parts[3]); const note = parts.slice(4).join(" ") || (isCredit ? "Admin credit" : "Admin debit");
+      if (!["INR","USDT"].includes(cur) || !isFinite(amt) || amt <= 0) { await sendMsg(BOT_TOKEN, chatId, "❌ Invalid args."); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const delta = isCredit ? amt : -amt;
+      const { error } = await supabase.rpc("adjust_wallet_balance", {
+        _telegram_id: tid, _currency: cur, _delta: delta, _type: isCredit ? "admin_credit" : "admin_debit", _reference_id: null, _note: note,
+      });
+      if (error) { await sendMsg(BOT_TOKEN, chatId, `❌ ${error.message}`); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
+      const sym = cur === "INR" ? SYMBOL : "$";
+      await sendMsg(BOT_TOKEN, chatId, `✅ ${isCredit ? "Credited" : "Debited"} ${sym}${amt} ${cur} ${isCredit ? "to" : "from"} \`${tid}\``);
+      if (CUSTOMER_BOT_TOKEN && !tid.startsWith("web_")) {
+        await sendToCustomer(CUSTOMER_BOT_TOKEN, tid, `${isCredit ? "💰 *Wallet Credited*" : "💸 *Wallet Debited*"}\n\n${isCredit ? "+" : "-"}${sym}${amt} ${cur}\n📝 ${note}`);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // ==================== Fallback ====================
     await sendMsg(BOT_TOKEN, chatId, `🤖 Unknown command. Type /help to see available commands.`);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
