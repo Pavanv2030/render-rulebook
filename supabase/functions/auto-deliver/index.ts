@@ -148,7 +148,16 @@ Deno.serve(async (req) => {
     const zipBlobWriter = new BlobWriter("application/zip");
     const zipWriter = new ZipWriter(zipBlobWriter);
 
-    for (const account of availableAccounts) {
+    // Send initial progress message to customer
+    let progressMsgId: number | null = null;
+    const isTgUser = !!(BOT_TOKEN && order.customer_id && !order.customer_id.startsWith("web_"));
+    if (isTgUser) {
+      progressMsgId = await sendTelegramMessage(BOT_TOKEN!, order.customer_id, buildProgress(orderId, country, 0, order.quantity));
+    }
+
+    const stepEvery = Math.max(1, Math.floor(availableAccounts.length / 10));
+    for (let i = 0; i < availableAccounts.length; i++) {
+      const account = availableAccounts[i];
       const { data: fileData, error: dlError } = await supabase.storage
         .from("account-files")
         .download(account.file_path);
@@ -159,6 +168,10 @@ Deno.serve(async (req) => {
       }
 
       await zipWriter.add(account.file_name, new BlobReader(fileData));
+
+      if (isTgUser && progressMsgId && (i === availableAccounts.length - 1 || i % stepEvery === 0)) {
+        await editTelegramMessage(BOT_TOKEN!, order.customer_id, progressMsgId, buildProgress(orderId, country, i + 1, order.quantity));
+      }
     }
 
     await zipWriter.close();
@@ -178,7 +191,7 @@ Deno.serve(async (req) => {
     }).eq("order_id", orderId);
 
     // Send to customer via Telegram
-    if (BOT_TOKEN && order.customer_id && !order.customer_id.startsWith("web_")) {
+    if (isTgUser) {
       try {
         await sendTelegramDocument(
           BOT_TOKEN,
