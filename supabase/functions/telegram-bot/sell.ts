@@ -154,6 +154,12 @@ export async function handleSellInput(opts: {
     if (st.state === "awaiting_withdrawal_amount") {
       return await handleWithdrawalAmount(supabase, botToken, chatId, rawText.trim(), st);
     }
+    if (typeof st.state === "string" && st.state.startsWith("awaiting_topup_amount_")) {
+      return await handleTopupAmount(supabase, botToken, chatId, username, rawText.trim(), st);
+    }
+    if (typeof st.state === "string" && st.state.startsWith("awaiting_topup_proof_")) {
+      return await handleTopupProof(supabase, botToken, chatId, username, rawText.trim(), st);
+    }
   }
 
   return false;
