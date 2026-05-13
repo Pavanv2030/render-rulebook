@@ -549,7 +549,7 @@ Deno.serve(async (req) => {
         [{ text: t("btn_how_to_buy", lang), callback_data: "guide_1" }],
         popularRow,
         ...restRows,
-        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: t("btn_referrals", lang), callback_data: "/refer" }],
+        [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: "➕ Add Balance", callback_data: "addbalance" }],
         [{ text: t("kb_support", lang), callback_data: "support" }],
       ];
 
