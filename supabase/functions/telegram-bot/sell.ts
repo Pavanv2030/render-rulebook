@@ -72,6 +72,30 @@ export async function handleSellInput(opts: {
     return true;
   }
 
+  // ---- Top-up flow ----
+  if (input === "addbalance" || input === "/addbalance" || input === "topup" || input === "/topup") {
+    await sendMsg(botToken, chatId,
+      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nSelect currency to top up:`,
+      { inline_keyboard: [
+        [{ text: "💳 INR (UPI)", callback_data: "topup_inr" }, { text: "₿ USDT (Crypto)", callback_data: "topup_usdt" }],
+        [{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🏠 Menu", callback_data: "home" }],
+      ]});
+    return true;
+  }
+
+  if (input === "topup_inr" || input === "topup_usdt") {
+    const currency = input === "topup_inr" ? "INR" : "USDT";
+    const method = input === "topup_inr" ? "upi" : "crypto";
+    const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr, min_topup_usdt").eq("id", 1).maybeSingle();
+    const min = currency === "INR" ? Number(settings?.min_topup_inr ?? 50) : Number(settings?.min_topup_usdt ?? 2);
+    const sym = currency === "INR" ? "₹" : "$";
+    await setSellState(supabase, chatId, { state: `awaiting_topup_amount_${currency}_${method}`, phone_number: null, withdrawal_method: null });
+    await sendMsg(botToken, chatId,
+      `➕ *Add ${currency} Balance*\n━━━━━━━━━━━━━━━\n\n*How much do you want to add?*\nMin: *${sym}${min}*\n\nType the amount (e.g. \`${currency === "INR" ? "500" : "10"}\`):`,
+      { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] });
+    return true;
+  }
+
   // ---- Country pick: sell_country_<CODE> ----
   if (input.startsWith("sell_country_")) {
     const code = input.replace("sell_country_", "").toUpperCase();
