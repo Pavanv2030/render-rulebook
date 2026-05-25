@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     if (req.method === "GET" && action === "dashboard") {
       // Aggregate stats
       const { data: allOrders } = await supabase.from("orders").select("amount, status, created_at, country");
-      const { data: allInventory } = await supabase.from("account_inventory").select("country, account_type, status");
+      const { data: allInventory } = await supabase.from("account_inventory").select("country, account_type").eq("status", "available").limit(10000);
       const { data: allCustomers } = await supabase.from("customers").select("id");
 
       const now = new Date();
