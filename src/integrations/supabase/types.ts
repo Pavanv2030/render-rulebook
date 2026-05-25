@@ -738,6 +738,14 @@ export type Database = {
         Returns: Json
       }
       generate_customer_code: { Args: never; Returns: string }
+      get_public_stock: {
+        Args: never
+        Returns: {
+          account_type: string
+          available: number
+          country: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
