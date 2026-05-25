@@ -109,6 +109,94 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ========== BUY-SECTION ACTIONS ==========
+    if (input === "__get_public_data__") {
+      const { data: pricing } = await supabase
+        .from("country_pricing").select("*").order("country_name");
+      const { data: stockRows } = await supabase.rpc("get_public_stock");
+      const stock: Record<string, { regular: number; aged: number }> = {};
+      for (const r of (stockRows || []) as any[]) {
+        if (!stock[r.country]) stock[r.country] = { regular: 0, aged: 0 };
+        stock[r.country][r.account_type as "regular" | "aged"] = Number(r.available);
+      }
+      const { data: upi } = await supabase
+        .from("upi_wallets").select("upi_id, display_name").eq("is_active", true).limit(1);
+      return new Response(JSON.stringify({
+        pricing: pricing || [], stock, upi: upi?.[0] || null,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (input === "__create_order__") {
+      const { country, accountType, quantity } = body;
+      const qty = parseInt(String(quantity));
+      const acctType = accountType === "aged" ? "aged" : "regular";
+      if (!country || !isFinite(qty) || qty < MIN_QTY || qty > MAX_QTY) {
+        return new Response(JSON.stringify({ error: "Invalid order input" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: priceRow } = await supabase
+        .from("country_pricing").select("regular_price, aged_price")
+        .eq("country_code", country).maybeSingle();
+      if (!priceRow) {
+        return new Response(JSON.stringify({ error: "Invalid country" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const pricePerAcc = acctType === "aged" ? Number(priceRow.aged_price) : Number(priceRow.regular_price);
+      const totalAmount = pricePerAcc * qty;
+      await supabase.from("customers").upsert(
+        { telegram_id: chatId, username: "web_user", first_name: "Web Buyer" },
+        { onConflict: "telegram_id" }
+      );
+      const oid = `ORD${Date.now().toString(36).toUpperCase()}`;
+      const { error } = await supabase.from("orders").insert({
+        order_id: oid, customer_id: chatId, country, account_type: acctType,
+        quantity: qty, amount: totalAmount, currency: "INR", status: "pending",
+        username: "web_user", payment_method: "upi",
+      });
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ orderId: oid, amount: totalAmount }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (input === "__mark_paid__") {
+      const { orderId } = body;
+      if (!orderId) {
+        return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: order } = await supabase.from("orders")
+        .select("*").eq("order_id", orderId).eq("customer_id", chatId).maybeSingle();
+      if (!order) {
+        return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (order.status !== "pending") {
+        return new Response(JSON.stringify({ error: `Order is ${order.status}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", orderId);
+
+      const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+      const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+        try {
+          await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: ADMIN_CHAT_ID,
+              text: `🚨 *NEW PAYMENT (Web)!*\n\n🆔 Order: \`${order.order_id}\`\n👤 Web Customer\n🌍 ${order.country}\n📦 ${order.quantity}x ${order.account_type}\n💵 *₹${order.amount}*`,
+              parse_mode: "Markdown",
+              reply_markup: JSON.stringify({ inline_keyboard: [[
+                { text: `✅ Approve ${order.order_id}`, callback_data: `approve_${order.order_id}` },
+                { text: `❌ Reject ${order.order_id}`, callback_data: `reject_${order.order_id}` },
+              ]]}),
+            }),
+          });
+        } catch (e) { console.error("admin notify failed:", e); }
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get or create conversation state
     let { data: state } = await supabase
       .from("conversation_states")

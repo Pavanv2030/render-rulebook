@@ -48,54 +48,39 @@ const ChatWidget = ({ t }: Props) => {
   const scrollToBottom = useCallback(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, []);
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-  // Subscribe to realtime admin replies
+  // Load + poll messages while open (replaces realtime subscription)
   useEffect(() => {
     if (!isOpen) return;
-
-    const channel = supabase
-      .channel(`support-${sessionId.current}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "support_messages",
-          filter: `session_id=eq.${sessionId.current}`,
-        },
-        (payload: any) => {
-          const newMsg = payload.new;
-          if (newMsg.sender === "admin") {
-            setMessages((prev) => {
-              if (prev.some(m => m.id === newMsg.id)) return prev;
-              return [...prev, { id: newMsg.id, text: newMsg.message, sender: "bot" }];
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [isOpen]);
-
-  // Load previous messages on open
-  useEffect(() => {
-    if (!isOpen) return;
-    const loadMessages = async () => {
+    const seenIds = new Set<string>();
+    const sync = async () => {
       try {
         const { data } = await supabase.functions.invoke("support-chat", {
           body: { sessionId: sessionId.current, action: "fetch" },
         });
-        if (data?.messages?.length) {
-          const loaded: Message[] = data.messages.map((m: any) => ({
-            id: m.id,
-            text: m.message,
-            sender: m.sender === "user" ? "user" : "bot",
-          }));
-          setMessages([{ id: "welcome", text: t("chat.welcome"), sender: "bot" }, ...loaded]);
-        }
-      } catch (e) { console.error("Load messages error:", e); }
+        if (!data?.messages) return;
+        setMessages((prev) => {
+          const hasOnlyWelcome = prev.length === 1 && prev[0].id === "welcome";
+          if (hasOnlyWelcome) {
+            const loaded: Message[] = data.messages.map((m: any) => {
+              seenIds.add(m.id);
+              return { id: m.id, text: m.message, sender: m.sender === "user" ? "user" : "bot" };
+            });
+            return [{ id: "welcome", text: t("chat.welcome"), sender: "bot" }, ...loaded];
+          }
+          const next = [...prev];
+          for (const m of data.messages) {
+            if (seenIds.has(m.id) || prev.some(p => p.id === m.id)) { seenIds.add(m.id); continue; }
+            if (m.sender !== "admin") { seenIds.add(m.id); continue; }
+            seenIds.add(m.id);
+            next.push({ id: m.id, text: m.message, sender: "bot" });
+          }
+          return next;
+        });
+      } catch (e) { console.error("Sync messages error:", e); }
     };
-    loadMessages();
+    sync();
+    pollingRef.current = setInterval(sync, 4000);
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [isOpen, t]);
 
   const sendMessage = async (text: string) => {
