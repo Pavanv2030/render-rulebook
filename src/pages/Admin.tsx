@@ -564,6 +564,9 @@ const Admin = () => {
             <h1 className="text-xl md:text-2xl font-bold">Admin Panel</h1>
           </div>
           <div className="flex items-center gap-2">
+            <a href="/landing.html" title="Home" className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors inline-flex">
+              <Home className="w-4 h-4" />
+            </a>
             <button onClick={() => { fetchOrders(); fetchInventory(); fetchDashboard(); }} disabled={loading} className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
