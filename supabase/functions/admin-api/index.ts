@@ -179,10 +179,8 @@ Deno.serve(async (req) => {
       // Stock levels
       const stockLevels: Record<string, { regular: number; aged: number }> = {};
       (allInventory || []).forEach((i: any) => {
-        if (i.status === "available") {
-          if (!stockLevels[i.country]) stockLevels[i.country] = { regular: 0, aged: 0 };
-          stockLevels[i.country][i.account_type as "regular" | "aged"]++;
-        }
+        if (!stockLevels[i.country]) stockLevels[i.country] = { regular: 0, aged: 0 };
+        stockLevels[i.country][i.account_type as "regular" | "aged"]++;
       });
 
       const topCountries = Object.entries(countryRevenue)
