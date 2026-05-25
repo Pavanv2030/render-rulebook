@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     if (req.method === "GET" && action === "dashboard") {
       // Aggregate stats
       const { data: allOrders } = await supabase.from("orders").select("amount, status, created_at, country");
-      const { data: allInventory } = await supabase.from("account_inventory").select("country, account_type, status");
+      const { data: allInventory } = await supabase.from("account_inventory").select("country, account_type").eq("status", "available").limit(10000);
       const { data: allCustomers } = await supabase.from("customers").select("id");
 
       const now = new Date();
@@ -179,10 +179,8 @@ Deno.serve(async (req) => {
       // Stock levels
       const stockLevels: Record<string, { regular: number; aged: number }> = {};
       (allInventory || []).forEach((i: any) => {
-        if (i.status === "available") {
-          if (!stockLevels[i.country]) stockLevels[i.country] = { regular: 0, aged: 0 };
-          stockLevels[i.country][i.account_type as "regular" | "aged"]++;
-        }
+        if (!stockLevels[i.country]) stockLevels[i.country] = { regular: 0, aged: 0 };
+        stockLevels[i.country][i.account_type as "regular" | "aged"]++;
       });
 
       const topCountries = Object.entries(countryRevenue)
