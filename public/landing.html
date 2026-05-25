@@ -523,14 +523,7 @@ async function sendChatMessage(directMsg) {
     if (data.upiAmount && data.orderId) {
       document.getElementById("upiAmount").textContent = `₹${data.upiAmount.toLocaleString()}`;
       document.getElementById("upiOrderId").textContent = data.orderId;
-      // Fetch active UPI from DB
-      try {
-        const upiRes = await fetch(`https://${CONFIG.PROJECT_ID}.supabase.co/rest/v1/upi_wallets?is_active=eq.true&order=created_at.asc&limit=1`, {
-          headers: { "apikey": CONFIG.API_KEY, "Authorization": `Bearer ${CONFIG.API_KEY}` }
-        });
-        const upiData = await upiRes.json();
-        document.getElementById("upiIdText").textContent = (upiData && upiData[0]) ? upiData[0].upi_id : "venkat342@fam";
-      } catch { document.getElementById("upiIdText").textContent = "venkat342@fam"; }
+      document.getElementById("upiIdText").textContent = data.upiId || "venkat342@fam";
       document.getElementById("upiOverlay").classList.add("open");
     }
   } catch (err) {

@@ -40,30 +40,23 @@ const BuySection = ({ t }: Props) => {
     fetchData();
   }, []);
 
+  const getSessionId = () => {
+    let s = localStorage.getItem("airdrop_session_id");
+    if (!s) { s = crypto.randomUUID(); localStorage.setItem("airdrop_session_id", s); }
+    return s;
+  };
+
   const fetchData = async () => {
     try {
-      const { data: pricingData } = await supabase
-        .from("country_pricing")
-        .select("*")
-        .order("country_name");
-
-      if (pricingData && pricingData.length > 0) {
+      const { data } = await supabase.functions.invoke("web-chat", {
+        body: { message: "__get_public_data__", sessionId: getSessionId() },
+      });
+      const pricingData = (data as any)?.pricing || [];
+      if (pricingData.length > 0) {
         setCountries(pricingData);
         setSelectedCountry(pricingData[0].country_code);
       }
-
-      // Fetch stock via web-chat function (lightweight check)
-      const { data: invData } = await supabase
-        .from("account_inventory")
-        .select("country, account_type, status");
-
-      const stockMap: Record<string, StockInfo> = {};
-      (invData || []).forEach((item: any) => {
-        if (item.status !== "available") return;
-        if (!stockMap[item.country]) stockMap[item.country] = { regular: 0, aged: 0 };
-        stockMap[item.country][item.account_type as "regular" | "aged"]++;
-      });
-      setStock(stockMap);
+      setStock((data as any)?.stock || {});
     } catch (e) {
       console.error("Failed to fetch data:", e);
     } finally {
@@ -81,41 +74,19 @@ const BuySection = ({ t }: Props) => {
   const handleOrder = async () => {
     if (!country || quantity < 1 || quantity > 100) return;
     setOrdering(true);
-
     try {
-      // Create order via web-chat edge function
-      const sessionId = localStorage.getItem("airdrop_session_id") || crypto.randomUUID();
-      localStorage.setItem("airdrop_session_id", sessionId);
-
-      const chatId = `web_${sessionId}`;
-
-      // Ensure customer exists
-      await supabase.from("customers").upsert(
-        { telegram_id: chatId, username: "web_user", first_name: "Web Buyer" },
-        { onConflict: "telegram_id" }
-      );
-
-      // Generate order ID
-      const oid = `ORD${Date.now().toString(36).toUpperCase()}`;
-
-      // Create order directly
-      const { error } = await supabase.from("orders").insert({
-        order_id: oid,
-        customer_id: chatId,
-        country: selectedCountry,
-        account_type: accountType,
-        quantity,
-        amount: totalAmount,
-        currency: "INR",
-        status: "pending",
-        username: "web_user",
-        payment_method: "upi",
+      const { data, error } = await supabase.functions.invoke("web-chat", {
+        body: {
+          message: "__create_order__",
+          sessionId: getSessionId(),
+          country: selectedCountry,
+          accountType,
+          quantity,
+        },
       });
-
-      if (error) throw error;
-
-      setOrderId(oid);
-      setOrderAmount(totalAmount);
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+      setOrderId((data as any).orderId);
+      setOrderAmount((data as any).amount);
       setShowPayment(true);
     } catch (e) {
       console.error("Order failed:", e);
@@ -126,10 +97,9 @@ const BuySection = ({ t }: Props) => {
 
   const handlePaid = async () => {
     if (!orderId) return;
-    await supabase.from("orders").update({
-      status: "payment_received",
-    }).eq("order_id", orderId);
-
+    await supabase.functions.invoke("web-chat", {
+      body: { message: "__mark_paid__", sessionId: getSessionId(), orderId },
+    });
     setShowPayment(false);
     setOrderSuccess(true);
     setTimeout(() => setOrderSuccess(false), 5000);
