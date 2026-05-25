@@ -376,6 +376,9 @@ Deno.serve(async (req) => {
       const totalPrice = (newState.selected_quantity || 0) * pricePerAcc;
       responseData.upiAmount = totalPrice;
       responseData.orderId = newState.pending_order_id;
+      const { data: upiWallets } = await supabase.from("upi_wallets")
+        .select("upi_id").eq("is_active", true).order("created_at").limit(1);
+      responseData.upiId = upiWallets?.[0]?.upi_id || "venkat342@fam";
     }
 
     return new Response(JSON.stringify(responseData), {
