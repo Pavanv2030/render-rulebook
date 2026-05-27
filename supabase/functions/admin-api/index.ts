@@ -387,17 +387,20 @@ Deno.serve(async (req) => {
         if (!BOT_TOKEN) {
           return new Response(JSON.stringify({ error: "Bot token not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
-        const { data: customers } = await supabase.from("customers").select("telegram_id");
+        const { data: customers } = await supabase.from("customers").select("telegram_id").not("telegram_id", "is", null);
+        const recipients = (customers || []).filter((c: any) => c.telegram_id && !String(c.telegram_id).startsWith("web_"));
         let sent = 0, failed = 0;
-        for (const c of (customers || [])) {
+        for (const c of recipients) {
           try {
-            await sendTelegramMessage(BOT_TOKEN, c.telegram_id, message);
-            sent++;
+            const r = await sendTelegramMessage(BOT_TOKEN, c.telegram_id, message);
+            if (r && r.ok) sent++; else failed++;
           } catch {
             failed++;
           }
+          // small delay to respect Telegram rate limits (~30/sec)
+          await new Promise((res) => setTimeout(res, 40));
         }
-        return new Response(JSON.stringify({ success: true, sent, failed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ success: true, sent, failed, total: recipients.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // ========== CRYPTO WALLETS ==========
