@@ -1,0 +1,1 @@
+SELECT cron.unschedule('auto-delete-old-delivered-orders');
