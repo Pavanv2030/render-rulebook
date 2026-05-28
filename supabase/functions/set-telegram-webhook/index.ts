@@ -18,7 +18,32 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ url: webhookUrl }),
     });
     results.push({ bot: "customer", webhookUrl, result: await res.json() });
+
+    // Set bot commands (shown when user taps the menu button)
+    const commands = [
+      { command: "start", description: "🏠 Main menu" },
+      { command: "myorders", description: "📦 My orders" },
+      { command: "reorder", description: "🔁 Quick reorder" },
+      { command: "guide", description: "📖 How to buy" },
+      { command: "manuallogin", description: "🔐 Manual login help" },
+      { command: "refer", description: "🎁 Refer & earn" },
+      { command: "language", description: "🌐 Change language" },
+      { command: "support", description: "💬 Contact support" },
+    ];
+    const cmdRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands }),
+    });
+    results.push({ bot: "customer", setMyCommands: await cmdRes.json() });
+
+    // Set the menu button to show commands (the grid icon next to the input)
+    const menuRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ menu_button: { type: "commands" } }),
+    });
+    results.push({ bot: "customer", setChatMenuButton: await menuRes.json() });
   }
+
 
   // Admin bot webhook
   const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
