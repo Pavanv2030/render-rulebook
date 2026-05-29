@@ -756,6 +756,17 @@ const Admin = () => {
                           <td className="px-4 py-3">{order.quantity}</td>
                           <td className="px-4 py-3 font-medium">₹{order.amount.toLocaleString()}</td>
                           <td className="px-4 py-3">
+                            {order.payment_method === "wallet" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/20 text-accent">💼 Wallet</span>
+                            ) : order.payment_method === "crypto" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/20 text-primary">₿ Crypto</span>
+                            ) : order.payment_method === "upi" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">📱 UPI</span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || "bg-secondary text-muted-foreground"}`}>
                               {STATUS_ICONS[order.status]} {order.status.replace("_", " ")}
                             </span>
