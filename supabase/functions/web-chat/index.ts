@@ -98,6 +98,21 @@ Deno.serve(async (req) => {
       });
       if (rpcErr) return new Response(JSON.stringify({ error: rpcErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       await supabase.from("orders").update({ status: "approved", payment_method: "wallet" }).eq("order_id", orderId);
+      // Notify admin bot of wallet purchase
+      try {
+        const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+        const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+        if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+          const sym = currency === "USDT" ? "$" : "₹";
+          const { data: w } = await supabase.from("customer_wallets").select("balance_inr,balance_usdt").eq("telegram_id", chatId).maybeSingle();
+          const newBal = currency === "USDT" ? Number(w?.balance_usdt || 0) : Number(w?.balance_inr || 0);
+          const text = `💼 *Wallet Purchase* (Web)\n━━━━━━━━━━━━━━━\n👤 \`${chatId}\`\n🆔 Order: \`${orderId}\`\n${order.country} • ${order.account_type} × ${order.quantity}\n💸 Spent: *${sym}${Number(order.amount).toFixed(2)}*\n💰 Remaining: *${sym}${newBal.toFixed(2)}*`;
+          await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text, parse_mode: "Markdown" }),
+          });
+        }
+      } catch (e) { console.error("admin notify failed:", e); }
       const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
