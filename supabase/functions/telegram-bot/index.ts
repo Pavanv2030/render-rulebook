@@ -878,7 +878,7 @@ Deno.serve(async (req) => {
         if (ADMIN_BOT_TOKEN2 && ADMIN_CHAT_ID2) {
           const { data: w2 } = await supabase.from("customer_wallets").select("balance_inr,balance_usdt").eq("telegram_id", chatId).maybeSingle();
           const newBal = cur === "USDT" ? Number(w2?.balance_usdt || 0) : Number(w2?.balance_inr || 0);
-          const uname = (msg as any)?.from?.username ? `@${(msg as any).from.username}` : "";
+          const uname = update.callback_query?.from?.username ? `@${update.callback_query.from.username}` : (update.message?.from?.username ? `@${update.message.from.username}` : "");
           const text = `💼 *Wallet Purchase* (Bot)\n━━━━━━━━━━━━━━━\n👤 \`${chatId}\` ${uname}\n🆔 Order: \`${orderId}\`\n${order.country} • ${order.account_type} × ${order.quantity}\n💸 Spent: *${sym}${Number(order.amount).toFixed(2)}*\n💰 Remaining: *${sym}${newBal.toFixed(2)}*`;
           await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN2}/sendMessage`, {
             method: "POST", headers: { "Content-Type": "application/json" },
