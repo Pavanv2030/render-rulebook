@@ -727,7 +727,7 @@ const Admin = () => {
                       if (e.target.checked) setSelectedOrderIds(new Set(filtered.map(o => o.order_id)));
                       else setSelectedOrderIds(new Set());
                     }} checked={selectedOrderIds.size > 0 && selectedOrderIds.size === orders.filter(o => statusFilter === "all" || o.status === statusFilter).length} /></th>
-                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
+                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Payment", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {orders.filter(o => statusFilter === "all" || o.status === statusFilter).map((order) => {
