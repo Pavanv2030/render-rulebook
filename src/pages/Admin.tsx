@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, PieChart, Pie, Cell } from "recharts";
 
-const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
+const STATUS_OPTIONS = ["all", "pending", "payment_received", "approved", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-warning/20 text-warning",
   payment_received: "bg-primary/20 text-primary",
@@ -49,7 +49,7 @@ const COUNTRIES = [
 
 const PIE_COLORS = ["hsl(175, 80%, 50%)", "hsl(270, 60%, 60%)", "hsl(145, 70%, 45%)", "hsl(40, 90%, 55%)", "hsl(0, 72%, 55%)", "hsl(200, 70%, 50%)", "hsl(320, 60%, 50%)", "hsl(60, 80%, 45%)"];
 
-interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; delivery_file_path: string | null; delivered_at: string | null; created_at: string; customer_username?: string | null; customer_name?: string | null; customer_history?: { total_orders: number; total_accounts: number; total_spent: number; delivered: number }; }
+interface Order { id: string; order_id: string; customer_id: string; username: string | null; country: string; account_type: string; quantity: number; currency: string; amount: number; status: string; payment_method: string | null; delivery_file_path: string | null; delivered_at: string | null; created_at: string; customer_username?: string | null; customer_name?: string | null; customer_history?: { total_orders: number; total_accounts: number; total_spent: number; delivered: number }; }
 interface Customer { id: string; telegram_id: string; username: string | null; first_name: string | null; country: string | null; referral_code: string | null; created_at: string; is_blocked?: boolean; }
 interface PricingRow { id: string; country_code: string; country_name: string; flag: string; regular_price: number; aged_price: number; regular_price_usdt: number; aged_price_usdt: number; }
 interface InventoryItem { id: string; file_name: string; file_path: string; account_type: string; country: string; status: string; order_id: string | null; created_at: string; }
@@ -727,7 +727,7 @@ const Admin = () => {
                       if (e.target.checked) setSelectedOrderIds(new Set(filtered.map(o => o.order_id)));
                       else setSelectedOrderIds(new Set());
                     }} checked={selectedOrderIds.size > 0 && selectedOrderIds.size === orders.filter(o => statusFilter === "all" || o.status === statusFilter).length} /></th>
-                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
+                    {["Order ID", "Customer", "Country", "Type", "Qty", "Amount", "Payment", "Status", "Date", "Actions"].map(h => <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {orders.filter(o => statusFilter === "all" || o.status === statusFilter).map((order) => {
@@ -755,6 +755,17 @@ const Admin = () => {
                           <td className="px-4 py-3">{order.account_type}</td>
                           <td className="px-4 py-3">{order.quantity}</td>
                           <td className="px-4 py-3 font-medium">₹{order.amount.toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            {order.payment_method === "wallet" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/20 text-accent">💼 Wallet</span>
+                            ) : order.payment_method === "crypto" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/20 text-primary">₿ Crypto</span>
+                            ) : order.payment_method === "upi" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">📱 UPI</span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || "bg-secondary text-muted-foreground"}`}>
                               {STATUS_ICONS[order.status]} {order.status.replace("_", " ")}
@@ -791,7 +802,7 @@ const Admin = () => {
                         </tr>
                       );
                     })}
-                    {orders.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">No orders found</td></tr>}
+                    {orders.length === 0 && <tr><td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">No orders found</td></tr>}
                   </tbody>
                 </table>
               </div>
