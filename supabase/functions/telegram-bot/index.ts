@@ -871,6 +871,21 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
       await supabase.from("orders").update({ status: "approved", payment_method: "Wallet" }).eq("order_id", orderId);
+      // Notify admin bot of wallet purchase
+      try {
+        const ADMIN_BOT_TOKEN2 = Deno.env.get("ADMIN_BOT_TOKEN");
+        const ADMIN_CHAT_ID2 = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+        if (ADMIN_BOT_TOKEN2 && ADMIN_CHAT_ID2) {
+          const { data: w2 } = await supabase.from("customer_wallets").select("balance_inr,balance_usdt").eq("telegram_id", chatId).maybeSingle();
+          const newBal = cur === "USDT" ? Number(w2?.balance_usdt || 0) : Number(w2?.balance_inr || 0);
+          const uname = update.callback_query?.from?.username ? `@${update.callback_query.from.username}` : (update.message?.from?.username ? `@${update.message.from.username}` : "");
+          const text = `💼 *Wallet Purchase* (Bot)\n━━━━━━━━━━━━━━━\n👤 \`${chatId}\` ${uname}\n🆔 Order: \`${orderId}\`\n${order.country} • ${order.account_type} × ${order.quantity}\n💸 Spent: *${sym}${Number(order.amount).toFixed(2)}*\n💰 Remaining: *${sym}${newBal.toFixed(2)}*`;
+          await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN2}/sendMessage`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: ADMIN_CHAT_ID2, text, parse_mode: "Markdown" }),
+          });
+        }
+      } catch (e) { console.error("admin notify failed:", e); }
       await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
       await sendMsg(BOT_TOKEN, chatId,
         `✅ *Paid from Wallet!*\n━━━━━━━━━━━━━━━\n\n🆔 \`${orderId}\`\n💼 -${sym}${Number(order.amount).toFixed(2)}\n\n⏳ Preparing your accounts for delivery...`,
