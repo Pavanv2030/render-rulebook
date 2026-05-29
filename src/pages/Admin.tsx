@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, PieChart, Pie, Cell } from "recharts";
 
-const STATUS_OPTIONS = ["all", "pending", "payment_received", "delivered", "rejected", "cancelled"];
+const STATUS_OPTIONS = ["all", "pending", "payment_received", "approved", "delivered", "rejected", "cancelled"];
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-warning/20 text-warning",
   payment_received: "bg-primary/20 text-primary",
