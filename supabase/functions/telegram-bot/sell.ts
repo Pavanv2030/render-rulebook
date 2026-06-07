@@ -75,11 +75,23 @@ export async function handleSellInput(opts: {
   // ---- Top-up flow ----
   if (input === "addbalance" || input === "/addbalance" || input === "topup" || input === "/topup") {
     await sendMsg(botToken, chatId,
-      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nSelect currency to top up:`,
+      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nSelect top-up method:`,
       { inline_keyboard: [
-        [{ text: "💳 INR (UPI)", callback_data: "topup_inr" }, { text: "₿ USDT (Crypto)", callback_data: "topup_usdt" }],
+        [{ text: "⚡ INR — UPI Auto (instant)", callback_data: "topup_rzp" }],
+        [{ text: "💳 INR — UPI (manual)", callback_data: "topup_inr" }, { text: "₿ USDT (Crypto)", callback_data: "topup_usdt" }],
         [{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🏠 Menu", callback_data: "home" }],
       ]});
+    return true;
+  }
+
+  // ---- Razorpay auto top-up: ask amount ----
+  if (input === "topup_rzp") {
+    const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr").eq("id", 1).maybeSingle();
+    const min = Number(settings?.min_topup_inr ?? 50);
+    await setSellState(supabase, chatId, { state: `awaiting_topup_amount_INR_rzp`, phone_number: null, withdrawal_method: null });
+    await sendMsg(botToken, chatId,
+      `⚡ *UPI Auto Top-up*\n━━━━━━━━━━━━━━━\n\n*How much do you want to add?*\nMin: *₹${min}*\n\nType the amount (e.g. \`500\`).\n\n_You'll get a QR — scan with any UPI app, payment is auto-detected ✨_`,
+      { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] });
     return true;
   }
 
