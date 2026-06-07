@@ -836,6 +836,34 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // ⚡ Razorpay UPI Auto-Pay
+    if (input.startsWith("pay_razorpay_")) {
+      const orderId = input.replace("pay_razorpay_", "").toUpperCase();
+      const { data: order } = await supabase.from("orders").select("*").eq("order_id", orderId).maybeSingle();
+      if (!order || order.customer_id !== chatId) {
+        await sendMsg(BOT_TOKEN, chatId, "❌ Order not found.", undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      if (order.status !== "pending") {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Order is already *${order.status}*.`, undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      await supabase.from("orders").update({ payment_method: "UPI Auto" }).eq("order_id", orderId);
+      await handleRazorpayPayment(orderId, Number(order.amount), "order", orderId, chatId, BOT_TOKEN, supabase, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // Razorpay topup creation: rzp_topup_<amount>
+    if (input.startsWith("rzp_topup_")) {
+      const amount = Number(input.replace("rzp_topup_", ""));
+      if (!amount || amount < 1) {
+        await sendMsg(BOT_TOKEN, chatId, "❌ Invalid amount.", undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      await handleRazorpayPayment(`TOPUP-${Date.now()}`, amount, "topup", null, chatId, BOT_TOKEN, supabase, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // 💼 Pay from wallet balance
     if (input.startsWith("pay_wallet_")) {
       const orderId = input.replace("pay_wallet_", "").toUpperCase();
