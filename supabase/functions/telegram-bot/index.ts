@@ -885,7 +885,7 @@ Deno.serve(async (req) => {
           `❌ *Insufficient wallet balance*\n\nBalance: *${sym}${bal.toFixed(2)}*\nNeeded: *${sym}${Number(order.amount).toFixed(2)}*\n\nTap ➕ Add Balance or pay another way.`,
           { inline_keyboard: [
             [{ text: "➕ Add Balance", callback_data: "addbalance" }],
-            [{ text: "💳 UPI", callback_data: `pay_upi_${orderId}` }, { text: "₿ Crypto", callback_data: `pay_crypto_${orderId}` }],
+            [{ text: "⚡ UPI Auto-Pay", callback_data: `pay_razorpay_${orderId}` }],
             [{ text: "❌ Cancel", callback_data: "cancel" }],
           ]}, lang);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
@@ -1402,8 +1402,6 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     payButtons.push([{ text: `➕ Add Wallet Balance`, callback_data: "addbalance" }]);
   }
   payButtons.push([{ text: "⚡ UPI Auto-Pay (instant)", callback_data: `pay_razorpay_${orderId}` }]);
-  payButtons.push([{ text: t("btn_upi", lang) + " (manual)", callback_data: `pay_upi_${orderId}` }]);
-  payButtons.push([{ text: t("btn_crypto", lang), callback_data: `pay_crypto_${orderId}` }]);
   payButtons.push([{ text: t("btn_cancel", lang), callback_data: "cancel" }]);
 
   await sendMsg(BOT_TOKEN, chatId,
@@ -1521,7 +1519,7 @@ async function handleRazorpayPayment(
   const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
   const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
   if (!RP_KEY || !RP_SECRET) {
-    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay is not configured. Please use manual UPI.", undefined, lang);
+    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay is not configured. Please contact support or pay from your wallet balance.", undefined, lang);
     return;
   }
   const amountPaise = Math.round(amount * 100);
@@ -1556,7 +1554,7 @@ async function handleRazorpayPayment(
     if (!rpRes.ok || !rpData.id || !rpData.image_url) {
       console.error("Razorpay QR create failed:", rpData);
       await sendMsg(BOT_TOKEN, chatId,
-        `❌ Could not create auto-pay QR. Please use manual UPI.\n\n_${rpData?.error?.description || "API error"}_`,
+        `❌ Could not create auto-pay QR. Please try again or pay from your wallet balance.\n\n_${rpData?.error?.description || "API error"}_`,
         undefined, lang);
       return;
     }
@@ -1589,7 +1587,7 @@ async function handleRazorpayPayment(
 
   } catch (e) {
     console.error("Razorpay error:", e);
-    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay failed. Please use manual UPI.", undefined, lang);
+    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay failed. Please try again or pay from your wallet balance.", undefined, lang);
   }
 }
 

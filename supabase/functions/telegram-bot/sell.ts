@@ -75,10 +75,9 @@ export async function handleSellInput(opts: {
   // ---- Top-up flow ----
   if (input === "addbalance" || input === "/addbalance" || input === "topup" || input === "/topup") {
     await sendMsg(botToken, chatId,
-      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nSelect top-up method:`,
+      `➕ *ADD BALANCE*\n━━━━━━━━━━━━━━━\n\nTop-up via UPI Auto-Pay — scan the QR with any UPI app, balance is credited instantly.`,
       { inline_keyboard: [
         [{ text: "⚡ INR — UPI Auto (instant)", callback_data: "topup_rzp" }],
-        [{ text: "💳 INR — UPI (manual)", callback_data: "topup_inr" }, { text: "₿ USDT (Crypto)", callback_data: "topup_usdt" }],
         [{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🏠 Menu", callback_data: "home" }],
       ]});
     return true;
