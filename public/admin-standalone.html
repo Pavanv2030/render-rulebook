@@ -290,8 +290,28 @@
         <span style="font-size:0.75rem;color:var(--muted);" id="broadcastCount">? customers will receive this</span>
         <button class="btn btn-primary" onclick="sendBroadcast()">📤 Send Broadcast</button>
       </div>
+  </div>
+
+  <div id="tab-autopay" class="tab-content hidden">
+    <div class="card glass">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <span>⚡ Razorpay Auto-Pay Log</span>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <select id="rzpStatusFilter" class="input" style="width:auto;padding:0.4rem 0.6rem;" onchange="fetchRazorpayPayments()">
+            <option value="all">All statuses</option>
+            <option value="paid" selected>Paid</option>
+            <option value="created">Created (pending)</option>
+            <option value="failed">Failed</option>
+            <option value="expired">Expired</option>
+          </select>
+          <button class="btn btn-primary" onclick="fetchRazorpayPayments()" style="padding:0.4rem 0.8rem;">🔄 Refresh</button>
+        </div>
+      </div>
+      <div id="rzpSummary" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div id="rzpList" style="overflow-x:auto;"></div>
     </div>
   </div>
+</div>
 </div>
 
 <script>
