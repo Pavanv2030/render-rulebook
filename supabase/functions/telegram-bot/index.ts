@@ -1554,7 +1554,7 @@ async function handleRazorpayPayment(
     if (!rpRes.ok || !rpData.id || !rpData.image_url) {
       console.error("Razorpay QR create failed:", rpData);
       await sendMsg(BOT_TOKEN, chatId,
-        `❌ Could not create auto-pay QR. Please use manual UPI.\n\n_${rpData?.error?.description || "API error"}_`,
+        `❌ Could not create auto-pay QR. Please try again or pay from your wallet balance.\n\n_${rpData?.error?.description || "API error"}_`,
         undefined, lang);
       return;
     }
