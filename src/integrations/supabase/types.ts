@@ -386,6 +386,48 @@ export type Database = {
         }
         Relationships: []
       }
+      razorpay_payments: {
+        Row: {
+          amount: number
+          chat_id: string
+          created_at: string
+          currency: string
+          paid_at: string | null
+          purpose: string
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          reference_id: string | null
+          status: string
+          telegram_id: string
+        }
+        Insert: {
+          amount: number
+          chat_id: string
+          created_at?: string
+          currency?: string
+          paid_at?: string | null
+          purpose: string
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          reference_id?: string | null
+          status?: string
+          telegram_id: string
+        }
+        Update: {
+          amount?: number
+          chat_id?: string
+          created_at?: string
+          currency?: string
+          paid_at?: string | null
+          purpose?: string
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          reference_id?: string | null
+          status?: string
+          telegram_id?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           commission: number | null
