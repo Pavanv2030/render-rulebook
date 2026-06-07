@@ -100,11 +100,23 @@ Deno.serve(async (req) => {
   chatId = chatId || rp.chat_id;
   const purpose = rp.purpose || purposeHint;
 
-  await supabase.from("razorpay_payments").update({
+  // Atomically claim this payment — only one event (webhook or manual check) will succeed.
+  // Prevents duplicate admin alerts when both payment.captured and qr_code.credited fire.
+  const { data: claimed } = await supabase.from("razorpay_payments").update({
     razorpay_payment_id: payment.id,
     status: "paid",
     paid_at: new Date().toISOString(),
-  }).eq("razorpay_order_id", rp.razorpay_order_id);
+  })
+    .eq("razorpay_order_id", rp.razorpay_order_id)
+    .eq("status", "created")
+    .select("id");
+
+  if (!claimed || claimed.length === 0) {
+    // Another concurrent event already processed this payment
+    return new Response(JSON.stringify({ ok: true, already: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const amountInr = Number(payment.amount) / 100;
 
