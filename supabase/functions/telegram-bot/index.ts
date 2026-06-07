@@ -1544,10 +1544,10 @@ async function handleRazorpayPayment(
         close_by: closeBy,
         notes: {
           purpose,
-          reference_id: referenceId || "",
+          reference_id: ourId, // unique key webhook uses to find this row
+          app_order_id: referenceId || "",
           telegram_id: chatId,
           chat_id: chatId,
-          our_id: ourId,
         },
       }),
     });
@@ -1560,13 +1560,13 @@ async function handleRazorpayPayment(
       return;
     }
 
-    // Save tracking record (use QR id as our key)
+    // Save tracking row — PK is the QR id; reference_id is our ourId for webhook lookup
     await supabase.from("razorpay_payments").insert({
       razorpay_order_id: rpData.id,
       amount,
       currency: "INR",
       purpose,
-      reference_id: referenceId,
+      reference_id: ourId,
       telegram_id: chatId,
       chat_id: chatId,
       status: "created",
