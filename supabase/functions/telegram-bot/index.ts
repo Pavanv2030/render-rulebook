@@ -1574,18 +1574,15 @@ async function handleRazorpayPayment(
     });
 
     const shortUrl = rpData.short_url;
-    const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=10&data=${encodeURIComponent(shortUrl)}`;
-    const caption =
+    const text =
       `⚡ *UPI AUTO-PAY*\n━━━━━━━━━━━━━━━\n\n` +
       `💰 Amount: *₹${amount.toFixed(2)}*\n` +
       `${purpose === "order" ? `🆔 Order: \`${referenceId}\`\n` : `💵 Wallet Top-up\n`}` +
       `⏱ Expires in: *30 min*\n\n` +
-      `📱 *Pay in 2 ways:*\n` +
-      `1️⃣ Tap the *Pay Now* button below (opens UPI app)\n` +
-      `2️⃣ Or scan the QR with any UPI app\n\n` +
+      `Tap *Pay Now* below to open your UPI app and complete payment.\n\n` +
       `_Payment is auto-detected — no screenshots needed!_`;
 
-    await sendPhoto(BOT_TOKEN, chatId, qrImage, caption, {
+    await sendMsg(BOT_TOKEN, chatId, text, {
       inline_keyboard: [
         [{ text: "💳 Pay Now", url: shortUrl }],
         [{ text: "🔄 Check Payment Status", callback_data: `rzp_check_${rpData.id}` }],
