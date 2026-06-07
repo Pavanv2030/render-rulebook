@@ -853,6 +853,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // 🔄 Razorpay QR status check (manual fallback if webhook delayed)
+    if (input.startsWith("rzp_check_")) {
+      const qrId = input.replace("rzp_check_", "");
+      const result = await finalizeRazorpayIfPaid(qrId, chatId, BOT_TOKEN, supabase, lang);
+      if (!result.paid) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `⏳ *Payment not yet detected*\n\nIf you've already paid, wait 10–30 sec and tap *🔄 Check Payment Status* again.\n\n_Most payments confirm in under 1 minute._`,
+          { inline_keyboard: [
+            [{ text: "🔄 Check Payment Status", callback_data: `rzp_check_${qrId}` }],
+            [{ text: "❓ Help", callback_data: "support" }],
+          ]}, lang);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // Razorpay topup creation: rzp_topup_<amount>
     if (input.startsWith("rzp_topup_")) {
       const amount = Number(input.replace("rzp_topup_", ""));
