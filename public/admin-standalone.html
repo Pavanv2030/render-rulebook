@@ -139,6 +139,7 @@
     <button class="tab" data-tab="pricing">💰 Pricing</button>
     <button class="tab" data-tab="crypto">🪙 Crypto</button>
     <button class="tab" data-tab="upi">💳 UPI</button>
+    <button class="tab" data-tab="autopay">⚡ Auto-Pay Log</button>
     <button class="tab" data-tab="broadcast">📢 Broadcast</button>
   </div>
 
@@ -289,8 +290,28 @@
         <span style="font-size:0.75rem;color:var(--muted);" id="broadcastCount">? customers will receive this</span>
         <button class="btn btn-primary" onclick="sendBroadcast()">📤 Send Broadcast</button>
       </div>
+  </div>
+
+  <div id="tab-autopay" class="tab-content hidden">
+    <div class="card glass">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <span>⚡ Razorpay Auto-Pay Log</span>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <select id="rzpStatusFilter" class="input" style="width:auto;padding:0.4rem 0.6rem;" onchange="fetchRazorpayPayments()">
+            <option value="all">All statuses</option>
+            <option value="paid" selected>Paid</option>
+            <option value="created">Created (pending)</option>
+            <option value="failed">Failed</option>
+            <option value="expired">Expired</option>
+          </select>
+          <button class="btn btn-primary" onclick="fetchRazorpayPayments()" style="padding:0.4rem 0.8rem;">🔄 Refresh</button>
+        </div>
+      </div>
+      <div id="rzpSummary" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div id="rzpList" style="overflow-x:auto;"></div>
     </div>
   </div>
+</div>
 </div>
 
 <script>
@@ -362,6 +383,7 @@ function loadTabData(tab) {
   if (tab === "crypto") fetchCryptoWallets();
   if (tab === "upi") fetchUpiWallets();
   if (tab === "inventory") { fetchInventoryList(); fetchInventoryStats(); }
+  if (tab === "autopay") fetchRazorpayPayments();
 }
 
 // ===================== DATA FETCHING =====================
@@ -399,6 +421,59 @@ async function fetchCryptoWallets() {
 async function fetchUpiWallets() {
   try { const result = await apiFetch(`${BASE_URL}/admin-api?action=upi_wallets`); if (!result.error) { upiWallets = result.wallets || []; renderUpiWallets(); } } catch {}
 }
+
+async function fetchRazorpayPayments() {
+  const status = document.getElementById("rzpStatusFilter")?.value || "paid";
+  try {
+    const result = await apiFetch(`${BASE_URL}/admin-api?action=razorpay_payments&rzp_status=${status}`);
+    if (result.error) return;
+    renderRazorpayPayments(result.payments || [], result.totals || {});
+  } catch {}
+}
+
+function renderRazorpayPayments(rows, totals) {
+  document.getElementById("rzpSummary").innerHTML =
+    `Showing <b>${rows.length}</b> · Paid in view: <b>₹${(totals.paid_amount || 0).toFixed(2)}</b> · Paid count: <b>${totals.paid || 0}</b> · Pending: <b>${totals.created || 0}</b>`;
+  if (!rows.length) {
+    document.getElementById("rzpList").innerHTML = `<p style="text-align:center;color:var(--muted);padding:2rem;">No payments found.</p>`;
+    return;
+  }
+  const badge = (s) => {
+    const colors = { paid: "#10b981", created: "#f59e0b", failed: "#ef4444", expired: "#6b7280" };
+    return `<span style="background:${colors[s] || "#6b7280"};color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;text-transform:uppercase;">${s}</span>`;
+  };
+  const fmt = (d) => d ? new Date(d).toLocaleString() : "—";
+  document.getElementById("rzpList").innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--border);color:var(--muted);">
+          <th style="padding:0.5rem;">When</th>
+          <th style="padding:0.5rem;">Status</th>
+          <th style="padding:0.5rem;">Purpose</th>
+          <th style="padding:0.5rem;">Reference</th>
+          <th style="padding:0.5rem;">Customer (TG)</th>
+          <th style="padding:0.5rem;text-align:right;">Amount</th>
+          <th style="padding:0.5rem;">Payment ID</th>
+          <th style="padding:0.5rem;">Paid At</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:0.5rem;white-space:nowrap;">${fmt(r.created_at)}</td>
+            <td style="padding:0.5rem;">${badge(r.status)}</td>
+            <td style="padding:0.5rem;">${r.purpose === "topup" ? "💵 Top-up" : "🛒 Order"}</td>
+            <td style="padding:0.5rem;"><code>${r.reference_id || "—"}</code></td>
+            <td style="padding:0.5rem;"><code>${r.telegram_id || "—"}</code></td>
+            <td style="padding:0.5rem;text-align:right;font-weight:600;">₹${Number(r.amount).toFixed(2)}</td>
+            <td style="padding:0.5rem;"><code style="font-size:0.7rem;">${r.razorpay_payment_id || "—"}</code></td>
+            <td style="padding:0.5rem;white-space:nowrap;">${fmt(r.paid_at)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>`;
+}
+
 
 async function refreshAll() {
   fetchDashboard(); fetchOrders(); fetchInventoryStats(); fetchPricing();

@@ -142,6 +142,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (req.method === "GET" && action === "razorpay_payments") {
+      const status = url.searchParams.get("rzp_status") || "all";
+      let q = supabase.from("razorpay_payments").select("*").order("created_at", { ascending: false }).limit(500);
+      if (status !== "all") q = q.eq("status", status);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = data || [];
+      const totals = {
+        total: rows.length,
+        paid: rows.filter((r: any) => r.status === "paid").length,
+        created: rows.filter((r: any) => r.status === "created").length,
+        paid_amount: rows.filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount || 0), 0),
+      };
+      return new Response(JSON.stringify({ payments: rows, totals }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     if (req.method === "GET" && action === "dashboard") {
       // Aggregate stats
       const { data: allOrders } = await supabase.from("orders").select("amount, status, created_at, country");
