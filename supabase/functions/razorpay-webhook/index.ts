@@ -59,37 +59,50 @@ Deno.serve(async (req) => {
   }
 
   const notes = payment.notes || {};
-  const purpose = notes.purpose;        // "order" | "topup"
-  const referenceId = notes.reference_id;
-  const telegramId = notes.telegram_id;
-  const chatId = notes.chat_id || telegramId;
-  const ourOrderId = notes.our_id;      // razorpay_payments PK
+  const ourRef = notes.reference_id;           // our internal id (order_id or TOPUP-xxx)
+  const purposeHint = notes.purpose;
+  const appOrderId = notes.app_order_id || ourRef;
+  let telegramId = notes.telegram_id;
+  let chatId = notes.chat_id || telegramId;
 
-  if (!ourOrderId) {
-    console.error("payment.captured missing our_id note", payment.id);
+  if (!ourRef) {
+    console.error("payment.captured missing reference_id note", payment.id);
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Idempotency: check current status
+  // Find our tracking row by reference_id
   const { data: rp } = await supabase
     .from("razorpay_payments")
-    .select("status")
-    .eq("razorpay_order_id", ourOrderId)
+    .select("*")
+    .eq("reference_id", ourRef)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (rp?.status === "paid") {
+  if (!rp) {
+    console.error("No razorpay_payments row for reference_id", ourRef);
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (rp.status === "paid") {
     return new Response(JSON.stringify({ ok: true, already: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
+  telegramId = telegramId || rp.telegram_id;
+  chatId = chatId || rp.chat_id;
+  const purpose = rp.purpose || purposeHint;
+
   await supabase.from("razorpay_payments").update({
     razorpay_payment_id: payment.id,
     status: "paid",
     paid_at: new Date().toISOString(),
-  }).eq("razorpay_order_id", ourOrderId);
+  }).eq("razorpay_order_id", rp.razorpay_order_id);
 
   const amountInr = Number(payment.amount) / 100;
 
