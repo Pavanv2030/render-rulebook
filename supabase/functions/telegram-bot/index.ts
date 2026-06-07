@@ -1574,21 +1574,24 @@ async function handleRazorpayPayment(
     });
 
     const shortUrl = rpData.short_url;
-    const text =
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(shortUrl)}`;
+    const caption =
       `⚡ *UPI AUTO-PAY*\n━━━━━━━━━━━━━━━\n\n` +
       `💰 Amount: *₹${amount.toFixed(2)}*\n` +
       `${purpose === "order" ? `🆔 Order: \`${referenceId}\`\n` : `💵 Wallet Top-up\n`}` +
       `⏱ Expires in: *30 min*\n\n` +
-      `Tap *Pay Now* below to open your UPI app and complete payment.\n\n` +
+      `📱 *Scan the QR* with any UPI app (GPay / PhonePe / Paytm)\n` +
+      `or tap *Pay Now* to open your UPI app directly.\n\n` +
       `_Payment is auto-detected — no screenshots needed!_`;
 
-    await sendMsg(BOT_TOKEN, chatId, text, {
+    await sendPhoto(BOT_TOKEN, chatId, qrUrl, caption, {
       inline_keyboard: [
         [{ text: "💳 Pay Now", url: shortUrl }],
         [{ text: "🔄 Check Payment Status", callback_data: `rzp_check_${rpData.id}` }],
         [{ text: "❌ Cancel", callback_data: "cancel" }, { text: "❓ Help", callback_data: "support" }],
       ],
     }, lang);
+
   } catch (e) {
     console.error("Razorpay error:", e);
     await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay failed. Please use manual UPI.", undefined, lang);
