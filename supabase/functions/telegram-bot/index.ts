@@ -1402,8 +1402,6 @@ async function processQuantity(qty: number, state: any, chatId: string, username
     payButtons.push([{ text: `➕ Add Wallet Balance`, callback_data: "addbalance" }]);
   }
   payButtons.push([{ text: "⚡ UPI Auto-Pay (instant)", callback_data: `pay_razorpay_${orderId}` }]);
-  payButtons.push([{ text: t("btn_upi", lang) + " (manual)", callback_data: `pay_upi_${orderId}` }]);
-  payButtons.push([{ text: t("btn_crypto", lang), callback_data: `pay_crypto_${orderId}` }]);
   payButtons.push([{ text: t("btn_cancel", lang), callback_data: "cancel" }]);
 
   await sendMsg(BOT_TOKEN, chatId,
