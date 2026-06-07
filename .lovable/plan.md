@@ -1,103 +1,107 @@
-# Wallet / Balance Feature
 
-Add a customer wallet system with INR + USDT balances. Users top up via bot or website (admin approves), admins can manually credit/debit any user, and balance can be used as payment for orders alongside existing UPI/crypto flows.
+# Razorpay Auto-Payment Integration (Customer Bot)
 
-## Database changes
+Add automated INR payment via Razorpay so users pay from a UPI app and the bot instantly credits the order/wallet — no manual UTR, no admin approval, no leaving Telegram for a web form.
 
-Migration adds:
+## How it works (UX)
 
-1. **`customer_wallets`** — add `balance_usdt numeric default 0` and `total_earned_usdt`, `total_withdrawn_usdt` (mirror existing INR cols).
-2. **`wallet_topup_requests`** (new) — top-up requests pending admin approval:
-   - `id`, `telegram_id`, `username`
-   - `amount`, `currency` (`INR` | `USDT`)
-   - `payment_method` (`upi` | `crypto`)
-   - `proof_text` (utr/txid), `proof_image_path` (optional)
-   - `source` (`bot` | `web`)
-   - `status` (`pending` | `approved` | `rejected`)
-   - `admin_notes`, `created_at`, `resolved_at`
-3. **`wallet_transactions`** (new) — full ledger:
-   - `id`, `telegram_id`, `currency`, `amount` (signed), `type` (`topup`, `admin_credit`, `admin_debit`, `order_payment`, `refund`), `reference_id` (order_id or topup id), `note`, `created_at`
-4. **`sell_settings`** — add `min_topup_inr default 50`, `min_topup_usdt default 2`.
-5. RLS: deny public on new tables (server-only via service role, matching existing pattern).
-6. Helper SQL function `adjust_wallet_balance(_telegram_id, _currency, _delta)` — updates wallet atomically and inserts ledger row.
+```
+User taps "💳 Pay with UPI (Auto)"
+   │
+   ▼
+Bot creates Razorpay Order via API
+   │
+   ▼
+Bot sends in chat:
+   • UPI QR image (scan with any UPI app)
+   • upi:// deep link button ("Open in UPI app")
+   • Amount + Order ID + 10-min expiry
+   │
+   ▼
+User pays in their UPI app (GPay/PhonePe/Paytm)
+   │
+   ▼
+Razorpay webhook → our edge function
+   │
+   ▼
+Auto: mark order paid → auto-deliver files
+       OR credit wallet top-up
+   │
+   ▼
+Bot sends "✅ Payment received! Delivering accounts…"
+```
 
-## Backend (edge functions)
+Everything stays inside Telegram. No browser, no Razorpay checkout page — only the user's own UPI app opens.
 
-### `telegram-bot/index.ts`
-- Add **💰 Wallet** menu button → shows INR + USDT balance, recent 5 transactions, "➕ Add Balance" + "🔄 Refresh".
-- Add Balance flow (conversation_states):
-  1. Choose currency (INR / USDT)
-  2. Choose method (UPI for INR, Crypto for USDT)
-  3. Enter amount (>= min)
-  4. Show payment instructions (active UPI / crypto wallet from existing tables)
-  5. Ask for UTR/TxID → creates `wallet_topup_requests` row, notifies admin bot.
-- Order checkout: when payment method picker shown, add **💼 Pay from Balance** option. If balance ≥ amount → debit wallet, mark order `payment_received`, trigger auto-deliver. If insufficient → show shortfall.
+## Scope
+
+- Orders: add "💳 UPI Auto Pay" alongside existing UPI manual / Crypto / Wallet options.
+- Wallet top-ups (INR): add "💳 UPI Auto Pay" alongside existing manual UPI proof flow.
+- Currency: INR only (USDT auto stays manual for now).
+- Existing manual UPI flow is kept as fallback.
+
+## Backend changes
+
+### Secrets (requested after plan approval)
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+
+### Database (migration)
+New table `razorpay_payments`:
+- `razorpay_order_id` (pk), `razorpay_payment_id`, `amount`, `currency`
+- `purpose` (`order` | `topup`), `reference_id` (our order_id or wallet topup id)
+- `telegram_id`, `chat_id`, `status` (`created` | `paid` | `failed` | `expired`)
+- `created_at`, `paid_at`
+- RLS: `no_public_access` (server-only, matches existing pattern).
+- Grants: `service_role` only.
+
+### New edge function `razorpay-webhook` (`verify_jwt = false`)
+- Verifies `X-Razorpay-Signature` (HMAC-SHA256 of raw body with webhook secret).
+- On `payment.captured`:
+  - Look up `razorpay_payments` row by `order_id`.
+  - If `purpose = order`: update orders → `payment_received` (method `upi_auto`), call existing `auto-deliver` function → bot sends delivery in chat.
+  - If `purpose = topup`: call `adjust_wallet_balance(_telegram_id, 'INR', amount, 'topup', ref_id, 'Razorpay UPI')` → bot sends "Wallet credited ₹X" message.
+  - Notify admin bot (reuse existing pattern).
+- Idempotent (skip if already `paid`).
+
+### `telegram-bot/index.ts` updates
+- New helper `createRazorpayOrder(amount, purpose, refId, telegramId, chatId)`:
+  - POST `https://api.razorpay.com/v1/orders` with basic auth (key:secret).
+  - Insert row into `razorpay_payments`.
+- New helper `buildUpiPayload(orderAmount, orderId)`:
+  - Returns `upi://pay?pa=<merchant-vpa>&pn=Riox&am=<amt>&tn=<orderid>&cu=INR` (vpa from Razorpay or fallback to active `upi_wallets` row).
+  - Generates QR image via `https://api.qrserver.com/v1/create-qr-code/?data=<encoded>` and sends with `sendPhoto`.
+- Order checkout payment picker: add `💳 UPI Auto Pay` button → creates Razorpay order → sends QR + deep-link button + "I've paid" status check button.
+- Wallet `➕ Add Balance` → currency INR → method picker now has `💳 UPI Auto Pay` (in addition to manual UPI).
+- Status check button calls Razorpay `fetch order` API; on `paid` triggers same flow as webhook (safety net if webhook delayed).
 
 ### `admin-bot/index.ts`
-- New menu: **💼 Wallets**
-  - View pending top-ups → approve/reject (approve calls `adjust_wallet_balance`, notifies user)
-  - Search user by code/telegram → view balances → ➕ Credit / ➖ Debit (amount + currency + note)
-- Notify admin chat on every new top-up request.
+- Notification on every auto-captured payment (already gets order notify via auto-deliver, just add small "Razorpay auto" tag).
 
-### `admin-api/index.ts`
-- Endpoints (POST actions):
-  - `list_topups` (filter by status)
-  - `approve_topup`, `reject_topup`
-  - `adjust_balance` (telegram_id, currency, delta, note)
-  - `list_wallet_transactions` (per user)
+### `set-telegram-webhook/index.ts`
+- No change.
 
-### `web-chat/index.ts` / new `wallet-api`
-- Use existing `admin-api` style for user-facing wallet ops, or extend `web-chat`:
-  - `get_balance` (by session/telegram_id mapped customer)
-  - `create_topup_request` (with proof)
-  - `pay_with_balance` (orderId)
+## Frontend changes
 
-### `auto-deliver/index.ts`
-- Already triggers on `payment_received`; no change needed.
+None. (Razorpay integration lives only in the customer Telegram bot per request.)
 
-## Frontend
+## Razorpay setup (one-time, by user)
 
-### `src/pages/Admin.tsx`
-New **Wallets** tab:
-- **Pending Top-ups** table: user, amount, currency, method, proof, [Approve] [Reject] buttons.
-- **Manual Adjust**: search user (telegram_id / customer_code) → show current balances → form to add/subtract INR or USDT with note.
-- **Transaction log** (filterable per user).
+After secrets are added:
+1. Razorpay Dashboard → Settings → Webhooks → Add webhook
+2. URL: `https://ptjqnvbebnpzaxdhxbtr.supabase.co/functions/v1/razorpay-webhook`
+3. Secret: same as `RAZORPAY_WEBHOOK_SECRET`
+4. Events: `payment.captured`, `payment.failed`
+5. Enable UPI under Payment Methods.
 
-### `src/components/BuySection.tsx`
-- After order created, payment modal gets a third option: **💼 Pay with Wallet (Balance: ₹X / $Y)**. Disabled if insufficient. On click → calls `pay_with_balance` → success state.
-
-### New `src/components/WalletSection.tsx` (rendered on landing page after Buy)
-- Shows wallet balance (requires telegram_id / login — for web users, identify by `web_<sessionId>` customer record).
-- "Add Balance" form: currency, amount, UPI screenshot/UTR or crypto txid → submits top-up request.
-- Recent transactions list.
-
-### Localization
-- Add wallet strings to `src/lib/i18n.ts` for EN/HI/ES/AR.
-
-## Flow summary
-
-```
-User                    System                       Admin
- │  Add ₹500 (UPI)        │                            │
- ├──────────────────────► │                            │
- │                        │  topup_request created     │
- │                        ├──────────────────────────► │  notify
- │                        │                            │  approve
- │                        │ ◄──────────────────────────┤
- │  ✅ Balance updated    │  adjust_wallet + ledger    │
- │ ◄──────────────────────┤                            │
- │                        │                            │
- │  Buy 5 IN Regular      │                            │
- │  Pay with Wallet       │                            │
- ├──────────────────────► │  debit wallet, order paid  │
- │                        │  → auto-deliver            │
- │  📦 Files delivered    │                            │
-```
+I'll send these exact steps after deploy.
 
 ## Implementation order
 
-1. Migration (DB + RLS + helper function).
-2. Edge functions (admin-api, telegram-bot, admin-bot, web-chat updates).
-3. Admin panel Wallets tab.
-4. BuySection wallet payment option + WalletSection on landing.
-5. i18n strings.
+1. Request 3 secrets.
+2. Migration: `razorpay_payments` table.
+3. Edge function `razorpay-webhook` + config.toml entry.
+4. `telegram-bot/index.ts`: order + wallet flows + QR helper.
+5. Deploy + give user webhook URL to paste in Razorpay dashboard.
+6. Test end-to-end with a ₹1 live payment.
