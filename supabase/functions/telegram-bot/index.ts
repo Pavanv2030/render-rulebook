@@ -1528,22 +1528,21 @@ async function handleRazorpayPayment(
   const closeBy = Math.floor(Date.now() / 1000) + 30 * 60; // 30 min expiry
 
   try {
-    // Use Payment Links API — works on every Razorpay account (Test & Live)
-    const expireBy = Math.floor(Date.now() / 1000) + 30 * 60; // 30 min
-    const rpRes = await fetch("https://api.razorpay.com/v1/payment_links", {
+    // Use QR Codes API — user scans directly in UPI app, no third-party page
+    const rpRes = await fetch("https://api.razorpay.com/v1/payments/qr_codes", {
       method: "POST",
       headers: {
         Authorization: "Basic " + btoa(`${RP_KEY}:${RP_SECRET}`),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: amountPaise,
-        currency: "INR",
-        accept_partial: false,
+        type: "upi_qr",
+        name: purpose === "order" ? `Order ${referenceId}` : `Wallet Top-up`,
+        usage: "single_use",
+        fixed_amount: true,
+        payment_amount: amountPaise,
         description: purpose === "order" ? `Order ${referenceId}` : `Wallet Top-up ₹${amount}`,
-        expire_by: expireBy,
-        reminder_enable: false,
-        notify: { sms: false, email: false },
+        close_by: closeBy,
         notes: {
           purpose,
           reference_id: ourId,
@@ -1554,10 +1553,10 @@ async function handleRazorpayPayment(
       }),
     });
     const rpData = await rpRes.json();
-    if (!rpRes.ok || !rpData.id || !rpData.short_url) {
-      console.error("Razorpay PaymentLink create failed:", rpData);
+    if (!rpRes.ok || !rpData.id || !rpData.image_url) {
+      console.error("Razorpay QR create failed:", rpData);
       await sendMsg(BOT_TOKEN, chatId,
-        `❌ Could not create auto-pay link. Please use manual UPI.\n\n_${rpData?.error?.description || "API error"}_`,
+        `❌ Could not create auto-pay QR. Please use manual UPI.\n\n_${rpData?.error?.description || "API error"}_`,
         undefined, lang);
       return;
     }
@@ -1573,20 +1572,16 @@ async function handleRazorpayPayment(
       status: "created",
     });
 
-    const shortUrl = rpData.short_url;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(shortUrl)}`;
     const caption =
       `⚡ *UPI AUTO-PAY*\n━━━━━━━━━━━━━━━\n\n` +
       `💰 Amount: *₹${amount.toFixed(2)}*\n` +
       `${purpose === "order" ? `🆔 Order: \`${referenceId}\`\n` : `💵 Wallet Top-up\n`}` +
       `⏱ Expires in: *30 min*\n\n` +
-      `📱 *Scan the QR* with any UPI app (GPay / PhonePe / Paytm)\n` +
-      `or tap *Pay Now* to open your UPI app directly.\n\n` +
-      `_Payment is auto-detected — no screenshots needed!_`;
+      `📱 *Scan the QR* with any UPI app (GPay / PhonePe / Paytm / BHIM)\n\n` +
+      `_Payment is auto-detected instantly — no screenshots, no redirects!_`;
 
-    await sendPhoto(BOT_TOKEN, chatId, qrUrl, caption, {
+    await sendPhoto(BOT_TOKEN, chatId, rpData.image_url, caption, {
       inline_keyboard: [
-        [{ text: "💳 Pay Now", url: shortUrl }],
         [{ text: "🔄 Check Payment Status", callback_data: `rzp_check_${rpData.id}` }],
         [{ text: "❌ Cancel", callback_data: "cancel" }, { text: "❓ Help", callback_data: "support" }],
       ],

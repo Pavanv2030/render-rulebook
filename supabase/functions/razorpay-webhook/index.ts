@@ -50,16 +50,18 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Extract payment from various event shapes
+  // Accept both payment.captured and qr_code.credited events
   const payment = event.payload?.payment?.entity;
+  const qrCode = event.payload?.qr_code?.entity;
   if (!payment || payment.status !== "captured") {
     return new Response(JSON.stringify({ ok: true, skipped: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const notes = payment.notes || {};
-  const ourRef = notes.reference_id;           // our internal id (order_id or TOPUP-xxx)
+  // Notes live on the QR code for qr_code.credited; on payment for payment.captured
+  const notes = qrCode?.notes || payment.notes || {};
+  const ourRef = notes.reference_id;
   const purposeHint = notes.purpose;
   const appOrderId = notes.app_order_id || ourRef;
   let telegramId = notes.telegram_id;
