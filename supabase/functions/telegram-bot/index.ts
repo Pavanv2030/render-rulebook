@@ -1587,7 +1587,7 @@ async function handleRazorpayPayment(
 
   } catch (e) {
     console.error("Razorpay error:", e);
-    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay failed. Please use manual UPI.", undefined, lang);
+    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay failed. Please try again or pay from your wallet balance.", undefined, lang);
   }
 }
 
