@@ -950,6 +950,21 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     if (input === "paid" || input.includes("i have paid") || input.includes("payment done") || input.includes("paid done")) {
       if (state?.pending_order_id) {
+        // If this order was paid via Razorpay UPI Auto, try to auto-finalize first
+        const { data: rzpRow } = await supabase
+          .from("razorpay_payments")
+          .select("razorpay_order_id, status")
+          .eq("reference_id", state.pending_order_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (rzpRow?.razorpay_order_id) {
+          const r = await finalizeRazorpayIfPaid(rzpRow.razorpay_order_id, chatId, BOT_TOKEN, supabase, lang);
+          if (r.paid) {
+            await supabase.from("conversation_states").update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+            return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+          }
+        }
         await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
         await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
