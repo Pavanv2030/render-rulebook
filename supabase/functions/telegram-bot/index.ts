@@ -1621,4 +1621,105 @@ async function handleRazorpayPayment(
   }
 }
 
+// ════════════════════════════════════════════
+// 🔄 Finalize Razorpay QR if customer already paid (webhook fallback)
+// ════════════════════════════════════════════
+async function finalizeRazorpayIfPaid(
+  qrId: string, chatId: string, BOT_TOKEN: string, supabase: any, lang: Lang = "en",
+): Promise<{ paid: boolean }> {
+  const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
+  const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
+  const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+  const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+  if (!RP_KEY || !RP_SECRET) return { paid: false };
+
+  const { data: rp } = await supabase
+    .from("razorpay_payments").select("*").eq("razorpay_order_id", qrId).maybeSingle();
+  if (!rp) return { paid: false };
+  if (rp.status === "paid") return { paid: true };
+
+  // Fetch payments for this QR from Razorpay
+  let payments: any[] = [];
+  try {
+    const res = await fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}/payments`, {
+      headers: { Authorization: "Basic " + btoa(`${RP_KEY}:${RP_SECRET}`) },
+    });
+    const j = await res.json();
+    payments = j?.items || [];
+  } catch (e) { console.error("rzp fetch payments failed:", e); return { paid: false }; }
+
+  const captured = payments.find((p: any) => p.status === "captured");
+  if (!captured) return { paid: false };
+
+  // Claim atomically — only proceed if we flip from created -> paid
+  const { data: claimed } = await supabase
+    .from("razorpay_payments")
+    .update({ status: "paid", razorpay_payment_id: captured.id, paid_at: new Date().toISOString() })
+    .eq("razorpay_order_id", qrId)
+    .eq("status", "created")
+    .select();
+  if (!claimed?.length) return { paid: true }; // someone else processed
+
+  const amountInr = Number(captured.amount) / 100;
+
+  if (rp.purpose === "order") {
+    await supabase.from("orders").update({
+      status: "payment_received", payment_method: "UPI Auto", transaction_id: captured.id,
+    }).eq("order_id", rp.reference_id);
+
+    await sendMsg(BOT_TOKEN, chatId,
+      `✅ *Payment Received!*\n━━━━━━━━━━━━━━━\n\n🆔 Order: \`${rp.reference_id}\`\n💰 ₹${amountInr.toFixed(2)}\n📱 Via UPI Auto\n\n⏳ Preparing your accounts...`,
+      { inline_keyboard: [[{ text: "📊 Track Order", callback_data: "check_status" }]] }, lang);
+
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}),
+        },
+        body: JSON.stringify({ orderId: rp.reference_id }),
+      });
+    } catch (e) { console.error("auto-deliver failed:", e); }
+
+    if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+      await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: ADMIN_CHAT_ID, parse_mode: "Markdown",
+          text: `⚡ *Razorpay Auto-Pay* (manual check)\n━━━━━━━━━━━━━━━\n👤 \`${rp.telegram_id}\`\n🆔 Order: \`${rp.reference_id}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 \`${captured.id}\``,
+        }),
+      });
+    }
+  } else if (rp.purpose === "topup") {
+    const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
+      _telegram_id: rp.telegram_id, _currency: "INR", _delta: amountInr,
+      _type: "topup", _reference_id: captured.id, _note: "Razorpay UPI Auto",
+    });
+    if (!rpcErr) {
+      const { data: w } = await supabase.from("customer_wallets")
+        .select("balance_inr").eq("telegram_id", rp.telegram_id).maybeSingle();
+      const newBal = Number(w?.balance_inr || 0);
+      await sendMsg(BOT_TOKEN, chatId,
+        `✅ *Wallet Credited!*\n━━━━━━━━━━━━━━━\n\n💵 Added: *₹${amountInr.toFixed(2)}*\n💰 New Balance: *₹${newBal.toFixed(2)}*\n📱 Via UPI Auto`,
+        { inline_keyboard: [[{ text: "💵 Wallet", callback_data: "wallet" }, { text: "🛒 Buy", callback_data: "start" }]] }, lang);
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID, parse_mode: "Markdown",
+            text: `⚡ *Razorpay Top-up* (manual check)\n👤 \`${rp.telegram_id}\`\n💵 +₹${amountInr.toFixed(2)}\n💰 New: ₹${newBal.toFixed(2)}\n🧾 \`${captured.id}\``,
+          }),
+        });
+      }
+    }
+  }
+  return { paid: true };
+}
+
+
 
