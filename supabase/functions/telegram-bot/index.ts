@@ -215,7 +215,7 @@ function getMainKeyboard(lang: Lang) {
     keyboard: [
       [{ text: t("kb_buy", lang) }, { text: t("kb_sell", lang) }],
       [{ text: t("kb_orders", lang) }, { text: t("kb_reorder", lang) }],
-      [{ text: t("kb_login", lang) }, { text: t("kb_refer", lang) }],
+      [{ text: t("kb_refer", lang) }],
       [{ text: t("kb_guide", lang) }, { text: t("kb_support", lang) }],
       [{ text: t("kb_language", lang) }],
     ],
