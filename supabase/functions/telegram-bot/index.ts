@@ -1519,7 +1519,7 @@ async function handleRazorpayPayment(
   const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
   const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
   if (!RP_KEY || !RP_SECRET) {
-    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay is not configured. Please use manual UPI.", undefined, lang);
+    await sendMsg(BOT_TOKEN, chatId, "❌ Auto-Pay is not configured. Please contact support or pay from your wallet balance.", undefined, lang);
     return;
   }
   const amountPaise = Math.round(amount * 100);
