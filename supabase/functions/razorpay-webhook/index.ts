@@ -112,10 +112,10 @@ Deno.serve(async (req) => {
       status: "payment_received",
       payment_method: "UPI Auto",
       transaction_id: payment.id,
-    }).eq("order_id", referenceId);
+    }).eq("order_id", appOrderId);
 
     await tgSend(BOT_TOKEN, chatId,
-      `✅ *Payment Received!*\n━━━━━━━━━━━━━━━\n\n🆔 Order: \`${referenceId}\`\n💰 ₹${amountInr.toFixed(2)}\n📱 Via UPI Auto\n\n⏳ Preparing your accounts...`,
+      `✅ *Payment Received!*\n━━━━━━━━━━━━━━━\n\n🆔 Order: \`${appOrderId}\`\n💰 ₹${amountInr.toFixed(2)}\n📱 Via UPI Auto\n\n⏳ Preparing your accounts...`,
       { inline_keyboard: [[{ text: "📊 Track Order", callback_data: "check_status" }]] });
 
     try {
@@ -126,13 +126,13 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}),
         },
-        body: JSON.stringify({ orderId: referenceId }),
+        body: JSON.stringify({ orderId: appOrderId }),
       });
     } catch (e) { console.error("auto-deliver failed:", e); }
 
     if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
       await tgSend(ADMIN_BOT_TOKEN, ADMIN_CHAT_ID,
-        `⚡ *Razorpay Auto-Pay*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n🆔 Order: \`${referenceId}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 Payment: \`${payment.id}\``);
+        `⚡ *Razorpay Auto-Pay*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n🆔 Order: \`${appOrderId}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 Payment: \`${payment.id}\``);
     }
   } else if (purpose === "topup") {
     // Credit wallet
@@ -148,14 +148,6 @@ Deno.serve(async (req) => {
     if (rpcErr) {
       console.error("wallet credit failed:", rpcErr);
     } else {
-      // Mark any pending topup_request as approved (if exists)
-      if (referenceId) {
-        await supabase.from("wallet_topup_requests").update({
-          status: "approved",
-          resolved_at: new Date().toISOString(),
-          admin_notes: `Auto-approved via Razorpay ${payment.id}`,
-        }).eq("id", referenceId);
-      }
 
       const { data: w } = await supabase.from("customer_wallets")
         .select("balance_inr").eq("telegram_id", telegramId).maybeSingle();
