@@ -1571,11 +1571,6 @@ async function handleRazorpayPayment(
       chat_id: chatId,
       status: "created",
     });
-    // Also store our internal id mapping via notes already saved above
-    await supabase.from("razorpay_payments").update({ razorpay_order_id: rpData.id })
-      .eq("razorpay_order_id", rpData.id);
-    // Update the notes' our_id to match the actual QR id (so webhook can find row)
-    // We use rpData.id as the PK going forward — the notes from QR creation already match.
 
     const qrImage = rpData.image_url;
     const caption =
