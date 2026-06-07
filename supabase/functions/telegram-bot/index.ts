@@ -885,7 +885,7 @@ Deno.serve(async (req) => {
           `❌ *Insufficient wallet balance*\n\nBalance: *${sym}${bal.toFixed(2)}*\nNeeded: *${sym}${Number(order.amount).toFixed(2)}*\n\nTap ➕ Add Balance or pay another way.`,
           { inline_keyboard: [
             [{ text: "➕ Add Balance", callback_data: "addbalance" }],
-            [{ text: "💳 UPI", callback_data: `pay_upi_${orderId}` }, { text: "₿ Crypto", callback_data: `pay_crypto_${orderId}` }],
+            [{ text: "⚡ UPI Auto-Pay", callback_data: `pay_razorpay_${orderId}` }],
             [{ text: "❌ Cancel", callback_data: "cancel" }],
           ]}, lang);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
