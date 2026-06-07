@@ -383,6 +383,7 @@ function loadTabData(tab) {
   if (tab === "crypto") fetchCryptoWallets();
   if (tab === "upi") fetchUpiWallets();
   if (tab === "inventory") { fetchInventoryList(); fetchInventoryStats(); }
+  if (tab === "autopay") fetchRazorpayPayments();
 }
 
 // ===================== DATA FETCHING =====================
