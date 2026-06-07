@@ -485,6 +485,16 @@ async function handleTopupAmount(supabase: any, botToken: string, chatId: string
     return true;
   }
 
+
+  // ⚡ Razorpay UPI Auto-Pay: clear state and let main bot dispatcher build the QR
+  if (method === "rzp") {
+    await setSellState(supabase, chatId, { state: "idle" });
+    await sendMsg(botToken, chatId,
+      `⚡ Generating UPI QR for *₹${amount.toFixed(2)}*...`,
+      { inline_keyboard: [[{ text: "⚡ Confirm & Generate QR", callback_data: `rzp_topup_${amount}` }, { text: "❌ Cancel", callback_data: "wallet" }]] });
+    return true;
+  }
+
   // Show payment instructions
   let payInfo = "";
   if (method === "upi") {
