@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
     if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
       await tgSend(ADMIN_BOT_TOKEN, ADMIN_CHAT_ID,
-        `⚡ *Razorpay Auto-Pay*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n🆔 Order: \`${appOrderId}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 Payment: \`${payment.id}\``);
+        `⚡ *Razorpay Auto-Pay*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n🆔 Order: \`${appOrderId}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 Payment: \`${payId}\``);
     }
   } else if (purpose === "topup") {
     // Credit wallet
@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
 
       if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
         await tgSend(ADMIN_BOT_TOKEN, ADMIN_CHAT_ID,
-          `⚡ *Razorpay Wallet Top-up*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n💵 +₹${amountInr.toFixed(2)}\n💰 New: ₹${newBal.toFixed(2)}\n🧾 \`${payment.id}\``);
+          `⚡ *Razorpay Wallet Top-up*\n━━━━━━━━━━━━━━━\n👤 \`${telegramId}\`\n💵 +₹${amountInr.toFixed(2)}\n💰 New: ₹${newBal.toFixed(2)}\n🧾 \`${payId}\``);
       }
     }
   }
