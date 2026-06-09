@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     await supabase.from("orders").update({
       status: "payment_received",
       payment_method: "UPI Auto",
-      transaction_id: payment.id,
+      transaction_id: payId,
     }).eq("order_id", appOrderId);
 
     await tgSend(BOT_TOKEN, chatId,
@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       _currency: "INR",
       _delta: amountInr,
       _type: "topup",
-      _reference_id: payment.id,
+      _reference_id: payId,
       _note: "Razorpay UPI Auto",
     });
 
