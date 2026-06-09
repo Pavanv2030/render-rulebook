@@ -50,45 +50,59 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Accept both payment.captured and qr_code.credited events
+  // Accept payment.captured, payment.authorized, qr_code.credited
   const payment = event.payload?.payment?.entity;
   const qrCode = event.payload?.qr_code?.entity;
-  if (!payment || payment.status !== "captured") {
-    return new Response(JSON.stringify({ ok: true, skipped: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  const evtType: string = event.event || "";
+  const isQrCredited = evtType === "qr_code.credited";
+
+  // For payment.* events require captured. qr_code.credited is itself the credit confirmation.
+  if (!isQrCredited) {
+    if (!payment || payment.status !== "captured") {
+      return new Response(JSON.stringify({ ok: true, skipped: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
-  // Notes live on the QR code for qr_code.credited; on payment for payment.captured
-  const notes = qrCode?.notes || payment.notes || {};
+  // Notes may live on qr_code (QR payments) or on payment (orders/links).
+  // For QR-based UPI, payment.notes is often empty, so we MUST fall back to qr.id lookup.
+  const notes = qrCode?.notes || payment?.notes || {};
   const ourRef = notes.reference_id;
   const purposeHint = notes.purpose;
   const appOrderId = notes.app_order_id || ourRef;
   let telegramId = notes.telegram_id;
   let chatId = notes.chat_id || telegramId;
 
-  if (!ourRef) {
-    console.error("payment.captured missing reference_id note", payment.id);
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // Primary lookup: qr_code.id (stored as razorpay_order_id when QR was created).
+  // Fallback: reference_id from notes.
+  let rp: any = null;
+  if (qrCode?.id) {
+    const { data } = await supabase
+      .from("razorpay_payments")
+      .select("*")
+      .eq("razorpay_order_id", qrCode.id)
+      .maybeSingle();
+    rp = data;
   }
-
-  // Find our tracking row by reference_id
-  const { data: rp } = await supabase
-    .from("razorpay_payments")
-    .select("*")
-    .eq("reference_id", ourRef)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (!rp && ourRef) {
+    const { data } = await supabase
+      .from("razorpay_payments")
+      .select("*")
+      .eq("reference_id", ourRef)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    rp = data;
+  }
 
   if (!rp) {
-    console.error("No razorpay_payments row for reference_id", ourRef);
+    console.error("No razorpay_payments row for event", evtType, "qr.id=", qrCode?.id, "ref=", ourRef, "pay=", payment?.id);
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   if (rp.status === "paid") {
     return new Response(JSON.stringify({ ok: true, already: true }), {
