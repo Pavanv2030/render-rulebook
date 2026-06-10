@@ -216,6 +216,15 @@ Deno.serve(async (req) => {
       .update({ state: "idle", pending_order_id: null, updated_at: new Date().toISOString() })
       .eq("chat_id", order.customer_id);
 
+    // Admin: order delivered notification
+    const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+    if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+      const uname = order.customer_username ? ` (@${order.customer_username})` : "";
+      await sendTelegramMessage(ADMIN_BOT_TOKEN, ADMIN_CHAT_ID,
+        `✅ *Order Delivered*\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`${uname}\n🌍 ${country} — ${order.quantity}x ${accountType === "aged" ? "👑 Aged" : "📦 Regular"}\n💰 ${order.currency || "₹"}${order.total_amount} • ${order.payment_method || "—"}`
+      );
+    }
+
     // Low stock alert
     if (BOT_TOKEN && ADMIN_CHAT_ID) {
       const { data: remaining } = await supabase
