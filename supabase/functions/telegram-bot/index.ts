@@ -400,6 +400,24 @@ Deno.serve(async (req) => {
       const fileId = photo[photo.length - 1].file_id;
       const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
 
+      // If order is already auto-paid via Razorpay (or already delivered), skip the manual approve flow.
+      const { data: existingOrd } = await supabase
+        .from("orders")
+        .select("status, payment_method")
+        .eq("order_id", state.pending_order_id)
+        .maybeSingle();
+      const alreadyHandled = existingOrd && (
+        existingOrd.payment_method === "UPI Auto" ||
+        ["payment_received", "processing", "delivered", "completed"].includes(existingOrd.status)
+      );
+      if (alreadyHandled) {
+        await supabase.from("conversation_states").update({ state: "idle", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+        await sendMsg(BOT_TOKEN, chatId,
+          `✅ Payment for \`${state.pending_order_id}\` was already received automatically. No screenshot needed.`,
+          { inline_keyboard: [[{ text: t("btn_track", lang), callback_data: "check_status" }]] }, lang);
+        return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: corsHeaders });
+      }
+
       await supabase.from("orders").update({ status: "payment_received" }).eq("order_id", state.pending_order_id);
       await supabase.from("conversation_states").update({ state: "payment_review", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
 
