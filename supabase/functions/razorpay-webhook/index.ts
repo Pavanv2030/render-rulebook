@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
   })
     .eq("razorpay_order_id", rp.razorpay_order_id)
     .eq("status", "created")
-    .select("id");
+    .select("razorpay_order_id");
 
   if (!claimed || claimed.length === 0) {
     return new Response(JSON.stringify({ ok: true, already: true }), {
