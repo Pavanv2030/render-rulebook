@@ -400,26 +400,59 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Broadcast message
+      // Broadcast message — run in background to avoid connection timeout on large lists
       if (body.action === "broadcast") {
         const { message } = body;
         if (!BOT_TOKEN) {
           return new Response(JSON.stringify({ error: "Bot token not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         const { data: customers } = await supabase.from("customers").select("telegram_id").not("telegram_id", "is", null);
-        const recipients = (customers || []).filter((c: any) => c.telegram_id && !String(c.telegram_id).startsWith("web_"));
-        let sent = 0, failed = 0;
-        for (const c of recipients) {
-          try {
-            const r = await sendTelegramMessage(BOT_TOKEN, c.telegram_id, message);
-            if (r && r.ok) sent++; else failed++;
-          } catch {
-            failed++;
+        const recipients = (customers || []).filter((c: any) => {
+          const id = String(c.telegram_id || "");
+          return /^\d+$/.test(id); // only real numeric Telegram IDs
+        });
+        const skipped = (customers || []).length - recipients.length;
+
+        // Background task — do not await
+        const task = (async () => {
+          let sent = 0, failed = 0;
+          for (const c of recipients) {
+            let attempt = 0;
+            while (attempt < 3) {
+              try {
+                const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ chat_id: c.telegram_id, text: message }),
+                });
+                const data = await res.json();
+                if (data.ok) { sent++; break; }
+                if (res.status === 429) {
+                  const retry = (data.parameters?.retry_after || 1) * 1000;
+                  await new Promise((r) => setTimeout(r, retry));
+                  attempt++;
+                  continue;
+                }
+                failed++;
+                break;
+              } catch {
+                attempt++;
+                if (attempt >= 3) failed++;
+              }
+            }
+            await new Promise((r) => setTimeout(r, 40));
           }
-          // small delay to respect Telegram rate limits (~30/sec)
-          await new Promise((res) => setTimeout(res, 40));
-        }
-        return new Response(JSON.stringify({ success: true, sent, failed, total: recipients.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          console.log(`Broadcast complete: sent=${sent} failed=${failed} total=${recipients.length}`);
+        })();
+        // @ts-ignore EdgeRuntime exists on Supabase Deno
+        if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(task);
+
+        return new Response(JSON.stringify({
+          success: true,
+          queued: true,
+          total: recipients.length,
+          skipped,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // ========== CRYPTO WALLETS ==========
