@@ -759,7 +759,7 @@ Deno.serve(async (req) => {
       let sent = 0, failed = 0;
       for (const c of realCustomers) {
         try {
-          await sendToCustomer(CUSTOMER_BOT_TOKEN, c.telegram_id, message);
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, c.telegram_id, message, { parseMode: "Markdown" });
           sent++;
         } catch { failed++; }
       }
@@ -1181,7 +1181,7 @@ Deno.serve(async (req) => {
           }).eq("telegram_id", w.telegram_id);
         }
         await supabase.from("withdrawal_requests").update({ status: "paid", resolved_at: new Date().toISOString() }).eq("id", id);
-        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `✅ *Withdrawal paid!*\n\n${SYMBOL}${w.amount_inr} sent to your ${w.method.toUpperCase()}: \`${w.payout_address}\``);
+        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `✅ *Withdrawal paid!*\n\n${SYMBOL}${w.amount_inr} sent to your ${w.method.toUpperCase()}: \`${w.payout_address}\``, { parseMode: "Markdown" });
         await sendMsg(BOT_TOKEN, chatId, `✅ Marked paid: \`${id.slice(0,8)}\``);
       } else {
         // Refund
@@ -1193,7 +1193,7 @@ Deno.serve(async (req) => {
           }).eq("telegram_id", w.telegram_id);
         }
         await supabase.from("withdrawal_requests").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", id);
-        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `❌ *Withdrawal rejected.*\n\n${SYMBOL}${w.amount_inr} returned to your wallet.`);
+        if (CUSTOMER_BOT_TOKEN) await sendToCustomer(CUSTOMER_BOT_TOKEN, w.telegram_id, `❌ *Withdrawal rejected.*\n\n${SYMBOL}${w.amount_inr} returned to your wallet.`, { parseMode: "Markdown" });
         await sendMsg(BOT_TOKEN, chatId, `↩️ Refunded: \`${id.slice(0,8)}\``);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
@@ -1248,13 +1248,13 @@ Deno.serve(async (req) => {
         if (rpcErr) { await sendMsg(BOT_TOKEN, chatId, `❌ ${rpcErr.message}`); return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders }); }
         await supabase.from("wallet_topup_requests").update({ status: "approved", resolved_at: new Date().toISOString() }).eq("id", id);
         if (CUSTOMER_BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
-          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `✅ *Top-up Approved!*\n\n+${sym}${Number(tu.amount).toFixed(2)} ${tu.currency} added to your wallet.\n\nUse /wallet to view balance.`);
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `✅ *Top-up Approved!*\n\n+${sym}${Number(tu.amount).toFixed(2)} ${tu.currency} added to your wallet.\n\nUse /wallet to view balance.`, { parseMode: "Markdown" });
         }
         await sendMsg(BOT_TOKEN, chatId, `✅ Approved top-up: ${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}`);
       } else {
         await supabase.from("wallet_topup_requests").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", id);
         if (CUSTOMER_BOT_TOKEN && !tu.telegram_id.startsWith("web_")) {
-          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `❌ *Top-up Rejected*\n\n${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}\n\nContact support if needed.`);
+          await sendToCustomer(CUSTOMER_BOT_TOKEN, tu.telegram_id, `❌ *Top-up Rejected*\n\n${sym}${Number(tu.amount).toFixed(2)} ${tu.currency}\n\nContact support if needed.`, { parseMode: "Markdown" });
         }
         await sendMsg(BOT_TOKEN, chatId, `❌ Rejected top-up: \`${id.slice(0,8)}\``);
       }
@@ -1291,7 +1291,7 @@ Deno.serve(async (req) => {
       const sym = cur === "INR" ? SYMBOL : "$";
       await sendMsg(BOT_TOKEN, chatId, `✅ ${isCredit ? "Credited" : "Debited"} ${sym}${amt} ${cur} ${isCredit ? "to" : "from"} \`${tid}\``);
       if (CUSTOMER_BOT_TOKEN && !tid.startsWith("web_")) {
-        await sendToCustomer(CUSTOMER_BOT_TOKEN, tid, `${isCredit ? "💰 *Wallet Credited*" : "💸 *Wallet Debited*"}\n\n${isCredit ? "+" : "-"}${sym}${amt} ${cur}\n📝 ${note}`);
+        await sendToCustomer(CUSTOMER_BOT_TOKEN, tid, `${isCredit ? "💰 *Wallet Credited*" : "💸 *Wallet Debited*"}\n\n${isCredit ? "+" : "-"}${sym}${amt} ${cur}\n📝 ${note}`, { parseMode: "Markdown" });
       }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
