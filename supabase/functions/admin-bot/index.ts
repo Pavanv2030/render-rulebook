@@ -250,7 +250,8 @@ Deno.serve(async (req) => {
             `${ci.flag} Country: ${ci.name}\n` +
             `📦 ${ord.quantity}x ${ord.account_type}\n` +
             `💰 ${SYMBOL}${ord.amount}\n\n` +
-            `⏳ Preparing your accounts for delivery...\nYou'll receive them shortly! 🚀`
+            `⏳ Preparing your accounts for delivery...\nYou'll receive them shortly! 🚀`,
+            { parseMode: "Markdown" }
           );
         }
       }
@@ -297,7 +298,8 @@ Deno.serve(async (req) => {
         const { data: order } = await supabase.from("orders").select("customer_id, order_id, quantity, account_type, amount").eq("order_id", orderId).single();
         if (order && order.customer_id && !order.customer_id.startsWith("web_")) {
           await sendToCustomer(CUSTOMER_BOT_TOKEN, order.customer_id,
-            `❌ *Payment Declined*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type}\n💰 ${SYMBOL}${order.amount}\n\n${reason ? `📝 Reason: ${reason}\n\n` : ""}Please re-check and try again.\nType /start to place a new order.`);
+            `❌ *Payment Declined*\n\n🆔 Order: \`${order.order_id}\`\n📦 ${order.quantity}x ${order.account_type}\n💰 ${SYMBOL}${order.amount}\n\n${reason ? `📝 Reason: ${reason}\n\n` : ""}Please re-check and try again.\nType /start to place a new order.`,
+            { parseMode: "Markdown" });
         }
       }
 
@@ -752,19 +754,43 @@ Deno.serve(async (req) => {
       }
 
       const { data: customers } = await supabase.from("customers").select("telegram_id");
-      const realCustomers = (customers || []).filter(c => !c.telegram_id.startsWith("web_"));
+      // Only numeric Telegram IDs can receive messages (skip web_, undefined, URLs, @usernames)
+      const realCustomers = (customers || []).filter(c => c.telegram_id && /^\d+$/.test(c.telegram_id));
+      const skipped = (customers?.length || 0) - realCustomers.length;
 
-      await sendMsg(BOT_TOKEN, chatId, `📢 Broadcasting to ${realCustomers.length} customers...`);
+      await sendMsg(BOT_TOKEN, chatId, `📢 Broadcasting to ${realCustomers.length} customers${skipped ? ` (${skipped} skipped: web/invalid IDs)` : ""}...`);
 
-      let sent = 0, failed = 0;
+      let sent = 0, failed = 0, blocked = 0;
+      const errors: string[] = [];
       for (const c of realCustomers) {
-        try {
-          await sendToCustomer(CUSTOMER_BOT_TOKEN, c.telegram_id, message, { parseMode: "Markdown" });
-          sent++;
-        } catch { failed++; }
+        let attempt = 0;
+        while (attempt < 3) {
+          try {
+            // Send as plain text so Markdown-special chars in the message don't reject it
+            await sendToCustomer(CUSTOMER_BOT_TOKEN, c.telegram_id, message);
+            sent++;
+            break;
+          } catch (e: any) {
+            if (e?.code === 429 && e?.retryAfter) {
+              await new Promise(r => setTimeout(r, (e.retryAfter + 1) * 1000));
+              attempt++;
+              continue;
+            }
+            if (e?.code === 403) blocked++;
+            else if (errors.length < 5) errors.push(`${c.telegram_id}: ${e?.message}`);
+            failed++;
+            break;
+          }
+        }
+        // ~25 msg/sec to stay under Telegram's 30/sec global cap
+        await new Promise(r => setTimeout(r, 40));
       }
 
-      await sendMsg(BOT_TOKEN, chatId, `✅ *Broadcast Complete!*\n\n📨 Sent: ${sent}\n❌ Failed: ${failed}`);
+      let report = `✅ *Broadcast Complete!*\n\n📨 Sent: ${sent}\n❌ Failed: ${failed}`;
+      if (blocked) report += `\n🚫 Blocked bot: ${blocked}`;
+      if (skipped) report += `\n⏭️ Skipped: ${skipped}`;
+      if (errors.length) report += `\n\nSample errors:\n${errors.map(e => `• ${e}`).join("\n")}`;
+      await sendMsg(BOT_TOKEN, chatId, report);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
@@ -811,7 +837,8 @@ Deno.serve(async (req) => {
           `🔐 *OTP Code:* \`${otpCode}\`\n` +
           `🛡️ *2FA Code:* \`${twofaCode}\`\n` +
           `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-          `⚠️ _Use these codes quickly!\nOTP expires in a few minutes._`
+          `⚠️ _Use these codes quickly!\nOTP expires in a few minutes._`,
+          { parseMode: "Markdown" }
         );
       }
 
@@ -1108,7 +1135,8 @@ Deno.serve(async (req) => {
       await supabase.from("account_submissions").update({ status: "rejected", notes: reason }).eq("id", sub.id);
       if (CUSTOMER_BOT_TOKEN) {
         await sendToCustomer(CUSTOMER_BOT_TOKEN, sub.seller_telegram_id,
-          `❌ *Submission Rejected*\n\n📱 \`${sub.phone_number}\`\nReason: ${reason}\n\n${SYMBOL}${sub.price_inr} has been deducted from your wallet.`);
+          `❌ *Submission Rejected*\n\n📱 \`${sub.phone_number}\`\nReason: ${reason}\n\n${SYMBOL}${sub.price_inr} has been deducted from your wallet.`,
+          { parseMode: "Markdown" });
       }
       await sendMsg(BOT_TOKEN, chatId, `✅ Rejected \`${sub.id.slice(0,8)}\` and refunded.`);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
