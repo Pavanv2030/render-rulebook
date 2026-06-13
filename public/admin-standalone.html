@@ -933,7 +933,7 @@ async function sendBroadcast() {
   try {
     const result = await apiFetch(`${BASE_URL}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast", message: msg }) });
     if (result.error) showError(result.error);
-    else { showSuccess(`✅ Broadcast sent! ${result.sent} delivered, ${result.failed} failed.`); document.getElementById("broadcastMsg").value = ""; }
+    else { showSuccess(`✅ Broadcast queued! Sending to ${result.total ?? 0} customers${result.skipped ? ` (${result.skipped} skipped)` : ""}. Delivery runs in the background.`); document.getElementById("broadcastMsg").value = ""; }
   } catch (e) { showError(e.message); }
 }
 
