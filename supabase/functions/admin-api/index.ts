@@ -576,6 +576,30 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // Normalize admin input → real telegram_id stored in DB.
+      // Accepts: numeric id, web_xxx, @username, t.me/username, https://t.me/username, customer_code.
+      const resolveTelegramId = async (raw: string): Promise<{ id: string | null; error?: string }> => {
+        if (!raw) return { id: null, error: "empty" };
+        let v = String(raw).trim();
+        // Strip URL prefix
+        v = v.replace(/^https?:\/\//i, "").replace(/^t\.me\//i, "").replace(/^telegram\.me\//i, "");
+        v = v.replace(/\/+$/, "").split("?")[0];
+        // Numeric or web_ → use as-is
+        if (/^\d+$/.test(v) || /^web_/i.test(v)) return { id: v };
+        // Strip leading @
+        const uname = v.replace(/^@/, "");
+        if (!uname) return { id: null, error: "invalid" };
+        // Lookup by username or customer_code
+        const { data: c } = await supabase.from("customers")
+          .select("telegram_id")
+          .or(`username.ilike.${uname},customer_code.ilike.${uname}`)
+          .not("telegram_id", "is", null)
+          .limit(1)
+          .maybeSingle();
+        if (c?.telegram_id) return { id: c.telegram_id };
+        return { id: null, error: `No customer found for "${raw}". Use numeric telegram_id, @username, or customer code.` };
+      };
+
       if (body.action === "adjust_balance") {
         const { telegram_id, currency, delta, note } = body;
         if (!telegram_id || !currency || delta === undefined) {
@@ -585,25 +609,35 @@ Deno.serve(async (req) => {
         if (!isFinite(d) || d === 0) {
           return new Response(JSON.stringify({ error: "Invalid delta" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
+        const resolved = await resolveTelegramId(telegram_id);
+        if (!resolved.id) {
+          return new Response(JSON.stringify({ error: resolved.error || "Could not resolve user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const realId = resolved.id;
         const { error: rpcErr } = await supabase.rpc("adjust_wallet_balance", {
-          _telegram_id: telegram_id, _currency: currency, _delta: d,
+          _telegram_id: realId, _currency: currency, _delta: d,
           _type: d > 0 ? "admin_credit" : "admin_debit", _reference_id: null, _note: note || "Manual adjustment by admin",
         });
         if (rpcErr) throw rpcErr;
-        if (BOT_TOKEN && !telegram_id.startsWith("web_")) {
+        if (BOT_TOKEN && !realId.startsWith("web_")) {
           const sym = currency === "INR" ? "₹" : "$";
-          await sendTelegramMessage(BOT_TOKEN, telegram_id,
+          await sendTelegramMessage(BOT_TOKEN, realId,
             `${d > 0 ? "💰 *Wallet Credited*" : "💸 *Wallet Debited*"}\n\n${d > 0 ? "+" : ""}${sym}${Math.abs(d).toFixed(2)} ${currency}\n${note ? `📝 ${note}\n\n` : ""}Use /wallet to view balance.`);
         }
-        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ success: true, telegram_id: realId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (body.action === "get_user_wallet") {
         const { telegram_id } = body;
         if (!telegram_id) return new Response(JSON.stringify({ error: "telegram_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        const { data: w } = await supabase.from("customer_wallets").select("*").eq("telegram_id", telegram_id).maybeSingle();
-        const { data: tx } = await supabase.from("wallet_transactions").select("*").eq("telegram_id", telegram_id).order("created_at", { ascending: false }).limit(50);
-        return new Response(JSON.stringify({ wallet: w || { balance_inr: 0, balance_usdt: 0 }, transactions: tx || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const resolved = await resolveTelegramId(telegram_id);
+        if (!resolved.id) {
+          return new Response(JSON.stringify({ error: resolved.error || "Not found", wallet: { balance_inr: 0, balance_usdt: 0 }, transactions: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const realId = resolved.id;
+        const { data: w } = await supabase.from("customer_wallets").select("*").eq("telegram_id", realId).maybeSingle();
+        const { data: tx } = await supabase.from("wallet_transactions").select("*").eq("telegram_id", realId).order("created_at", { ascending: false }).limit(50);
+        return new Response(JSON.stringify({ telegram_id: realId, wallet: w || { balance_inr: 0, balance_usdt: 0 }, transactions: tx || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (body.action === "search_user") {
