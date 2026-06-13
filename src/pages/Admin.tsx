@@ -304,7 +304,7 @@ const Admin = () => {
     try {
       const result = await apiFetch(`${baseUrl}/admin-api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast", message: broadcastMsg }) });
       if (result.error) throw new Error(result.error);
-      setSuccessMsg(`✅ Broadcast sent! ${result.sent} delivered, ${result.failed} failed.`); setBroadcastMsg("");
+      setSuccessMsg(`✅ Broadcast queued! Sending to ${result.total ?? 0} customers${result.skipped ? ` (${result.skipped} skipped)` : ""}. Delivery runs in the background.`); setBroadcastMsg("");
     } catch (err: any) { if (err.message !== "Unauthorized") setError(err.message); } finally { setBroadcasting(false); }
   };
 
