@@ -32,11 +32,21 @@ async function sendMsg(botToken: string, chatId: string, text: string, replyMark
   });
 }
 
-async function sendToCustomer(customerBotToken: string, chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${customerBotToken}/sendMessage`, {
+async function sendToCustomer(customerBotToken: string, chatId: string, text: string, opts: { parseMode?: string | null } = {}) {
+  const body: any = { chat_id: chatId, text };
+  if (opts.parseMode) body.parse_mode = opts.parseMode;
+  const r = await fetch(`https://api.telegram.org/bot${customerBotToken}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
+    body: JSON.stringify(body),
   });
+  const data = await r.json().catch(() => ({}));
+  if (!data?.ok) {
+    const err: any = new Error(data?.description || `HTTP ${r.status}`);
+    err.code = data?.error_code ?? r.status;
+    err.retryAfter = data?.parameters?.retry_after;
+    throw err;
+  }
+  return data;
 }
 
 Deno.serve(async (req) => {
