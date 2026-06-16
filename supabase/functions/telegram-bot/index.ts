@@ -840,6 +840,25 @@ Deno.serve(async (req) => {
       return await processQuantity(qty, state, chatId, username, firstName, supabase, BOT_TOKEN, PRICING, ADMIN_CHAT_ID, lang);
     }
 
+    // 💵 Custom top-up amount input
+    if (state?.state === "awaiting_topup_amount") {
+      const amt = Number(input.replace(/[₹,\s]/g, ""));
+      const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr").eq("id", 1).maybeSingle();
+      const min = Number(settings?.min_topup_inr ?? 50);
+      if (!isFinite(amt) || amt < min) {
+        await sendMsg(BOT_TOKEN, chatId,
+          `❌ Please send a valid amount (minimum *₹${min}*).`,
+          { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] }, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      await supabase.from("conversation_states")
+        .update({ state: "idle", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+      await handleRazorpayPayment(`TOPUP-${Date.now()}`, amt, "topup", null, chatId, BOT_TOKEN, supabase, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+
+
     // ════════════════════════════════════════════
     // 💳 Payment Method Selection
     // ════════════════════════════════════════════
