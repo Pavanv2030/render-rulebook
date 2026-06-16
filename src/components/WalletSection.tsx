@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Wallet, Plus, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
+import { Wallet, Plus, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, Clock, Zap, X, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface WalletData {
