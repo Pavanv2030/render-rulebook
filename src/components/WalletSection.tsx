@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Wallet, Plus, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
+import { Wallet, Plus, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, Clock, Zap, X, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface WalletData {
@@ -25,6 +25,10 @@ const WalletSection = ({ t }: Props) => {
   const [proof, setProof] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [rzpLoading, setRzpLoading] = useState(false);
+  const [rzpQr, setRzpQr] = useState<{ qrId: string; imageUrl: string; amount: number; expiresAt: number } | null>(null);
+  const [rzpPaid, setRzpPaid] = useState(false);
+  const pollRef = useRef<number | null>(null);
 
   const sessionId = (() => {
     let s = localStorage.getItem("airdrop_session_id");
@@ -63,6 +67,47 @@ const WalletSection = ({ t }: Props) => {
       setTimeout(() => { setShowTopup(false); setMsg(""); refresh(); }, 1500);
     } finally { setSubmitting(false); }
   };
+
+  const startAutoPay = async () => {
+    setMsg("");
+    const amt = Number(amount);
+    const min = data?.minTopupInr ?? 50;
+    if (!amt || amt < min) { setMsg(`Minimum ₹${min}`); return; }
+    setRzpLoading(true); setRzpPaid(false);
+    try {
+      const { data: res, error } = await supabase.functions.invoke("web-chat", {
+        body: { message: "__create_rzp_qr__", sessionId, purpose: "topup", amount: amt },
+      });
+      if (error || (res as any)?.error) { setMsg((res as any)?.error || error?.message || "Failed"); return; }
+      setRzpQr(res as any);
+    } finally { setRzpLoading(false); }
+  };
+
+  const closeAutoPay = () => {
+    setRzpQr(null); setRzpPaid(false);
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (!rzpQr || rzpPaid) return;
+    const poll = async () => {
+      try {
+        const { data: r } = await supabase.functions.invoke("web-chat", {
+          body: { message: "__check_rzp__", sessionId, qrId: rzpQr.qrId },
+        });
+        if ((r as any)?.paid) {
+          setRzpPaid(true);
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          refresh();
+          setTimeout(() => { closeAutoPay(); setAmount(""); }, 2500);
+        }
+      } catch {}
+    };
+    poll();
+    pollRef.current = window.setInterval(poll, 4000);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rzpQr, rzpPaid]);
 
   const sym = (c: string) => c === "INR" ? "₹" : "$";
   const txIcon = (type: string) => type === "topup" || type === "admin_credit" || type === "refund"
@@ -151,9 +196,49 @@ const WalletSection = ({ t }: Props) => {
 
                   {msg && <div className="text-sm text-foreground">{msg}</div>}
 
-                  <button onClick={submitTopup} disabled={submitting} className="w-full bg-primary text-primary-foreground font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
-                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Submit Top-up Request
+                  {currency === "INR" && (
+                    <button onClick={startAutoPay} disabled={rzpLoading || !amount}
+                      className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
+                      {rzpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                      ⚡ UPI Auto-Pay (Instant QR)
+                    </button>
+                  )}
+
+                  <div className="text-center text-[11px] text-muted-foreground">— or submit manually for admin approval —</div>
+
+                  <button onClick={submitTopup} disabled={submitting} className="w-full bg-secondary text-foreground font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 border border-border">
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Submit Top-up Request (Manual)
                   </button>
+                </div>
+              )}
+
+              {/* Razorpay QR Modal */}
+              {rzpQr && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+                  <div className="glass neon-border rounded-2xl p-6 max-w-sm w-full relative">
+                    <button onClick={closeAutoPay} aria-label="Close" className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
+                      <X className="w-5 h-5" />
+                    </button>
+                    {rzpPaid ? (
+                      <div className="text-center py-6">
+                        <CheckCircle className="w-14 h-14 mx-auto text-[hsl(var(--success))] mb-3" />
+                        <h3 className="text-lg font-bold mb-1">Payment Received!</h3>
+                        <p className="text-sm text-muted-foreground">₹{rzpQr.amount.toFixed(2)} added to your wallet.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-bold text-center mb-1">⚡ UPI Auto-Pay</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-3">Scan with GPay / PhonePe / Paytm / BHIM</p>
+                        <div className="bg-white rounded-xl p-3 mb-3">
+                          <img src={rzpQr.imageUrl} alt="UPI QR" className="w-full rounded-lg" />
+                        </div>
+                        <div className="text-center text-2xl font-bold neon-text mb-2">₹{rzpQr.amount.toFixed(2)}</div>
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Waiting for payment… auto-detected instantly
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
