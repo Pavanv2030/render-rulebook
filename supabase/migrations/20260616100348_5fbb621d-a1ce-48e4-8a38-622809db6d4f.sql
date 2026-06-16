@@ -1,0 +1,2 @@
+update public.account_inventory set status='available', order_id=null, allocated_at=null where order_id='ORD089768';
+update public.orders set status='payment_received', delivery_file_path=null, delivered_at=null where order_id='ORD089768';
