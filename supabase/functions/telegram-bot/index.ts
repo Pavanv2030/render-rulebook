@@ -889,6 +889,38 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
+    // ➕ Add Balance menu → quick-amount Razorpay autopay
+    if (input === "addbalance" || input === "add_balance" || input === "topup") {
+      const { data: settings } = await supabase.from("sell_settings").select("min_topup_inr").eq("id", 1).maybeSingle();
+      const min = Number(settings?.min_topup_inr ?? 50);
+      const presets = [100, 250, 500, 1000, 2000, 5000].filter(a => a >= min);
+      if (presets.length === 0) presets.push(min);
+      const rows: any[] = [];
+      for (let i = 0; i < presets.length; i += 2) {
+        const row = [{ text: `₹${presets[i]}`, callback_data: `rzp_topup_${presets[i]}` }];
+        if (presets[i + 1]) row.push({ text: `₹${presets[i + 1]}`, callback_data: `rzp_topup_${presets[i + 1]}` });
+        rows.push(row);
+      }
+      rows.push([{ text: "✏️ Custom amount", callback_data: "topup_custom" }]);
+      rows.push([{ text: "◀️ Back", callback_data: "wallet" }]);
+      await sendMsg(BOT_TOKEN, chatId,
+        `➕ *Add Wallet Balance*\n━━━━━━━━━━━━━━━\n\n⚡ Tap any amount for instant *UPI Auto-Pay* (QR opens in your UPI app — payment auto-detected).\n\nMinimum: *₹${min}*`,
+        { inline_keyboard: rows }, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ✏️ Custom top-up amount → ask user to type the amount
+    if (input === "topup_custom") {
+      await supabase.from("conversation_states")
+        .upsert({ chat_id: chatId, state: "awaiting_topup_amount", updated_at: new Date().toISOString() }, { onConflict: "chat_id" });
+      await sendMsg(BOT_TOKEN, chatId,
+        `✏️ *Enter top-up amount in ₹*\n\nSend a number (e.g. \`750\`) and I'll generate the UPI Auto-Pay QR instantly.`,
+        { inline_keyboard: [[{ text: "❌ Cancel", callback_data: "wallet" }]] }, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+
+
     // Razorpay topup creation: rzp_topup_<amount>
     if (input.startsWith("rzp_topup_")) {
       const amount = Number(input.replace("rzp_topup_", ""));
