@@ -17,7 +17,42 @@ async function sendTelegramDocument(botToken: string, chatId: string, fileBlob: 
     method: "POST",
     body: formData,
   });
-  return res.json();
+  try { return await res.json(); } catch { return { ok: false, error: `http_${res.status}` }; }
+}
+
+// Retry the Telegram document send with exponential backoff.
+// Returns { ok, attempts, response, error } — ok=true only after a confirmed Telegram ack.
+async function sendTelegramDocumentWithRetry(
+  botToken: string,
+  chatId: string,
+  fileBlob: Blob,
+  caption: string,
+  fileName: string,
+  maxAttempts = 4,
+): Promise<{ ok: boolean; attempts: number; response?: unknown; error?: string }> {
+  let lastErr: string | undefined;
+  let lastResp: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const resp = await sendTelegramDocument(botToken, chatId, fileBlob, caption, fileName);
+      lastResp = resp;
+      if (resp?.ok) return { ok: true, attempts: attempt, response: resp };
+      // Honor Telegram rate-limit hint when present
+      const retryAfter = Number(resp?.parameters?.retry_after) || 0;
+      lastErr = JSON.stringify(resp);
+      console.error(`sendTelegramDocument attempt ${attempt}/${maxAttempts} failed:`, lastErr);
+      const backoff = retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1000 * 2 ** (attempt - 1));
+      if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, backoff));
+    } catch (e) {
+      lastErr = (e as Error).message;
+      console.error(`sendTelegramDocument attempt ${attempt}/${maxAttempts} threw:`, lastErr);
+      if (attempt < maxAttempts) {
+        const backoff = Math.min(15000, 1000 * 2 ** (attempt - 1));
+        await new Promise((r) => setTimeout(r, backoff));
+      }
+    }
+  }
+  return { ok: false, attempts: maxAttempts, response: lastResp, error: lastErr };
 }
 
 async function sendTelegramMessage(botToken: string, chatId: string, text: string): Promise<number | null> {
