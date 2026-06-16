@@ -25,6 +25,10 @@ const WalletSection = ({ t }: Props) => {
   const [proof, setProof] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [rzpLoading, setRzpLoading] = useState(false);
+  const [rzpQr, setRzpQr] = useState<{ qrId: string; imageUrl: string; amount: number; expiresAt: number } | null>(null);
+  const [rzpPaid, setRzpPaid] = useState(false);
+  const pollRef = useRef<number | null>(null);
 
   const sessionId = (() => {
     let s = localStorage.getItem("airdrop_session_id");
