@@ -256,9 +256,9 @@ Deno.serve(async (req) => {
       const ADMIN_BOT_TOKEN_ERR = Deno.env.get("ADMIN_BOT_TOKEN");
       if (ADMIN_BOT_TOKEN_ERR && ADMIN_CHAT_ID) {
         await sendTelegramMessage(ADMIN_BOT_TOKEN_ERR, ADMIN_CHAT_ID,
-          `🚨 *Delivery FAILED*\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`\n🌍 ${country} × ${order.quantity}\n\nError: ${sendError || "unknown"}\n\nAccounts re-released to inventory. Please re-trigger delivery from admin.`);
+          `🚨 *Delivery FAILED* (after ${sendAttempts} retries)\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`\n🌍 ${country} × ${order.quantity}\n\nError: ${sendError || "unknown"}\n\nAccounts re-released to inventory. Please re-trigger delivery from admin.`);
       }
-      return new Response(JSON.stringify({ success: false, error: "telegram_send_failed", detail: sendError }), {
+      return new Response(JSON.stringify({ success: false, error: "telegram_send_failed", attempts: sendAttempts, detail: sendError }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
