@@ -177,7 +177,61 @@ Deno.serve(async (req) => {
     await zipWriter.close();
     const zipBlob = await zipBlobWriter.getData();
 
-    // Store delivered ZIP
+    // 🚀 Send to customer FIRST — only mark delivered after a successful Telegram send.
+    // (Previously we uploaded to storage + marked delivered before sending, so any
+    //  Telegram send error left the order flagged as "delivered" with no file sent.)
+    let sentToCustomer = false;
+    let sendError: string | null = null;
+    if (isTgUser) {
+      try {
+        const resp = await sendTelegramDocument(
+          BOT_TOKEN!,
+          order.customer_id,
+          zipBlob,
+          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+          `accounts_${orderId}.zip`
+        );
+        if (resp?.ok) {
+          sentToCustomer = true;
+          await sendTelegramMessage(BOT_TOKEN!, order.customer_id,
+            `🔐 *Two-Step Verification Code*\n\n` +
+            `Your 2FA code for the accounts: \`123\`\n\n` +
+            `Use this code when prompted during login.`
+          );
+        } else {
+          sendError = JSON.stringify(resp);
+          console.error("Telegram document send returned not-ok:", resp);
+        }
+      } catch (e) {
+        sendError = (e as Error).message;
+        console.error("Failed to send Telegram document:", e);
+      }
+    } else {
+      sentToCustomer = true; // web users — no Telegram send needed
+    }
+
+    if (!sentToCustomer) {
+      // Release the allocated accounts so the order can be retried cleanly
+      await supabase.from("account_inventory")
+        .update({ status: "available", order_id: null, allocated_at: null })
+        .in("id", accountIds);
+
+      if (isTgUser && progressMsgId) {
+        await editTelegramMessage(BOT_TOKEN!, order.customer_id, progressMsgId,
+          `⚠️ *Delivery failed*\n\n🆔 Order: \`${orderId}\`\n\nWe couldn't send the accounts file. Our team has been notified and will re-deliver shortly.`);
+      }
+      const ADMIN_BOT_TOKEN_ERR = Deno.env.get("ADMIN_BOT_TOKEN");
+      if (ADMIN_BOT_TOKEN_ERR && ADMIN_CHAT_ID) {
+        await sendTelegramMessage(ADMIN_BOT_TOKEN_ERR, ADMIN_CHAT_ID,
+          `🚨 *Delivery FAILED*\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`\n🌍 ${country} × ${order.quantity}\n\nError: ${sendError || "unknown"}\n\nAccounts re-released to inventory. Please re-trigger delivery from admin.`);
+      }
+      return new Response(JSON.stringify({ success: false, error: "telegram_send_failed", detail: sendError }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Store delivered ZIP for admin/audit access (after successful send)
     const deliveryPath = `orders/${orderId}/accounts_${orderId}.zip`;
     await supabase.storage
       .from("account-files")
@@ -189,27 +243,6 @@ Deno.serve(async (req) => {
       delivery_file_path: deliveryPath,
       delivered_at: new Date().toISOString(),
     }).eq("order_id", orderId);
-
-    // Send to customer via Telegram
-    if (isTgUser) {
-      try {
-        await sendTelegramDocument(
-          BOT_TOKEN,
-          order.customer_id,
-          zipBlob,
-          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
-          `accounts_${orderId}.zip`
-        );
-        // Send 2-step verification code
-        await sendTelegramMessage(BOT_TOKEN, order.customer_id,
-          `🔐 *Two-Step Verification Code*\n\n` +
-          `Your 2FA code for the accounts: \`123\`\n\n` +
-          `Use this code when prompted during login.`
-        );
-      } catch (e) {
-        console.error("Failed to send Telegram document:", e);
-      }
-    }
 
     // Reset conversation state
     await supabase.from("conversation_states")
