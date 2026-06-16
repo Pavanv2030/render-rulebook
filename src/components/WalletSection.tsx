@@ -68,6 +68,47 @@ const WalletSection = ({ t }: Props) => {
     } finally { setSubmitting(false); }
   };
 
+  const startAutoPay = async () => {
+    setMsg("");
+    const amt = Number(amount);
+    const min = data?.minTopupInr ?? 50;
+    if (!amt || amt < min) { setMsg(`Minimum ₹${min}`); return; }
+    setRzpLoading(true); setRzpPaid(false);
+    try {
+      const { data: res, error } = await supabase.functions.invoke("web-chat", {
+        body: { message: "__create_rzp_qr__", sessionId, purpose: "topup", amount: amt },
+      });
+      if (error || (res as any)?.error) { setMsg((res as any)?.error || error?.message || "Failed"); return; }
+      setRzpQr(res as any);
+    } finally { setRzpLoading(false); }
+  };
+
+  const closeAutoPay = () => {
+    setRzpQr(null); setRzpPaid(false);
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (!rzpQr || rzpPaid) return;
+    const poll = async () => {
+      try {
+        const { data: r } = await supabase.functions.invoke("web-chat", {
+          body: { message: "__check_rzp__", sessionId, qrId: rzpQr.qrId },
+        });
+        if ((r as any)?.paid) {
+          setRzpPaid(true);
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          refresh();
+          setTimeout(() => { closeAutoPay(); setAmount(""); }, 2500);
+        }
+      } catch {}
+    };
+    poll();
+    pollRef.current = window.setInterval(poll, 4000);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rzpQr, rzpPaid]);
+
   const sym = (c: string) => c === "INR" ? "₹" : "$";
   const txIcon = (type: string) => type === "topup" || type === "admin_credit" || type === "refund"
     ? <ArrowDownRight className="w-4 h-4 text-[hsl(var(--success))]" />
