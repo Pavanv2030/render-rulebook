@@ -217,29 +217,27 @@ Deno.serve(async (req) => {
     //  Telegram send error left the order flagged as "delivered" with no file sent.)
     let sentToCustomer = false;
     let sendError: string | null = null;
+    let sendAttempts = 0;
     if (isTgUser) {
-      try {
-        const resp = await sendTelegramDocument(
-          BOT_TOKEN!,
-          order.customer_id,
-          zipBlob,
-          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
-          `accounts_${orderId}.zip`
+      const result = await sendTelegramDocumentWithRetry(
+        BOT_TOKEN!,
+        order.customer_id,
+        zipBlob,
+        `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+        `accounts_${orderId}.zip`,
+        4,
+      );
+      sendAttempts = result.attempts;
+      if (result.ok) {
+        sentToCustomer = true;
+        await sendTelegramMessage(BOT_TOKEN!, order.customer_id,
+          `🔐 *Two-Step Verification Code*\n\n` +
+          `Your 2FA code for the accounts: \`123\`\n\n` +
+          `Use this code when prompted during login.`
         );
-        if (resp?.ok) {
-          sentToCustomer = true;
-          await sendTelegramMessage(BOT_TOKEN!, order.customer_id,
-            `🔐 *Two-Step Verification Code*\n\n` +
-            `Your 2FA code for the accounts: \`123\`\n\n` +
-            `Use this code when prompted during login.`
-          );
-        } else {
-          sendError = JSON.stringify(resp);
-          console.error("Telegram document send returned not-ok:", resp);
-        }
-      } catch (e) {
-        sendError = (e as Error).message;
-        console.error("Failed to send Telegram document:", e);
+      } else {
+        sendError = result.error || JSON.stringify(result.response);
+        console.error(`Telegram document send failed after ${result.attempts} attempts:`, sendError);
       }
     } else {
       sentToCustomer = true; // web users — no Telegram send needed
