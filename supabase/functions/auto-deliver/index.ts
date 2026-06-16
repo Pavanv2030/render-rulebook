@@ -17,7 +17,42 @@ async function sendTelegramDocument(botToken: string, chatId: string, fileBlob: 
     method: "POST",
     body: formData,
   });
-  return res.json();
+  try { return await res.json(); } catch { return { ok: false, error: `http_${res.status}` }; }
+}
+
+// Retry the Telegram document send with exponential backoff.
+// Returns { ok, attempts, response, error } — ok=true only after a confirmed Telegram ack.
+async function sendTelegramDocumentWithRetry(
+  botToken: string,
+  chatId: string,
+  fileBlob: Blob,
+  caption: string,
+  fileName: string,
+  maxAttempts = 4,
+): Promise<{ ok: boolean; attempts: number; response?: unknown; error?: string }> {
+  let lastErr: string | undefined;
+  let lastResp: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const resp = await sendTelegramDocument(botToken, chatId, fileBlob, caption, fileName);
+      lastResp = resp;
+      if (resp?.ok) return { ok: true, attempts: attempt, response: resp };
+      // Honor Telegram rate-limit hint when present
+      const retryAfter = Number(resp?.parameters?.retry_after) || 0;
+      lastErr = JSON.stringify(resp);
+      console.error(`sendTelegramDocument attempt ${attempt}/${maxAttempts} failed:`, lastErr);
+      const backoff = retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1000 * 2 ** (attempt - 1));
+      if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, backoff));
+    } catch (e) {
+      lastErr = (e as Error).message;
+      console.error(`sendTelegramDocument attempt ${attempt}/${maxAttempts} threw:`, lastErr);
+      if (attempt < maxAttempts) {
+        const backoff = Math.min(15000, 1000 * 2 ** (attempt - 1));
+        await new Promise((r) => setTimeout(r, backoff));
+      }
+    }
+  }
+  return { ok: false, attempts: maxAttempts, response: lastResp, error: lastErr };
 }
 
 async function sendTelegramMessage(botToken: string, chatId: string, text: string): Promise<number | null> {
@@ -182,29 +217,27 @@ Deno.serve(async (req) => {
     //  Telegram send error left the order flagged as "delivered" with no file sent.)
     let sentToCustomer = false;
     let sendError: string | null = null;
+    let sendAttempts = 0;
     if (isTgUser) {
-      try {
-        const resp = await sendTelegramDocument(
-          BOT_TOKEN!,
-          order.customer_id,
-          zipBlob,
-          `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
-          `accounts_${orderId}.zip`
+      const result = await sendTelegramDocumentWithRetry(
+        BOT_TOKEN!,
+        order.customer_id,
+        zipBlob,
+        `✅ *Order Delivered!*\n\n🆔 Order: \`${orderId}\`\n🌍 Country: ${country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you for your purchase! 🚀\n\nType /start to order more!`,
+        `accounts_${orderId}.zip`,
+        4,
+      );
+      sendAttempts = result.attempts;
+      if (result.ok) {
+        sentToCustomer = true;
+        await sendTelegramMessage(BOT_TOKEN!, order.customer_id,
+          `🔐 *Two-Step Verification Code*\n\n` +
+          `Your 2FA code for the accounts: \`123\`\n\n` +
+          `Use this code when prompted during login.`
         );
-        if (resp?.ok) {
-          sentToCustomer = true;
-          await sendTelegramMessage(BOT_TOKEN!, order.customer_id,
-            `🔐 *Two-Step Verification Code*\n\n` +
-            `Your 2FA code for the accounts: \`123\`\n\n` +
-            `Use this code when prompted during login.`
-          );
-        } else {
-          sendError = JSON.stringify(resp);
-          console.error("Telegram document send returned not-ok:", resp);
-        }
-      } catch (e) {
-        sendError = (e as Error).message;
-        console.error("Failed to send Telegram document:", e);
+      } else {
+        sendError = result.error || JSON.stringify(result.response);
+        console.error(`Telegram document send failed after ${result.attempts} attempts:`, sendError);
       }
     } else {
       sentToCustomer = true; // web users — no Telegram send needed
@@ -223,9 +256,9 @@ Deno.serve(async (req) => {
       const ADMIN_BOT_TOKEN_ERR = Deno.env.get("ADMIN_BOT_TOKEN");
       if (ADMIN_BOT_TOKEN_ERR && ADMIN_CHAT_ID) {
         await sendTelegramMessage(ADMIN_BOT_TOKEN_ERR, ADMIN_CHAT_ID,
-          `🚨 *Delivery FAILED*\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`\n🌍 ${country} × ${order.quantity}\n\nError: ${sendError || "unknown"}\n\nAccounts re-released to inventory. Please re-trigger delivery from admin.`);
+          `🚨 *Delivery FAILED* (after ${sendAttempts} retries)\n━━━━━━━━━━━━━━━\n🆔 \`${orderId}\`\n👤 \`${order.customer_id}\`\n🌍 ${country} × ${order.quantity}\n\nError: ${sendError || "unknown"}\n\nAccounts re-released to inventory. Please re-trigger delivery from admin.`);
       }
-      return new Response(JSON.stringify({ success: false, error: "telegram_send_failed", detail: sendError }), {
+      return new Response(JSON.stringify({ success: false, error: "telegram_send_failed", attempts: sendAttempts, detail: sendError }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
