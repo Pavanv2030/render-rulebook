@@ -124,6 +124,125 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ========== RAZORPAY UPI AUTO-PAY (QR) ==========
+    if (input === "__create_rzp_qr__") {
+      const { purpose, amount, orderId } = body;
+      const amt = Number(amount);
+      if (!["order", "topup"].includes(purpose) || !isFinite(amt) || amt <= 0) {
+        return new Response(JSON.stringify({ error: "Invalid input" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (purpose === "order" && !orderId) {
+        return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
+      const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+      if (!RP_KEY || !RP_SECRET) {
+        return new Response(JSON.stringify({ error: "Auto-Pay is not configured" }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await supabase.from("customers").upsert({ telegram_id: chatId, username: "web_user", first_name: "Web Visitor" }, { onConflict: "telegram_id" });
+      const ourId = purpose === "order" ? orderId : `TOPUP-${Date.now()}`;
+      const amountPaise = Math.round(amt * 100);
+      const closeBy = Math.floor(Date.now() / 1000) + 30 * 60;
+      try {
+        const rpRes = await fetch("https://api.razorpay.com/v1/payments/qr_codes", {
+          method: "POST",
+          headers: { Authorization: "Basic " + btoa(`${RP_KEY}:${RP_SECRET}`), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "upi_qr",
+            name: purpose === "order" ? `Order ${orderId}` : `Wallet Top-up`,
+            usage: "single_use",
+            fixed_amount: true,
+            payment_amount: amountPaise,
+            description: purpose === "order" ? `Order ${orderId}` : `Wallet Top-up ₹${amt}`,
+            close_by: closeBy,
+            notes: { purpose, reference_id: ourId, app_order_id: orderId || "", telegram_id: chatId, chat_id: chatId, source: "web" },
+          }),
+        });
+        const rpData = await rpRes.json();
+        if (!rpRes.ok || !rpData.id || !rpData.image_url) {
+          console.error("Razorpay QR create failed:", rpData);
+          return new Response(JSON.stringify({ error: rpData?.error?.description || "Razorpay error" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        await supabase.from("razorpay_payments").insert({
+          razorpay_order_id: rpData.id, amount: amt, currency: "INR",
+          purpose, reference_id: ourId, telegram_id: chatId, chat_id: chatId, status: "created",
+        });
+        return new Response(JSON.stringify({
+          qrId: rpData.id, imageUrl: rpData.image_url, amount: amt, expiresAt: closeBy * 1000,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch (e) {
+        console.error("Razorpay create error:", e);
+        return new Response(JSON.stringify({ error: "Razorpay request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    if (input === "__check_rzp__") {
+      const { qrId } = body;
+      if (!qrId) return new Response(JSON.stringify({ error: "qrId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
+      const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+      const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
+
+      const { data: rp } = await supabase.from("razorpay_payments").select("*").eq("razorpay_order_id", qrId).eq("telegram_id", chatId).maybeSingle();
+      if (!rp) return new Response(JSON.stringify({ error: "QR not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (rp.status === "paid") {
+        return new Response(JSON.stringify({ paid: true, purpose: rp.purpose, reference_id: rp.reference_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (!RP_KEY || !RP_SECRET) {
+        return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let captured: any = null;
+      try {
+        const res = await fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}/payments`, {
+          headers: { Authorization: "Basic " + btoa(`${RP_KEY}:${RP_SECRET}`) },
+        });
+        const j = await res.json();
+        captured = (j?.items || []).find((p: any) => p.status === "captured");
+      } catch (e) { console.error("rzp check failed:", e); }
+      if (!captured) {
+        return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: claimed } = await supabase.from("razorpay_payments")
+        .update({ status: "paid", razorpay_payment_id: captured.id, paid_at: new Date().toISOString() })
+        .eq("razorpay_order_id", qrId).eq("status", "created").select();
+      const amountInr = Number(captured.amount) / 100;
+
+      if (claimed?.length) {
+        if (rp.purpose === "order") {
+          await supabase.from("orders").update({
+            status: "payment_received", payment_method: "UPI Auto", transaction_id: captured.id,
+          }).eq("order_id", rp.reference_id);
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}) },
+              body: JSON.stringify({ orderId: rp.reference_id }),
+            });
+          } catch (e) { console.error("auto-deliver failed:", e); }
+        } else if (rp.purpose === "topup") {
+          await supabase.rpc("adjust_wallet_balance", {
+            _telegram_id: rp.telegram_id, _currency: "INR", _delta: amountInr,
+            _type: "topup", _reference_id: captured.id, _note: "Razorpay UPI Auto (Web)",
+          });
+        }
+        // Notify admin
+        try {
+          const ADMIN_BOT_TOKEN = Deno.env.get("ADMIN_BOT_TOKEN");
+          const ADMIN_CHAT_ID = Deno.env.get("ADMIN_TELEGRAM_CHAT_ID");
+          if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+            const text = rp.purpose === "order"
+              ? `⚡ *Web Auto-Pay* (Order)\n👤 \`${rp.telegram_id}\`\n🆔 \`${rp.reference_id}\`\n💰 ₹${amountInr.toFixed(2)}\n🧾 \`${captured.id}\``
+              : `⚡ *Web Auto-Pay* (Top-up)\n👤 \`${rp.telegram_id}\`\n💵 +₹${amountInr.toFixed(2)}\n🧾 \`${captured.id}\``;
+            await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text, parse_mode: "Markdown" }),
+            });
+          }
+        } catch (e) { console.error("admin notify failed:", e); }
+      }
+      return new Response(JSON.stringify({ paid: true, purpose: rp.purpose, reference_id: rp.reference_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ========== BUY-SECTION ACTIONS ==========
     if (input === "__get_public_data__") {
       const { data: pricing } = await supabase
