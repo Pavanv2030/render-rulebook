@@ -310,8 +310,11 @@ Deno.serve(async (req) => {
     const chatId = String(message?.chat?.id || callbackQuery?.from?.id);
     const rawText = (update.message?.text || "").trim();
     const callbackData = callbackQuery?.data || "";
-    const username = message?.from?.username || callbackQuery?.from?.username || "unknown";
-    const firstName = message?.from?.first_name || callbackQuery?.from?.first_name || "Friend";
+    // IMPORTANT: For callback_query updates, message.from is the BOT itself (since the
+    // message was sent by the bot). The actual user is callback_query.from. Always
+    // prefer update.message.from (direct user message) → callback_query.from → fallback.
+    const username = update.message?.from?.username || callbackQuery?.from?.username || "unknown";
+    const firstName = update.message?.from?.first_name || callbackQuery?.from?.first_name || "Friend";
 
     if (!chatId) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     if (callbackQuery) await answerCb(BOT_TOKEN, callbackQuery.id);
