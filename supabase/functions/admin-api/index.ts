@@ -611,18 +611,15 @@ Deno.serve(async (req) => {
 
       // Normalize admin input → real telegram_id stored in DB.
       // Accepts: numeric id, web_xxx, @username, t.me/username, https://t.me/username, customer_code.
+      // Falls back to Telegram getChat to resolve unknown @usernames and auto-create a customer row.
       const resolveTelegramId = async (raw: string): Promise<{ id: string | null; error?: string }> => {
         if (!raw) return { id: null, error: "empty" };
         let v = String(raw).trim();
-        // Strip URL prefix
         v = v.replace(/^https?:\/\//i, "").replace(/^t\.me\//i, "").replace(/^telegram\.me\//i, "");
         v = v.replace(/\/+$/, "").split("?")[0];
-        // Numeric or web_ → use as-is
         if (/^\d+$/.test(v) || /^web_/i.test(v)) return { id: v };
-        // Strip leading @
         const uname = v.replace(/^@/, "");
         if (!uname) return { id: null, error: "invalid" };
-        // Lookup by username or customer_code
         const { data: c } = await supabase.from("customers")
           .select("telegram_id")
           .or(`username.ilike.${uname},customer_code.ilike.${uname}`)
@@ -630,7 +627,29 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
         if (c?.telegram_id) return { id: c.telegram_id };
-        return { id: null, error: `No customer found for "${raw}". Use numeric telegram_id, @username, or customer code.` };
+
+        // Fallback: ask Telegram for the chat info by @username and auto-create customer row.
+        if (BOT_TOKEN && /^[a-zA-Z0-9_]{3,32}$/.test(uname)) {
+          try {
+            const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: `@${uname}` }),
+            });
+            const tgJson = await tgRes.json();
+            if (tgJson?.ok && tgJson.result?.id) {
+              const tgId = String(tgJson.result.id);
+              await supabase.from("customers").upsert({
+                telegram_id: tgId,
+                username: tgJson.result.username || uname,
+                first_name: tgJson.result.first_name || null,
+                last_name: tgJson.result.last_name || null,
+              }, { onConflict: "telegram_id" });
+              return { id: tgId };
+            }
+          } catch (_e) { /* fall through */ }
+        }
+        return { id: null, error: `No customer found for "${raw}". The user must /start the bot at least once, or provide their numeric telegram_id / customer code.` };
       };
 
       if (body.action === "adjust_balance") {
