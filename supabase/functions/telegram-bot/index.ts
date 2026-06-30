@@ -1517,21 +1517,14 @@ async function processQuantity(qty: number, state: any, chatId: string, username
   payButtons.push([{ text: t("btn_cancel", lang), callback_data: "cancel" }]);
 
   await sendMsg(BOT_TOKEN, chatId,
-    `*${t("order_created", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
-    `${stepIndicator(4, lang)}\n\n` +
-    `🆔 *Order:* \`${orderId}\`\n\n` +
-    `┌─── 🧾 *${t("details", lang)}* ───┐\n` +
-    `│                                                │\n` +
-    `│  🌍 ${ci?.flag || ""} *${ci?.name || country}*             │\n` +
-    `│  📦 ${label}                              │\n` +
-    `│  🔢 *${qty}* account${qty > 1 ? "s" : ""}                    │\n` +
-    `│  💵 ${SYMBOL}${pricePerAcc} × ${qty}                  │\n` +
-    `│                                                │\n` +
-    `│  ━━━━━━━━━━━━━━━━━━       │\n` +
-    `│  💰 *${t("total", lang)}: ${SYMBOL}${totalPrice.toLocaleString()}*       │\n` +
-    `│                                                │\n` +
-    `└─────────────────────┘\n\n` +
+    `*${t("order_created", lang)}*\n` +
+    `━━━━━━━━━━━━\n` +
+    `🆔 \`${orderId}\`\n\n` +
+    `${ci?.flag || ""} *${ci?.name || country}* • ${label}\n` +
+    `🔢 ${qty} acc × ${SYMBOL}${pricePerAcc}\n` +
+    `💰 *${t("total", lang)}: ${SYMBOL}${totalPrice.toLocaleString()}*\n\n` +
     t("choose_payment", lang),
+
     { inline_keyboard: payButtons }, lang);
 
   return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
