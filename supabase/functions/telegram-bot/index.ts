@@ -496,6 +496,22 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
+    // ⬇️ /hide — Close the reply keyboard
+    // ════════════════════════════════════════════
+    if (input === "/hide" || input === "hide" || input === "close" || input === "/close") {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "✅ Menu hidden. Send /start to bring it back.",
+          reply_markup: JSON.stringify({ remove_keyboard: true }),
+        }),
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
     // 🏠 /start — Welcome
     // ════════════════════════════════════════════
     if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu" || input === "home") {
