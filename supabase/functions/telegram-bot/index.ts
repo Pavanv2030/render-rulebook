@@ -220,7 +220,6 @@ function getMainKeyboard(lang: Lang) {
       [{ text: t("kb_language", lang) }],
     ],
     resize_keyboard: true,
-    is_persistent: true,
   };
 }
 
@@ -494,6 +493,22 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
       input = "start";
+    }
+
+    // ════════════════════════════════════════════
+    // ⬇️ /hide — Close the reply keyboard
+    // ════════════════════════════════════════════
+    if (input === "/hide" || input === "hide" || input === "close" || input === "/close") {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "✅ Menu hidden. Send /start to bring it back.",
+          reply_markup: JSON.stringify({ remove_keyboard: true }),
+        }),
+      });
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
     // ════════════════════════════════════════════
