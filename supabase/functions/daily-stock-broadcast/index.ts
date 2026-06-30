@@ -26,6 +26,16 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  let preview = false;
+  try {
+    const url = new URL(req.url);
+    if (url.searchParams.get("preview") === "1") preview = true;
+    if (req.method === "POST") {
+      const b = await req.clone().json().catch(() => ({}));
+      if (b?.preview) preview = true;
+    }
+  } catch {}
+
   try {
     // Aggregate stock by country & account type
     const { data: stock, error: stockErr } = await supabase
@@ -64,6 +74,25 @@ Deno.serve(async (req) => {
     const replyMarkup = {
       inline_keyboard: [[{ text: "🛒 Buy Accounts Now", callback_data: "buy" }]],
     };
+
+    // Preview mode: only send to admin, don't broadcast
+    if (preview) {
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID,
+            text: `👁 *PREVIEW — Daily Stock Broadcast*\n\n${body}`,
+            parse_mode: "Markdown",
+            reply_markup: replyMarkup,
+          }),
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, preview: true, message: body }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get all non-blocked customers
     const { data: customers, error: custErr } = await supabase
