@@ -26,6 +26,16 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  let preview = false;
+  try {
+    const url = new URL(req.url);
+    if (url.searchParams.get("preview") === "1") preview = true;
+    if (req.method === "POST") {
+      const b = await req.clone().json().catch(() => ({}));
+      if (b?.preview) preview = true;
+    }
+  } catch {}
+
   try {
     // Aggregate stock by country & account type
     const { data: stock, error: stockErr } = await supabase
