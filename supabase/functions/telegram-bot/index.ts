@@ -220,7 +220,6 @@ function getMainKeyboard(lang: Lang) {
       [{ text: t("kb_language", lang) }],
     ],
     resize_keyboard: true,
-    is_persistent: true,
   };
 }
 
