@@ -210,38 +210,31 @@ function t(key: string, lang: Lang): string {
   return translations[key]?.[lang] || translations[key]?.en || key;
 }
 
-function getMainKeyboard(lang: Lang) {
-  return {
-    keyboard: [
-      [{ text: t("kb_buy", lang) }, { text: t("kb_sell", lang) }],
-      [{ text: t("kb_orders", lang) }, { text: t("kb_reorder", lang) }],
-      [{ text: t("kb_refer", lang) }],
-      [{ text: t("kb_guide", lang) }, { text: t("kb_support", lang) }],
-      [{ text: t("kb_language", lang) }],
-    ],
-    resize_keyboard: true,
-  };
+function getMainKeyboard(_lang: Lang) {
+  // Reply keyboard removed — users interact via / commands and inline buttons only
+  return { remove_keyboard: true };
 }
 
-async function sendMsg(botToken: string, chatId: string, text: string, inlineMarkup?: any, lang: Lang = "en") {
+async function sendMsg(botToken: string, chatId: string, text: string, inlineMarkup?: any, _lang: Lang = "en") {
   const body: any = {
     chat_id: chatId, text, parse_mode: "Markdown",
-    reply_markup: inlineMarkup ? JSON.stringify(inlineMarkup) : JSON.stringify(getMainKeyboard(lang)),
   };
+  if (inlineMarkup) body.reply_markup = JSON.stringify(inlineMarkup);
   return await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
 
-async function sendPhoto(botToken: string, chatId: string, photo: string, caption: string, inlineMarkup?: any, lang: Lang = "en") {
+async function sendPhoto(botToken: string, chatId: string, photo: string, caption: string, inlineMarkup?: any, _lang: Lang = "en") {
   const body: any = {
     chat_id: chatId, photo, caption, parse_mode: "Markdown",
-    reply_markup: inlineMarkup ? JSON.stringify(inlineMarkup) : JSON.stringify(getMainKeyboard(lang)),
   };
+  if (inlineMarkup) body.reply_markup = JSON.stringify(inlineMarkup);
   return await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
+
 
 async function answerCb(botToken: string, cbId: string, text?: string) {
   await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
