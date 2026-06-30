@@ -59,20 +59,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    let body = `🌅 *GOOD MORNING!*\n\n📊 *Today's Fresh Stock Update*\n\n`;
-    for (const c of countries) {
+    // Sort by total stock desc (highest stock first)
+    const sortedCountries = countries
+      .map((c) => ({ c, total: grouped[c].regular + grouped[c].aged }))
+      .filter((x) => x.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    let body = `🔥 *STOCK UPDATED!* 🔥\n\n`;
+    for (const { c, total } of sortedCountries) {
       const cName = COUNTRY_NAMES[c] || c;
-      const { regular, aged } = grouped[c];
-      if (regular === 0 && aged === 0) continue;
-      body += `${cName}\n`;
-      if (regular > 0) body += `   📦 Regular: *${regular}*\n`;
-      if (aged > 0) body += `   👑 Aged: *${aged}*\n`;
-      body += `\n`;
+      body += `${cName} — ${total}\n`;
     }
-    body += `⚡ Order now before they sell out!\n🛒 Tap below to start shopping.`;
+    body += `\n⚡ Instant Delivery\n💳 Auto Pay Available\n📩 DM to Order Before Stock Runs Out!`;
 
     const replyMarkup = {
-      inline_keyboard: [[{ text: "🛒 Buy Accounts Now", callback_data: "buy" }]],
+      inline_keyboard: [[{ text: "🛒 Order Now", callback_data: "buy" }]],
     };
 
     // Preview mode: only send to admin, don't broadcast
