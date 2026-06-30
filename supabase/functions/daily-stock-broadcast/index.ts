@@ -75,6 +75,25 @@ Deno.serve(async (req) => {
       inline_keyboard: [[{ text: "🛒 Buy Accounts Now", callback_data: "buy" }]],
     };
 
+    // Preview mode: only send to admin, don't broadcast
+    if (preview) {
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID,
+            text: `👁 *PREVIEW — Daily Stock Broadcast*\n\n${body}`,
+            parse_mode: "Markdown",
+            reply_markup: replyMarkup,
+          }),
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, preview: true, message: body }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get all non-blocked customers
     const { data: customers, error: custErr } = await supabase
       .from("customers")
