@@ -825,8 +825,10 @@ Deno.serve(async (req) => {
         `100 acc → ${SYMBOL}${price * 100}\n━━━━━━━━━━━━━━━\n\n` +
         t("how_many", lang),
         { inline_keyboard: [
-          [{ text: "1️⃣ 1", callback_data: "qty_1" }, { text: "2️⃣ 2", callback_data: "qty_2" }, { text: "3️⃣ 3", callback_data: "qty_3" }, { text: "5️⃣ 5", callback_data: "qty_5" }],
-          [{ text: "🔟 10", callback_data: "qty_10" }, { text: "📦 25", callback_data: "qty_25" }, { text: "📦 50", callback_data: "qty_50" }, { text: "💯 100", callback_data: "qty_100" }],
+          [{ text: "1 acc", callback_data: "qty_1" }, { text: "2 acc", callback_data: "qty_2" }],
+          [{ text: "3 acc", callback_data: "qty_3" }, { text: "5 acc", callback_data: "qty_5" }],
+          [{ text: "10 acc", callback_data: "qty_10" }, { text: "25 acc", callback_data: "qty_25" }],
+          [{ text: "50 acc", callback_data: "qty_50" }, { text: "100 acc", callback_data: "qty_100" }],
           [{ text: t("change_type", lang), callback_data: `country_${selectedCountry}` }, { text: t("btn_menu", lang), callback_data: "home" }],
         ]}, lang);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
