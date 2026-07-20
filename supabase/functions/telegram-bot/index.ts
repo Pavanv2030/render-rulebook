@@ -642,6 +642,16 @@ Deno.serve(async (req) => {
         { inline_keyboard: allRows }, lang);
 
       await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+
+      // Compact quick-menu (2-col) — sits pinned at bottom of chat for anytime navigation
+      await sendMsg(BOT_TOKEN, chatId,
+        "☰ *Quick menu is ready below* 👇\n_Use it anytime._",
+        { inline_keyboard: [
+          [{ text: "🛍️ Shop", callback_data: "start" },        { text: "💰 Wallet", callback_data: "wallet" }],
+          [{ text: "📦 My Orders", callback_data: "check_status" }, { text: "🆘 Support", callback_data: "support" }],
+          [{ text: "⚙️ Settings", callback_data: "settings" },  { text: "✨ API", callback_data: "api_info" }],
+        ]}, lang);
+
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
