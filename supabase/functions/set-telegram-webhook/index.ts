@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     // Set bot commands (shown when user taps the menu button)
     const commands = [
       { command: "start", description: "🏠 Main menu" },
+      { command: "menu", description: "☰ Quick menu" },
       { command: "myorders", description: "📦 My orders" },
       { command: "reorder", description: "🔁 Quick reorder" },
       { command: "guide", description: "📖 How to buy" },

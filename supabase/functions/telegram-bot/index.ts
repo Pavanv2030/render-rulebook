@@ -505,6 +505,49 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════
+    // ☰ /menu — Compact Quick Menu (2-column grid)
+    // ════════════════════════════════════════════
+    if (input === "/menu" || input === "quickmenu" || input === "quick_menu") {
+      await sendMsg(BOT_TOKEN, chatId,
+        "☰ *Quick menu is ready below* 👇\n_Use it anytime._",
+        { inline_keyboard: [
+          [{ text: "🛍️ Shop", callback_data: "start" },        { text: "💰 Wallet", callback_data: "wallet" }],
+          [{ text: "📦 My Orders", callback_data: "check_status" }, { text: "🆘 Support", callback_data: "support" }],
+          [{ text: "⚙️ Settings", callback_data: "settings" },  { text: "✨ API", callback_data: "api_info" }],
+        ]}, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ⚙️ Settings — language switcher
+    if (input === "settings" || input === "/settings") {
+      await sendMsg(BOT_TOKEN, chatId,
+        "⚙️ *Settings*\n━━━━━━━━━━━━━━━\n\nChoose your language:",
+        { inline_keyboard: [
+          [{ text: "🇬🇧 English", callback_data: "lang_en" }, { text: "🇮🇳 हिंदी", callback_data: "lang_hi" }],
+          [{ text: "🇪🇸 Español", callback_data: "lang_es" }, { text: "🇸🇦 العربية", callback_data: "lang_ar" }],
+          [{ text: "◀️ Back to Menu", callback_data: "quick_menu" }],
+        ]}, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ✨ API — info / contact
+    if (input === "api_info" || input === "/api") {
+      await sendMsg(BOT_TOKEN, chatId,
+        "✨ *API Access — Riox Reseller*\n━━━━━━━━━━━━━━━\n\n" +
+        "Bulk buyers & resellers can plug our stock directly into their systems via API:\n\n" +
+        "• 📡 Real-time stock & pricing\n" +
+        "• ⚡ Instant auto-delivery\n" +
+        "• 💳 Wallet-based billing\n" +
+        "• 📊 Order history endpoint\n\n" +
+        "_Contact support to request API keys and docs._",
+        { inline_keyboard: [
+          [{ text: "🆘 Contact Support", callback_data: "support" }],
+          [{ text: "◀️ Back to Menu", callback_data: "quick_menu" }],
+        ]}, lang);
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ════════════════════════════════════════════
     // 🏠 /start — Welcome
     // ════════════════════════════════════════════
     if (input === "/start" || input === "hi" || input === "hello" || input === "start" || input === "menu" || input === "home") {
@@ -599,6 +642,16 @@ Deno.serve(async (req) => {
         { inline_keyboard: allRows }, lang);
 
       await supabase.from("conversation_states").update({ state: "awaiting_country", updated_at: new Date().toISOString() }).eq("chat_id", chatId);
+
+      // Compact quick-menu (2-col) — sits pinned at bottom of chat for anytime navigation
+      await sendMsg(BOT_TOKEN, chatId,
+        "☰ *Quick menu is ready below* 👇\n_Use it anytime._",
+        { inline_keyboard: [
+          [{ text: "🛍️ Shop", callback_data: "start" },        { text: "💰 Wallet", callback_data: "wallet" }],
+          [{ text: "📦 My Orders", callback_data: "check_status" }, { text: "🆘 Support", callback_data: "support" }],
+          [{ text: "⚙️ Settings", callback_data: "settings" },  { text: "✨ API", callback_data: "api_info" }],
+        ]}, lang);
+
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
 
