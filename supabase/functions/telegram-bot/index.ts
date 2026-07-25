@@ -322,12 +322,54 @@ Deno.serve(async (req) => {
     // Get user language
     const lang = await getUserLang(supabase, chatId);
 
+    // Admin check (matches ADMIN_TELEGRAM_CHAT_ID env)
+    const isAdmin = ADMIN_CHAT_ID && String(chatId) === String(ADMIN_CHAT_ID);
+
+    // ═════════════ /maintenance on|off (admin only) ═════════════
+    const rawLower = rawText.toLowerCase();
+    if (rawLower.startsWith("/maintenance")) {
+      if (!isAdmin) {
+        await sendMsg(BOT_TOKEN, chatId, "⛔ *Admins only.*", undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      const arg = rawLower.replace("/maintenance", "").trim();
+      if (arg === "on" || arg === "off") {
+        const enabled = arg === "on";
+        await supabase.from("app_settings").upsert(
+          { key: "maintenance", value: { enabled }, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+        await sendMsg(BOT_TOKEN, chatId,
+          enabled ? "🛠 *Maintenance mode: ON*\n\nAll users will see a maintenance message." 
+                  : "✅ *Maintenance mode: OFF*\n\nBot is live for all users.",
+          undefined, lang);
+      } else {
+        const { data: cur } = await supabase.from("app_settings").select("value").eq("key", "maintenance").maybeSingle();
+        const on = cur?.value?.enabled === true;
+        await sendMsg(BOT_TOKEN, chatId,
+          `🛠 *Maintenance status:* ${on ? "ON" : "OFF"}\n\nUsage:\n\`/maintenance on\`\n\`/maintenance off\``,
+          undefined, lang);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
     // Check if customer is blocked
     const { data: customerData } = await supabase.from("customers").select("is_blocked").eq("telegram_id", chatId).single();
     if (customerData?.is_blocked) {
       await sendMsg(BOT_TOKEN, chatId, t("blocked", lang),
         { inline_keyboard: [[{ text: t("contact_support", lang), callback_data: "support" }]] }, lang);
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+    // ═════════════ Maintenance gate (non-admins blocked) ═════════════
+    if (!isAdmin) {
+      const { data: mSetting } = await supabase.from("app_settings").select("value").eq("key", "maintenance").maybeSingle();
+      if (mSetting?.value?.enabled === true) {
+        await sendMsg(BOT_TOKEN, chatId,
+          "🛠 *Bot is under maintenance*\n\nWe're making things better. Please try again in a little while.\n\nThank you for your patience! 💙",
+          undefined, lang);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
     }
 
     // Normalize input — handle both callbacks and keyboard button text (multilingual)
