@@ -87,6 +87,28 @@ Deno.serve(async (req) => {
 
     const input = (callbackData || text).toLowerCase();
 
+    // ==================== /maintenance on|off ====================
+    if (input.startsWith("/maintenance")) {
+      const arg = input.replace("/maintenance", "").trim();
+      if (arg === "on" || arg === "off") {
+        const enabled = arg === "on";
+        await supabase.from("app_settings").upsert(
+          { key: "maintenance", value: { enabled }, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+        await sendMsg(BOT_TOKEN, chatId,
+          enabled ? "🛠 *Maintenance mode: ON*\n\nAll users will see a maintenance message in the customer bot."
+                  : "✅ *Maintenance mode: OFF*\n\nCustomer bot is live for all users.");
+      } else {
+        const { data: cur } = await supabase.from("app_settings").select("value").eq("key", "maintenance").maybeSingle();
+        const on = (cur?.value as any)?.enabled === true;
+        await sendMsg(BOT_TOKEN, chatId,
+          `🛠 *Maintenance status:* ${on ? "ON" : "OFF"}\n\nUsage:\n\`/maintenance on\`\n\`/maintenance off\``);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+    }
+
+
     // ==================== /start or /help ====================
     if (input === "/start" || input === "/help") {
       await sendMsg(BOT_TOKEN, chatId,
