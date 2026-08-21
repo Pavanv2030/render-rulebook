@@ -210,6 +210,10 @@ function t(key: string, lang: Lang): string {
   return translations[key]?.[lang] || translations[key]?.en || key;
 }
 
+function escapeMarkdown(value: string): string {
+  return value.replace(/([_*`\[])/g, "\\$1");
+}
+
 function getMainKeyboard(_lang: Lang) {
   // Reply keyboard removed — users interact via / commands and inline buttons only
   return { remove_keyboard: true };
@@ -220,9 +224,22 @@ async function sendMsg(botToken: string, chatId: string, text: string, inlineMar
     chat_id: chatId, text, parse_mode: "Markdown",
   };
   if (inlineMarkup) body.reply_markup = JSON.stringify(inlineMarkup);
-  return await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
+  if (response.ok) return response;
+
+  const details = await response.text();
+  console.error(`Telegram sendMessage failed [${response.status}]: ${details}`);
+  const fallbackBody = { ...body };
+  delete fallbackBody.parse_mode;
+  const fallback = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(fallbackBody),
+  });
+  if (!fallback.ok) {
+    console.error(`Telegram sendMessage fallback failed [${fallback.status}]: ${await fallback.text()}`);
+  }
+  return fallback;
 }
 
 async function sendPhoto(botToken: string, chatId: string, photo: string, caption: string, inlineMarkup?: any, _lang: Lang = "en") {
@@ -230,9 +247,22 @@ async function sendPhoto(botToken: string, chatId: string, photo: string, captio
     chat_id: chatId, photo, caption, parse_mode: "Markdown",
   };
   if (inlineMarkup) body.reply_markup = JSON.stringify(inlineMarkup);
-  return await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
+  if (response.ok) return response;
+
+  const details = await response.text();
+  console.error(`Telegram sendPhoto failed [${response.status}]: ${details}`);
+  const fallbackBody = { ...body };
+  delete fallbackBody.parse_mode;
+  const fallback = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(fallbackBody),
+  });
+  if (!fallback.ok) {
+    console.error(`Telegram sendPhoto fallback failed [${fallback.status}]: ${await fallback.text()}`);
+  }
+  return fallback;
 }
 
 
@@ -307,6 +337,7 @@ Deno.serve(async (req) => {
     // prefer update.message.from (direct user message) → callback_query.from → fallback.
     const username = update.message?.from?.username || callbackQuery?.from?.username || "unknown";
     const firstName = update.message?.from?.first_name || callbackQuery?.from?.first_name || "Friend";
+    const safeFirstName = escapeMarkdown(firstName);
 
     if (!chatId) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     if (callbackQuery) await answerCb(BOT_TOKEN, callbackQuery.id);
@@ -599,7 +630,7 @@ Deno.serve(async (req) => {
       if (!isMember) {
         await sendMsg(BOT_TOKEN, chatId,
           `*${t("join_channel_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
-          `Hey *${firstName}*! 👋\n\n` +
+          `Hey *${safeFirstName}*! 👋\n\n` +
           t("join_channel_msg", lang),
           { inline_keyboard: [
             [{ text: t("btn_join", lang), url: "https://t.me/riox239" }],
@@ -676,7 +707,7 @@ Deno.serve(async (req) => {
       const balUsdt = Number(meWallet?.balance_usdt || 0).toFixed(2);
 
       await sendPhoto(BOT_TOKEN, chatId, bannerUrl,
-        `Hey *${firstName}*! 👋\n` +
+        `Hey *${safeFirstName}*! 👋\n` +
         `_Premium Telegram accounts — instant delivery._\n\n` +
         (meCode ? `🪪 *ID:* \`${meCode}\`\n` : ``) +
         `💼 *Balance:* ₹${balInr}  •  $${balUsdt}\n\n` +
@@ -1549,7 +1580,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════
     await sendMsg(BOT_TOKEN, chatId,
       `*${t("welcome_title", lang)}*\n━━━━━━━━━━━━━━━\n\n` +
-      `Hey *${firstName}*! 👋\n\n${t("fallback_msg", lang)}`,
+      `Hey *${safeFirstName}*! 👋\n\n${t("fallback_msg", lang)}`,
       { inline_keyboard: [
         [{ text: t("btn_buy", lang), callback_data: "start" }],
         [{ text: t("kb_orders", lang), callback_data: "check_status" }, { text: "➕ Add Balance", callback_data: "addbalance" }],
