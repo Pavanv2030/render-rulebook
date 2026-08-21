@@ -13,11 +13,19 @@ Deno.serve(async (req) => {
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   if (BOT_TOKEN) {
     const webhookUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    // Force a clean re-registration (fixes Telegram DC sync issues where updates stop arriving)
+    const delRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ drop_pending_updates: false }),
+    });
+    results.push({ bot: "customer", deleteWebhook: await delRes.json() });
+
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl }),
+      body: JSON.stringify({ url: webhookUrl, max_connections: 40, allowed_updates: ["message", "callback_query", "edited_message"] }),
     });
     results.push({ bot: "customer", webhookUrl, result: await res.json() });
+
 
     // Set bot commands (shown when user taps the menu button)
     const commands = [
