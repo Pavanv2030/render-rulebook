@@ -24,6 +24,20 @@ Deno.serve(async (req) => {
     });
     results.push({ bot: "customer", deleteWebhook: await delRes.json() });
 
+    // Probe Telegram's cloud update queue before restoring the webhook. A 409
+    // here proves another poller/local Bot API server is consuming this token.
+    const pollRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offset: -1, limit: 1, timeout: 0, allowed_updates: [] }),
+    });
+    const pollResult = await pollRes.json();
+    results.push({
+      bot: "customer",
+      updateQueueProbe: pollResult?.ok
+        ? { ok: true, queued: Array.isArray(pollResult.result) ? pollResult.result.length : 0 }
+        : pollResult,
+    });
+
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
