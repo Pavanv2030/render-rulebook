@@ -12,38 +12,15 @@ Deno.serve(async (req) => {
   // Customer bot webhook
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   if (BOT_TOKEN) {
-    // Use the dedicated Functions hostname. Telegram was reporting a
-    // synchronization error for the general API hostname even though direct
-    // requests succeeded, so this avoids that failing delivery route.
-    const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
-    const webhookUrl = `https://${projectRef}.functions.supabase.co/telegram-bot?revision=${Date.now()}`;
-    // Force a clean re-registration (fixes Telegram DC sync issues where updates stop arriving)
-    const delRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ drop_pending_updates: true }),
-    });
-    results.push({ bot: "customer", deleteWebhook: await delRes.json() });
-
-    // Probe Telegram's cloud update queue before restoring the webhook. A 409
-    // here proves another poller/local Bot API server is consuming this token.
-    const pollRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offset: -1, limit: 1, timeout: 0, allowed_updates: [] }),
-    });
-    const pollResult = await pollRes.json();
-    results.push({
-      bot: "customer",
-      updateQueueProbe: pollResult?.ok
-        ? { ok: true, queued: Array.isArray(pollResult.result) ? pollResult.result.length : 0 }
-        : pollResult,
-    });
-
+    // Keep one stable webhook URL. Repeated deleteWebhook/getUpdates/setWebhook
+    // cycles discard user messages and force Telegram to restart DC synchronization.
+    const webhookUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         url: webhookUrl,
-        max_connections: 40,
-        drop_pending_updates: true,
+        max_connections: 10,
+        drop_pending_updates: false,
         allowed_updates: ["message", "callback_query", "edited_message"],
       }),
     });
