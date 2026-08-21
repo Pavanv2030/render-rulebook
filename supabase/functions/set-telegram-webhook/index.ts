@@ -20,13 +20,32 @@ Deno.serve(async (req) => {
     // Force a clean re-registration (fixes Telegram DC sync issues where updates stop arriving)
     const delRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ drop_pending_updates: false }),
+      body: JSON.stringify({ drop_pending_updates: true }),
     });
     results.push({ bot: "customer", deleteWebhook: await delRes.json() });
 
+    // Probe Telegram's cloud update queue before restoring the webhook. A 409
+    // here proves another poller/local Bot API server is consuming this token.
+    const pollRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offset: -1, limit: 1, timeout: 0, allowed_updates: [] }),
+    });
+    const pollResult = await pollRes.json();
+    results.push({
+      bot: "customer",
+      updateQueueProbe: pollResult?.ok
+        ? { ok: true, queued: Array.isArray(pollResult.result) ? pollResult.result.length : 0 }
+        : pollResult,
+    });
+
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl, max_connections: 40, allowed_updates: ["message", "callback_query", "edited_message"] }),
+      body: JSON.stringify({
+        url: webhookUrl,
+        max_connections: 40,
+        drop_pending_updates: true,
+        allowed_updates: ["message", "callback_query", "edited_message"],
+      }),
     });
     results.push({ bot: "customer", webhookUrl, result: await res.json() });
 
