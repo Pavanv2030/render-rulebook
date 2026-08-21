@@ -1,0 +1,1 @@
+DELETE FROM public.customers WHERE telegram_id = '1'; DELETE FROM public.conversation_states WHERE chat_id = '1';
