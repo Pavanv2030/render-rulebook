@@ -12,9 +12,11 @@ Deno.serve(async (req) => {
   // Customer bot webhook
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
   if (BOT_TOKEN) {
-    // A unique URL forces Telegram's data centers to discard a stale cached
-    // webhook route. Telegram accepts query parameters on webhook URLs.
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?revision=${Date.now()}`;
+    // Use the dedicated Functions hostname. Telegram was reporting a
+    // synchronization error for the general API hostname even though direct
+    // requests succeeded, so this avoids that failing delivery route.
+    const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+    const webhookUrl = `https://${projectRef}.functions.supabase.co/telegram-bot?revision=${Date.now()}`;
     // Force a clean re-registration (fixes Telegram DC sync issues where updates stop arriving)
     const delRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
