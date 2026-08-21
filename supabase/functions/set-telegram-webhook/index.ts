@@ -43,7 +43,14 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ menu_button: { type: "commands" } }),
     });
     results.push({ bot: "customer", setChatMenuButton: await menuRes.json() });
+
+    // Diagnostics: webhook delivery health + bot identity
+    const infoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
+    results.push({ bot: "customer", webhookInfo: await infoRes.json() });
+    const meRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
+    results.push({ bot: "customer", getMe: await meRes.json() });
   }
+
 
 
   // Admin bot webhook
