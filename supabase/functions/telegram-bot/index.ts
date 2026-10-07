@@ -1136,11 +1136,13 @@ Deno.serve(async (req) => {
       // Trigger auto-deliver
       const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") || "";
       try {
-        await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
+        const adRes = await fetch(`${SUPABASE_URL}/functions/v1/auto-deliver`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...(ADMIN_PASSWORD ? { "x-admin-key": ADMIN_PASSWORD } : {}) },
           body: JSON.stringify({ orderId }),
         });
+        const adTxt = await adRes.text();
+        console.log("auto-deliver", orderId, adRes.status, adTxt.slice(0, 300));
       } catch (e) { console.error("auto-deliver failed:", e); }
       return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
     }
