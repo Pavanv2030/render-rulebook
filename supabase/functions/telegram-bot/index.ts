@@ -1022,7 +1022,8 @@ Deno.serve(async (req) => {
 
     // 🔄 Razorpay QR status check (manual fallback if webhook delayed)
     if (input.startsWith("rzp_check_")) {
-      const qrId = input.replace("rzp_check_", "");
+      // Use raw callbackData — Razorpay QR ids are mixed-case and `input` is lowercased above.
+      const qrId = (callbackData || input).replace("rzp_check_", "");
       const result = await finalizeRazorpayIfPaid(qrId, chatId, BOT_TOKEN, supabase, lang);
       if (!result.paid) {
         await sendMsg(BOT_TOKEN, chatId,
