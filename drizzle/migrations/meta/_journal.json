@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792304307554,
+      "tag": "0000_cron_secret_for_broadcast",
+      "breakpoints": true
+    }
+  ]
+}
