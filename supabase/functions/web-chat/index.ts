@@ -25,6 +25,11 @@ Deno.serve(async (req) => {
     if (!message || !sessionId) {
       return new Response(JSON.stringify({ error: "message and sessionId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    // sessionId acts as an unguessable bearer token for the visitor's web wallet/orders:
+    // only accept random UUIDs so ids cannot be chosen or enumerated.
+    if (typeof sessionId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) {
+      return new Response(JSON.stringify({ error: "Invalid session" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const chatId = `web_${sessionId}`;
     const input = String(message).toLowerCase().trim();
