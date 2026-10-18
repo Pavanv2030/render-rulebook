@@ -25,6 +25,11 @@ Deno.serve(async (req) => {
     if (!message || !sessionId) {
       return new Response(JSON.stringify({ error: "message and sessionId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    // sessionId acts as an unguessable bearer token for the visitor's web wallet/orders:
+    // only accept random UUIDs so ids cannot be chosen or enumerated.
+    if (typeof sessionId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) {
+      return new Response(JSON.stringify({ error: "Invalid session" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const chatId = `web_${sessionId}`;
     const input = String(message).toLowerCase().trim();
@@ -127,12 +132,21 @@ Deno.serve(async (req) => {
     // ========== RAZORPAY UPI AUTO-PAY (QR) ==========
     if (input === "__create_rzp_qr__") {
       const { purpose, amount, orderId } = body;
-      const amt = Number(amount);
-      if (!["order", "topup"].includes(purpose) || !isFinite(amt) || amt <= 0) {
+      let amt = Number(amount);
+      if (!["order", "topup"].includes(purpose) || (purpose === "topup" && (!isFinite(amt) || amt <= 0 || amt > 100000))) {
         return new Response(JSON.stringify({ error: "Invalid input" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (purpose === "order" && !orderId) {
-        return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (purpose === "order") {
+        if (!orderId || typeof orderId !== "string") {
+          return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Price always comes from the stored order, never from the request
+        const { data: ord } = await supabase.from("orders").select("amount, status, customer_id")
+          .eq("order_id", orderId).eq("customer_id", chatId).maybeSingle();
+        if (!ord || ord.status !== "pending") {
+          return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        amt = Number(ord.amount);
       }
       const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
       const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
@@ -201,6 +215,19 @@ Deno.serve(async (req) => {
       } catch (e) { console.error("rzp check failed:", e); }
       if (!captured) {
         return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Captured amount must cover the stored payment (and order) amount
+      {
+        let required = Math.round(Number(rp.amount) * 100);
+        if (rp.purpose === "order") {
+          const { data: ord } = await supabase.from("orders").select("amount").eq("order_id", rp.reference_id).maybeSingle();
+          if (!ord) return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          required = Math.max(required, Math.round(Number(ord.amount) * 100));
+        }
+        if (Number(captured.amount) < required) {
+          console.error("Underpaid QR", qrId, captured.amount, required);
+          return new Response(JSON.stringify({ paid: false, error: "Amount mismatch" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
       const { data: claimed } = await supabase.from("razorpay_payments")
         .update({ status: "paid", razorpay_payment_id: captured.id, paid_at: new Date().toISOString() })

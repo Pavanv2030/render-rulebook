@@ -68,6 +68,16 @@ Deno.serve(async (req) => {
       const country = (formData.get("country") as string) || "IN";
       const file = formData.get("file") as File;
 
+      if (!/^[A-Z]{2,3}$/.test(country) || !["regular", "aged"].includes(accountType)) {
+        return new Response(JSON.stringify({ error: "Invalid country or account type" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (file && file.size > 200 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "ZIP too large (max 200 MB)" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       if (!file) {
         return new Response(JSON.stringify({ error: "No file provided" }), {
           status: 400,
@@ -84,7 +94,9 @@ Deno.serve(async (req) => {
       for (const entry of entries) {
         if (entry.directory || !entry.filename.endsWith(".session")) continue;
 
-        const fileName = entry.filename.split("/").pop() || entry.filename;
+        if ((entry.uncompressedSize || 0) > 5 * 1024 * 1024) { skipped++; continue; }
+        const fileName = (entry.filename.split(/[\\/]/).pop() || "").replace(/[^A-Za-z0-9._+-]/g, "_");
+        if (!fileName || fileName.startsWith(".") || !fileName.endsWith(".session")) { skipped++; continue; }
         const filePath = `inventory/${country}/${accountType}/${fileName}`;
 
         const { data: existing } = await supabase

@@ -26,6 +26,20 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // Only the scheduled job (shared secret) or a service-role caller may trigger broadcasts
+  {
+    const provided = req.headers.get("x-cron-secret") || "";
+    const auth = req.headers.get("authorization") || "";
+    let ok = auth === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+    if (!ok && provided) {
+      const { data } = await supabase.from("internal_secrets").select("value").eq("name", "cron_broadcast").maybeSingle();
+      ok = !!data?.value && data.value === provided;
+    }
+    if (!ok) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+  }
+
   let preview = false;
   try {
     const url = new URL(req.url);

@@ -118,7 +118,22 @@ Deno.serve(async (req) => {
   // qr_code.credited puts the credited amount on qr_code.payments_amount_received and
   // also includes payment.entity. Fall back to our stored amount if needed.
   const payId = payment?.id || qrCode?.last_payment_id || null;
-  const amountPaise = Number(payment?.amount ?? qrCode?.payments_amount_received ?? Math.round(Number(rp.amount) * 100));
+  const amountPaise = Number(payment?.amount ?? qrCode?.payments_amount_received ?? 0);
+
+  // Never trust a payment that does not cover the stored amount (and order total)
+  let requiredPaise = Math.round(Number(rp.amount) * 100);
+  if (purpose === "order") {
+    const { data: ord } = await supabase.from("orders").select("amount").eq("order_id", rp.reference_id).maybeSingle();
+    if (!ord) {
+      console.error("Order missing for payment", rp.reference_id);
+      return new Response(JSON.stringify({ ok: true, skipped: "order_missing" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    requiredPaise = Math.max(requiredPaise, Math.round(Number(ord.amount) * 100));
+  }
+  if (!isFinite(amountPaise) || amountPaise < requiredPaise) {
+    console.error("Underpaid payment", rp.razorpay_order_id, amountPaise, requiredPaise);
+    return new Response(JSON.stringify({ ok: true, skipped: "amount_mismatch" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   // Atomically claim this payment — only one event (webhook or manual check) will succeed.
   const { data: claimed } = await supabase.from("razorpay_payments").update({
