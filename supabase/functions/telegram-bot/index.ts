@@ -325,6 +325,15 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   await fetchCountries(supabase);
 
+  // Only accept updates genuinely sent by Telegram (secret_token set on setWebhook)
+  {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`tg-webhook:${BOT_TOKEN}`));
+    const expected = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (req.headers.get("x-telegram-bot-api-secret-token") !== expected) {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
   try {
     const update = await req.json();
     const message = update.message || update.callback_query?.message;
@@ -1848,6 +1857,18 @@ async function finalizeRazorpayIfPaid(
 
   const captured = payments.find((p: any) => p.status === "captured");
   if (!captured) return { paid: false };
+  {
+    let required = Math.round(Number(rp.amount) * 100);
+    if (rp.purpose === "order") {
+      const { data: ord } = await supabase.from("orders").select("amount").eq("order_id", rp.reference_id).maybeSingle();
+      if (!ord) return { paid: false };
+      required = Math.max(required, Math.round(Number(ord.amount) * 100));
+    }
+    if (Number(captured.amount) < required) {
+      console.error("Underpaid QR", qrId, captured.amount, required);
+      return { paid: false };
+    }
+  }
 
   // Claim atomically — only proceed if we flip from created -> paid
   const { data: claimed } = await supabase

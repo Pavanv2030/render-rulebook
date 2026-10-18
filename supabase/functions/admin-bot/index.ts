@@ -62,6 +62,16 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // Fail closed: admin chat must be configured, and updates must carry Telegram's secret token
+  if (!ADMIN_CHAT_ID) return new Response("ADMIN_TELEGRAM_CHAT_ID not configured", { status: 500 });
+  {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`tg-webhook:${BOT_TOKEN}`));
+    const expected = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (req.headers.get("x-telegram-bot-api-secret-token") !== expected) {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
   try {
     const update = await req.json();
     const message = update.message || update.callback_query?.message;
