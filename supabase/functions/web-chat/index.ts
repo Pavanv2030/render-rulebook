@@ -127,12 +127,21 @@ Deno.serve(async (req) => {
     // ========== RAZORPAY UPI AUTO-PAY (QR) ==========
     if (input === "__create_rzp_qr__") {
       const { purpose, amount, orderId } = body;
-      const amt = Number(amount);
-      if (!["order", "topup"].includes(purpose) || !isFinite(amt) || amt <= 0) {
+      let amt = Number(amount);
+      if (!["order", "topup"].includes(purpose) || (purpose === "topup" && (!isFinite(amt) || amt <= 0 || amt > 100000))) {
         return new Response(JSON.stringify({ error: "Invalid input" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (purpose === "order" && !orderId) {
-        return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (purpose === "order") {
+        if (!orderId || typeof orderId !== "string") {
+          return new Response(JSON.stringify({ error: "orderId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Price always comes from the stored order, never from the request
+        const { data: ord } = await supabase.from("orders").select("amount, status, customer_id")
+          .eq("order_id", orderId).eq("customer_id", chatId).maybeSingle();
+        if (!ord || ord.status !== "pending") {
+          return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        amt = Number(ord.amount);
       }
       const RP_KEY = Deno.env.get("RAZORPAY_KEY_ID");
       const RP_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
