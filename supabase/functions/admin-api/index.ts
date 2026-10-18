@@ -86,8 +86,9 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === "GET" && action === "customers") {
-      const search = url.searchParams.get("search") || "";
+      const rawSearch = url.searchParams.get("search") || "";
       let query = supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500);
+      const search = rawSearch.replace(/[^A-Za-z0-9_@ -]/g, "").slice(0, 64);
       if (search) {
         query = query.or(`username.ilike.%${search}%,first_name.ilike.%${search}%,telegram_id.ilike.%${search}%`);
       }
@@ -231,7 +232,15 @@ Deno.serve(async (req) => {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const filePath = `orders/${orderId}/${file.name}`;
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(orderId)) {
+          return new Response(JSON.stringify({ error: "Invalid orderId" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const safeName = String(file.name || "delivery.zip").split(/[\\/]/).pop()!.replace(/[^A-Za-z0-9._-]/g, "_");
+        const allowedExt = /\.(zip|session|txt|json|rar|7z)$/i;
+        if (!allowedExt.test(safeName) || safeName.startsWith(".") || file.size > 50 * 1024 * 1024) {
+          return new Response(JSON.stringify({ error: "File type or size not allowed (max 50 MB)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const filePath = `orders/${orderId}/${safeName}`;
         const { error: uploadError } = await supabase.storage.from("account-files").upload(filePath, file, { upsert: true });
         if (uploadError) throw uploadError;
 
@@ -245,7 +254,7 @@ Deno.serve(async (req) => {
               try {
                 await sendTelegramDocument(BOT_TOKEN, order.customer_id, signedData.signedUrl,
                   `✅ *Order Delivered!*\n\n🆔 Order: \`${order.order_id}\`\n🌍 Country: ${order.country}\n📦 ${order.quantity}x ${order.account_type} accounts\n\n📥 Your accounts are attached above.\nThank you! 🚀\n\nType /start to order more!`,
-                  file.name);
+                  safeName);
               } catch (e) { console.error("Failed to send Telegram document:", e); }
             }
           }
@@ -619,7 +628,7 @@ Deno.serve(async (req) => {
         v = v.replace(/\/+$/, "").split("?")[0];
         if (/^\d+$/.test(v) || /^web_/i.test(v)) return { id: v };
         const uname = v.replace(/^@/, "");
-        if (!uname) return { id: null, error: "invalid" };
+        if (!uname || !/^[A-Za-z0-9_-]{1,64}$/.test(uname)) return { id: null, error: "invalid" };
         const { data: c } = await supabase.from("customers")
           .select("telegram_id")
           .or(`username.ilike.${uname},customer_code.ilike.${uname}`)
@@ -693,7 +702,7 @@ Deno.serve(async (req) => {
       }
 
       if (body.action === "search_user") {
-        const { q } = body;
+        const q = String(body.q || "").replace(/[^A-Za-z0-9_@ -]/g, "").slice(0, 64);
         if (!q) return new Response(JSON.stringify({ users: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const { data } = await supabase.from("customers").select("telegram_id, customer_code, username, first_name").or(`telegram_id.ilike.%${q}%,customer_code.ilike.%${q}%,username.ilike.%${q}%`).limit(20);
         return new Response(JSON.stringify({ users: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
