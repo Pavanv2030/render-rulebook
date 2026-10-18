@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       const country = (formData.get("country") as string) || "IN";
       const file = formData.get("file") as File;
 
-      if (!COUNTRIES.includes(country) || !["regular", "aged"].includes(accountType)) {
+      if (!/^[A-Z]{2,3}$/.test(country) || !["regular", "aged"].includes(accountType)) {
         return new Response(JSON.stringify({ error: "Invalid country or account type" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
