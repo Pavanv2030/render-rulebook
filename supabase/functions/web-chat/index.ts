@@ -211,6 +211,19 @@ Deno.serve(async (req) => {
       if (!captured) {
         return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      // Captured amount must cover the stored payment (and order) amount
+      {
+        let required = Math.round(Number(rp.amount) * 100);
+        if (rp.purpose === "order") {
+          const { data: ord } = await supabase.from("orders").select("amount").eq("order_id", rp.reference_id).maybeSingle();
+          if (!ord) return new Response(JSON.stringify({ paid: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          required = Math.max(required, Math.round(Number(ord.amount) * 100));
+        }
+        if (Number(captured.amount) < required) {
+          console.error("Underpaid QR", qrId, captured.amount, required);
+          return new Response(JSON.stringify({ paid: false, error: "Amount mismatch" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
       const { data: claimed } = await supabase.from("razorpay_payments")
         .update({ status: "paid", razorpay_payment_id: captured.id, paid_at: new Date().toISOString() })
         .eq("razorpay_order_id", qrId).eq("status", "created").select();
