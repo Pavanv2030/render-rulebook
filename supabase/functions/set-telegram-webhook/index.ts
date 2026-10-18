@@ -3,6 +3,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function webhookSecret(token: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`tg-webhook:${token}`));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 

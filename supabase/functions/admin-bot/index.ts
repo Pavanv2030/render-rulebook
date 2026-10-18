@@ -1015,10 +1015,14 @@ Deno.serve(async (req) => {
       }
 
       const doc = update.message.document;
-      const fileName = doc.file_name || "unknown.session";
+      const fileName = String(doc.file_name || "unknown.session").split(/[\\/]/).pop()!.replace(/[^A-Za-z0-9._+-]/g, "_");
 
-      if (!fileName.endsWith(".session")) {
+      if (!fileName.endsWith(".session") || fileName.startsWith(".")) {
         await sendMsg(BOT_TOKEN, chatId, `⚠️ Skipped \`${fileName}\` — only .session files accepted.`);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+      }
+      if (Number(doc.file_size || 0) > 5 * 1024 * 1024) {
+        await sendMsg(BOT_TOKEN, chatId, `⚠️ Skipped \`${fileName}\` — file larger than 5 MB.`);
         return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
