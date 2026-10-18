@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
         max_connections: 10,
         drop_pending_updates: false,
         allowed_updates: ["message", "callback_query", "edited_message"],
+        secret_token: await webhookSecret(BOT_TOKEN),
       }),
     });
     results.push({ bot: "customer", webhookUrl, result: await res.json() });
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     const webhookUrl = `${SUPABASE_URL}/functions/v1/admin-bot`;
     const res = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/setWebhook`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl }),
+      body: JSON.stringify({ url: webhookUrl, secret_token: await webhookSecret(ADMIN_BOT_TOKEN) }),
     });
     results.push({ bot: "admin", webhookUrl, result: await res.json() });
   }
